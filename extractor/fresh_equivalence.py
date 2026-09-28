@@ -85,11 +85,12 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         name: z3.Const(name, sort_to_z3(sort, ctx))
         for name, sort in variable_sorts(builder.variables).items()
     }
+    memo: dict = {}
     records = []
     for query in builder.queries(selected_component=arguments.component):
         solver = z3.Solver(ctx=ctx)
         solver.set(timeout=arguments.timeout_ms)
-        solver.add(expr_to_z3(query.proposition, variables, ctx))
+        solver.add(expr_to_z3(query.proposition, variables, ctx, memo=memo))
         result = solver.check()
         record: dict[str, Any] = {"query": query.name, "result": str(result)}
         if result == z3.sat:
