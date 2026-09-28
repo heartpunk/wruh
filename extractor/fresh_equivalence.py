@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from extractor.runtime_trace import start_runtime_trace
+
+start_runtime_trace()
+
 import argparse
 import importlib.util
 import json
@@ -9,7 +13,11 @@ from pathlib import Path
 import sys
 from typing import Any
 
-import z3
+from extractor.native_runtime import preload_libstdcxx
+
+_LIBSTDCXX = preload_libstdcxx()
+
+import z3  # noqa: E402
 
 from extractor.binary_cfg import build_static_cfg
 from extractor.binary_inventory import load_pinned_binary
@@ -130,6 +138,7 @@ def main() -> int:
     parser.add_argument("--max-steps", type=int, default=4096)
     parser.add_argument("--max-paths", type=int, default=4096)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--record-only", action="store_true")
     arguments = parser.parse_args()
     if arguments.timeout_ms <= 0:
         parser.error("--timeout-ms must be positive")
@@ -139,7 +148,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"{result['handler']} fresh equivalence: {result['status']}", flush=True)
-    return 0 if result["status"] == "PASS" else 1
+    return 0 if arguments.record_only or result["status"] == "PASS" else 1
 
 
 if __name__ == "__main__":

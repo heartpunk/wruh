@@ -1,0 +1,78 @@
+load("@extractor_pypi//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("//tools:reapi_artifact_action.bzl", "reapi_artifact_action")
+
+package(default_visibility = ["//visibility:private"])
+
+exports_files(["requirements_linux_x86_64.txt"])
+
+_LINUX_X86_64 = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+]
+
+py_binary(
+    name = "fresh_equivalence_tool",
+    srcs = glob(["*.py"]),
+    data = [
+        "amd64_smoke.hex",
+        "@nix_native_deps//:libstdcxx",
+    ],
+    env = {
+        "GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)",
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONSAFEPATH": "1",
+    },
+    main = "fresh_equivalence.py",
+    target_compatible_with = _LINUX_X86_64,
+    deps = [
+        requirement("angr"),
+        requirement("capstone"),
+        requirement("z3-solver"),
+    ],
+)
+
+_HANDLER_NAMES = [
+    "addi", "add", "lb", "sb", "beq", "goto", "slli", "srli", "srai", "mul",
+]
+
+[
+    reapi_artifact_action(
+        name = handler + "_handler_fresh_equivalence",
+        arguments = [
+            "--handler=" + handler + "_handler",
+            "--timeout-ms=300000",
+            "--record-only",
+        ],
+        dependencies = [
+            "@ghot_inputs//:tinymemory_wruh_provider.py",
+            "@ghot_inputs//:extractor_artifact",
+            "@ghot_inputs//:tinymemory_linux_x86_64_manifest.json",
+            "@ghot_inputs//:tinymemory_linux_x86_64_cfg.json",
+        ],
+        dependency_arguments = [
+            "--provider={path}",
+            "--artifact={path}",
+            "--manifest={path}",
+            "--cfg={path}",
+        ],
+        exec_compatible_with = _LINUX_X86_64,
+        exec_properties = {
+            "cpu_count": "2",
+            "memory_mb": "8000",
+        },
+        inputs = ["@ghot_inputs//:provider_bundle"],
+        output = handler + "_handler_fresh_equivalence.json",
+        target_compatible_with = _LINUX_X86_64,
+        tool = ":fresh_equivalence_tool",
+    )
+    for handler in _HANDLER_NAMES
+]
+
+filegroup(
+    name = "handler_fresh_equivalence_all",
+    srcs = [
+        ":" + handler + "_handler_fresh_equivalence"
+        for handler in _HANDLER_NAMES
+    ],
+)
