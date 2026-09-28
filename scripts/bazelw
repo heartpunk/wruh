@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "build" && " $* " == *" --config=reapi "* && "$(uname -s)" != Linux ]]; then
+  printf '%s\n' 'Wruh REAPI execution requires the qualified Linux Bazel frontend.' >&2
+  exit 2
+fi
+exec bazel "$@"

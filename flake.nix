@@ -13,9 +13,22 @@
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
     in {
-      devShells = nixpkgs.lib.genAttrs systems (system: {
-        default = nixpkgs.legacyPackages.${system}.mkShell {
-          packages = [ angr-nix.packages.${system}.default ];
+      devShells = nixpkgs.lib.genAttrs systems (system:
+        let pkgs = nixpkgs.legacyPackages.${system};
+        in {
+        default = pkgs.mkShell {
+          packages = [
+            angr-nix.packages.${system}.default
+            pkgs.git
+            pkgs.jdk21_headless
+            (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
+          ];
+          JAVA_HOME = pkgs.jdk21_headless.home;
+          GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
+          GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/r4a53a1bvn9ysxj2sf7s1i9qpkf4yycz-ghot-reapi-worker-runtime";
+          shellHook = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+            export PATH="/nix/store/r4a53a1bvn9ysxj2sf7s1i9qpkf4yycz-ghot-reapi-worker-runtime/bin:$PATH"
+          '';
           PYTHONNOUSERSITE = "1";
           PYTHONSAFEPATH = "1";
         };
