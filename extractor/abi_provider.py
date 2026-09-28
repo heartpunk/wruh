@@ -24,6 +24,15 @@ class SourceEdge:
 
 
 @dataclass(frozen=True)
+class OutputProjection:
+    """One named source-versus-machine result observation."""
+
+    name: str
+    source_value: TypedExpr | None
+    machine_value: TypedExpr
+
+
+@dataclass(frozen=True)
 class HandlerContract:
     """Source semantics and ABI relation for one provider-named root."""
 
@@ -31,6 +40,7 @@ class HandlerContract:
     opcode: int
     abi_relation: TypedExpr
     source_edges: tuple[SourceEdge, ...]
+    projections: tuple[OutputProjection, ...]
 
 
 class AbiProvider(Protocol):
@@ -41,7 +51,9 @@ class AbiProvider(Protocol):
 
     def inventory_policy(self) -> InventoryPolicy: ...
 
-    def handler_contract(self, root_id: str) -> HandlerContract: ...
+    def handler_contract(
+        self, root_id: str, cfg: Mapping[str, Any]
+    ) -> HandlerContract: ...
 
     def external_call_edges(
         self, pinned: PinnedBinary, cfg: Mapping[str, Any]

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import ctypes
+import ctypes.util
 import os
+import sys
 from pathlib import Path
 
 
@@ -23,6 +25,18 @@ def runfiles_root() -> Path:
 
 def preload_libstdcxx() -> Path:
     raw_rlocation = os.environ.get(_LIBSTDCXX_RLOCATION_ENV)
+    if not raw_rlocation and not (os.environ.get("RUNFILES_DIR") or os.environ.get("TEST_SRCDIR")):
+        # Standalone Nix-shell runs use the locked host C++ runtime; Bazel
+        # actions continue to require and validate their declared runfile.
+        library_name = "c++" if sys.platform == "darwin" else "stdc++"
+        library = ctypes.util.find_library(library_name)
+        if library is None:
+            raise RuntimeError(
+                f"{_LIBSTDCXX_RLOCATION_ENV} is required outside Bazel "
+                "unless the host C++ runtime is discoverable"
+            )
+        ctypes.CDLL(library, mode=ctypes.RTLD_GLOBAL)
+        return Path(library)
     if not raw_rlocation:
         raise RuntimeError(f"{_LIBSTDCXX_RLOCATION_ENV} is required")
 
