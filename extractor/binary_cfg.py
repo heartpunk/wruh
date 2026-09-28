@@ -1,10 +1,8 @@
-"""Strict static CFG inventory for the exact TinyMemory extractor artifact."""
+"""Strict static CFG inventory for a provider-selected artifact."""
 
 from __future__ import annotations
 
 from collections import Counter
-import json
-import os
 from typing import Any
 
 import capstone
@@ -13,11 +11,7 @@ import pyvex
 from extractor.binary_inventory import (
     InventoryError,
     PinnedBinary,
-    _declared_runfile,
-    load_pinned_binary,
 )
-
-_CFG_MANIFEST_RLOCATION_ENV = "GHOT_TINYMEMORY_CFG_MANIFEST_RLOCATION"
 
 
 def _instruction_records(
@@ -556,35 +550,3 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
         "schema": 1,
     }
 
-
-def build_pinned_cfg() -> dict[str, Any]:
-    return build_static_cfg(load_pinned_binary())
-
-
-def validate_pinned_cfg(
-    pinned: PinnedBinary | None = None,
-) -> dict[str, Any]:
-    """Validate the CFG while preserving a caller's sole loaded project."""
-
-    actual = (
-        build_pinned_cfg()
-        if pinned is None
-        else build_static_cfg(pinned)
-    )
-    expected_path = _declared_runfile(_CFG_MANIFEST_RLOCATION_ENV)
-    expected = json.loads(expected_path.read_text(encoding="utf-8"))
-    if actual != expected:
-        raise InventoryError(
-            "static CFG differs from the pinned manifest:\n"
-            f"expected={json.dumps(expected, sort_keys=True)}\n"
-            f"actual={json.dumps(actual, sort_keys=True)}"
-        )
-    return actual
-
-
-def main() -> None:
-    if os.environ.get(_CFG_MANIFEST_RLOCATION_ENV):
-        result = validate_pinned_cfg()
-    else:
-        result = build_pinned_cfg()
-    print(json.dumps(result, indent=2, sort_keys=True))

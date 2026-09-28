@@ -1,4 +1,4 @@
-"""Fork-parallel fresh extraction over the fixed TinyMemory root family."""
+"""Fork-parallel fresh extraction over provider-selected roots."""
 
 from __future__ import annotations
 

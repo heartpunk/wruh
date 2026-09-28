@@ -1,4 +1,4 @@
-"""Fail-closed inventory of the exact TinyMemory extractor artifact."""
+"""Fail-closed inventory of a provider-selected binary artifact."""
 
 from __future__ import annotations
 
@@ -7,32 +7,11 @@ from dataclasses import dataclass
 from enum import Enum
 import hashlib
 import json
-import os
 from pathlib import Path
 from typing import Any, Callable
 
 import capstone
-
-from extractor.runtime import _runfiles_root
 import angr
-
-_BINARY_RLOCATION_ENV = "GHOT_TINYMEMORY_BINARY_RLOCATION"
-_MANIFEST_RLOCATION_ENV = "GHOT_TINYMEMORY_MANIFEST_RLOCATION"
-_ROOT_NAMES = (
-    "step",
-    "dispatch",
-    "addi_handler",
-    "add_handler",
-    "lb_handler",
-    "sb_handler",
-    "beq_handler",
-    "goto_handler",
-    "slli_handler",
-    "srli_handler",
-    "srai_handler",
-    "mul_handler",
-)
-_DECLARED_PRIMITIVES = frozenset({"memcpy"})
 
 
 class InventoryError(RuntimeError):
@@ -76,7 +55,7 @@ def classify_call(
     encoded_target: int | None,
     resolution: CallResolution,
     selected_symbols: frozenset[str],
-    declared_primitives: frozenset[str] = _DECLARED_PRIMITIVES,
+    declared_primitives: frozenset[str],
 ) -> tuple[CallKind, str]:
     """Classify one encoded call without retargeting past its successor."""
 
@@ -104,41 +83,6 @@ def classify_call(
             f"{encoded_target:#x}"
         )
     return (CallKind.MODELED_PRIMITIVE, name)
-
-
-def _declared_runfile(environment_name: str) -> Path:
-    raw_rlocation = os.environ.get(environment_name)
-    if not raw_rlocation:
-        raise InventoryError(f"{environment_name} is required")
-    runfiles_root = _runfiles_root()
-    runfile = (runfiles_root / raw_rlocation).absolute()
-    if not runfile.is_relative_to(runfiles_root) or not runfile.is_file():
-        raise InventoryError(f"declared runfile is missing: {runfile}")
-    return runfile
-
-
-def _root_symbol_name(root: str, symbol_names: list[str]) -> str:
-    legacy_prefix = f"_ZN10tinymemory{len(root)}{root}17h"
-    v0_suffix = f"_10tinymemory{len(root)}{root}"
-    matches = [
-        name
-        for name in symbol_names
-        if name.startswith(legacy_prefix)
-        or (name.startswith("_RNvC") and name.endswith(v0_suffix))
-    ]
-    if len(matches) != 1:
-        raise InventoryError(
-            f"expected one pinned Rust symbol for {root}, found {matches!r}"
-        )
-    return matches[0]
-
-
-TINYMEMORY_INVENTORY_POLICY = InventoryPolicy(
-    root_names=_ROOT_NAMES,
-    declared_primitives=_DECLARED_PRIMITIVES,
-    resolve_root_symbol=_root_symbol_name,
-    require_pic=True,
-)
 
 
 def exact_symbol_inventory_policy(
@@ -217,7 +161,7 @@ def _function_symbol_named(project: angr.Project, name: str) -> Any | None:
 def inventory_project(
     project: angr.Project,
     artifact: Path,
-    policy: InventoryPolicy = TINYMEMORY_INVENTORY_POLICY,
+    policy: InventoryPolicy,
 ) -> dict[str, Any]:
     """Build the stable rooted inventory from an already-loaded image."""
 
@@ -424,21 +368,21 @@ def inventory_project(
     }
 
 
-def inventory(artifact: Path) -> dict[str, Any]:
-    """Load one image and build its stable rooted inventory."""
+def inventory(artifact: Path, policy: InventoryPolicy) -> dict[str, Any]:
+    """Load one image and build its provider-selected rooted inventory."""
 
     project = angr.Project(str(artifact), auto_load_libs=False)
-    return inventory_project(project, artifact)
+    return inventory_project(project, artifact, policy)
 
 
-def load_pinned_binary() -> PinnedBinary:
-    """Load and validate the exact artifact without creating a second project."""
+def load_pinned_binary(
+    artifact: Path, manifest_path: Path, policy: InventoryPolicy
+) -> PinnedBinary:
+    """Load and validate provider-supplied inputs with one Angr project."""
 
-    artifact = _declared_runfile(_BINARY_RLOCATION_ENV)
-    manifest_path = _declared_runfile(_MANIFEST_RLOCATION_ENV)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     project = angr.Project(str(artifact), auto_load_libs=False)
-    actual = inventory_project(project, artifact)
+    actual = inventory_project(project, artifact, policy)
     if actual != manifest:
         raise InventoryError(
             "extractor artifact inventory differs from the pinned manifest:\n"
@@ -451,14 +395,3 @@ def load_pinned_binary() -> PinnedBinary:
         project=project,
     )
 
-
-def validate_pinned_artifact() -> dict[str, Any]:
-    return load_pinned_binary().manifest
-
-
-def main() -> None:
-    print(json.dumps(validate_pinned_artifact(), indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()

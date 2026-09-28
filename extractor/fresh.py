@@ -1,4 +1,4 @@
-"""Deterministic fresh extraction of one rooted TinyMemory function."""
+"""Deterministic fresh extraction of one provider-selected rooted function."""
 
 from __future__ import annotations
 
