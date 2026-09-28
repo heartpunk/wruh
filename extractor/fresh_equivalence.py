@@ -97,6 +97,7 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         elif result == z3.unknown:
             record["reason"] = solver.reason_unknown()
         records.append(record)
+        print(f"{query.name}: {result}", flush=True)
     passed = bool(records) and all(item["result"] == "unsat" for item in records)
     complete = all(item["result"] != "unknown" for item in records)
     status = "PASS" if passed else "FAIL" if complete else "INCOMPLETE"
@@ -107,6 +108,10 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         "image_sha256": pinned.manifest["image_sha256"],
         "fresh_roots": list(roots),
         "fresh_paths": len(paths),
+        "fresh_path_edges": {
+            path.run_id: [list(edge) for edge in path.edge_ids]
+            for path in paths
+        },
         "status": status,
         "queries": records,
     }
