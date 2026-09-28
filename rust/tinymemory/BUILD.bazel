@@ -1,0 +1,79 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+_LINUX_X86_64 = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+]
+
+_EXTRACTOR_RUSTC_FLAGS = [
+    "-Zplt=yes",
+    "-Ccodegen-units=1",
+    "-Cdebuginfo=1",
+    "-Cembed-bitcode=no",
+    "-Cforce-frame-pointers=yes",
+    "-Clto=off",
+    "-Copt-level=2",
+    "-Coverflow-checks=on",
+    "-Cpanic=abort",
+    "-Crelocation-model=pic",
+    "-Cstrip=none",
+    "-Csymbol-mangling-version=v0",
+]
+
+exports_files([
+    "Cargo.Bazel.lock",
+    "cargo-bazel-lock.json",
+])
+
+rust_library(
+    name = "tinymemory",
+    srcs = ["src/lib.rs"],
+    edition = "2021",
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "tinymemory_extractor",
+    srcs = ["src/lib.rs"],
+    crate_name = "tinymemory",
+    edition = "2021",
+    rustc_env = {"RUSTC_BOOTSTRAP": "1"},
+    rustc_flags = _EXTRACTOR_RUSTC_FLAGS,
+    target_compatible_with = _LINUX_X86_64,
+)
+
+rust_binary(
+    name = "extractor_artifact",
+    srcs = ["src/extractor_artifact.rs"],
+    edition = "2021",
+    rustc_env = {"RUSTC_BOOTSTRAP": "1"},
+    rustc_flags = _EXTRACTOR_RUSTC_FLAGS + [
+        "-Clink-arg=-pie",
+        "-Clink-arg=-Wl,--build-id=sha1",
+        "-Clink-arg=-Wl,--no-undefined",
+        "-Clink-arg=-Wl,-z,now",
+        "-Clink-arg=-Wl,-z,relro",
+    ],
+    target_compatible_with = _LINUX_X86_64,
+    visibility = ["//extractor:__subpackages__"],
+    deps = [":tinymemory_extractor"],
+)
+
+rust_test(
+    name = "tinymemory_unit_tests",
+    crate = ":tinymemory",
+)
+
+rust_test(
+    name = "oracle_roundtrip_test",
+    srcs = ["tests/oracle_roundtrip.rs"],
+    data = ["//:target__ghot__tinymemory_h_bounded_h_oracle"],
+    edition = "2021",
+    env = {
+        "TINYMORY_LEAN_ORACLE": "$(rootpath //:target__ghot__tinymemory_h_bounded_h_oracle)",
+    },
+    deps = [
+        ":tinymemory",
+        "@rust_crates//hegeltest",
+    ],
+)

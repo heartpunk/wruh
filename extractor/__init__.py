@@ -1,0 +1,1 @@
+"""Pragmatic target-aware extractor."""
