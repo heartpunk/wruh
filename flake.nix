@@ -25,9 +25,9 @@
           ];
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
-          GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/r4a53a1bvn9ysxj2sf7s1i9qpkf4yycz-ghot-reapi-worker-runtime";
+          GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
           shellHook = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-            export PATH="/nix/store/r4a53a1bvn9ysxj2sf7s1i9qpkf4yycz-ghot-reapi-worker-runtime/bin:$PATH"
+            export PATH="/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin:$PATH"
           '';
           PYTHONNOUSERSITE = "1";
           PYTHONSAFEPATH = "1";
