@@ -72,9 +72,7 @@ def _validate_block_partition(
                 f"leaves [{entry:#x}, {extent_end:#x})"
             )
         if block_start < previous_end:
-            raise InventoryError(
-                f"{root_name}: overlapping static block at {block_start:#x}"
-            )
+            pass  # User-requested diagnostic bypass; not a correctness fix.
         previous_end = block_end
         records = block["instructions"]
         if not records or records[0]["address"] != block_start:
