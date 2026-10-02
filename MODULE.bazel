@@ -1,5 +1,8 @@
 module(name = "wruh", version = "0.1.0")
 
+bazel_dep(name = "ayxg", version = "0.1.0")
+local_path_override(module_name = "ayxg", path = ".dependencies/ayxg")
+
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_python", version = "1.7.0")
 bazel_dep(name = "ghot_vendored_arpy", version = "1.1.1")

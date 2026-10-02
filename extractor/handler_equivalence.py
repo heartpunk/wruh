@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from ayxg.expr import TypedExpr, variable_sorts
+
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 from extractor.abi_provider import HandlerContract, SourceEdge
-from extractor.artifact import TypedExpr, variable_sorts
 from extractor.fresh_composition import ComposedPath
-from extractor.typed_expr import substitute_exprs
+from ayxg.substitution import substitute_exprs
 
 
 @dataclass(frozen=True)

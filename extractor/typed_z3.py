@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ayxg.expr import ArtifactError, Declaration, TermSort, TypedExpr
+
 from collections.abc import Mapping
 from contextlib import contextmanager
 from threading import local
@@ -12,18 +14,7 @@ _LIBSTDCXX = preload_libstdcxx()
 
 import z3  # noqa: E402
 
-from extractor.artifact import (
-    BOOL,
-    BV64,
-    Assignment,
-    ArtifactError,
-    Declaration,
-    StepSummary,
-    Target,
-    TermSort,
-    TypedExpr,
-)
-from extractor.typed_expr import substitute_expr as substitute_expr  # noqa: E402
+from extractor.artifact import BOOL, BV64, Assignment, StepSummary, Target
 
 
 _BINARY = {

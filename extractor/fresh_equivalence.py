@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ayxg.expr import variable_sorts
+
 from extractor.runtime_trace import start_runtime_trace
 
 start_runtime_trace()
@@ -25,7 +27,6 @@ from extractor.fresh import extract_fresh_function
 from extractor.fresh_composition import compose_fresh_paths
 from extractor.handler_equivalence import HandlerEquivalenceBuilder
 from extractor.typed_z3 import expr_to_z3, sort_to_z3
-from extractor.artifact import variable_sorts
 
 
 def _provider(path: Path) -> Any:

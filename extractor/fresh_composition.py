@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+from ayxg.expr import TypedExpr
+
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Mapping
 
 import z3
 
-from extractor.artifact import LocalEdge, Target, TypedExpr
+from extractor.artifact import LocalEdge, Target
 from extractor.fresh import FreshFunction
 from extractor.typed_z3 import declaration_variables, expr_to_z3
-from extractor.typed_expr import substitute_exprs
+from ayxg.substitution import substitute_exprs
 
 
 class FreshCompositionError(RuntimeError):

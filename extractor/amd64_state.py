@@ -355,7 +355,8 @@ def _apply_typed_z3_replacements(state: Any, expression: z3.ExprRef) -> z3.ExprR
     replacements = state.globals.get("_ghot_typed_replacements", {})
     if not replacements:
         return expression
-    from extractor.typed_z3 import expr_from_z3, expr_to_z3, substitute_expr
+    from ayxg.substitution import substitute_expr
+    from extractor.typed_z3 import expr_from_z3, expr_to_z3
 
     typed = expr_from_z3(expression)
     for _ in range(len(replacements) + 1):

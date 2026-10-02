@@ -26,6 +26,7 @@ py_binary(
     main = "fresh_equivalence.py",
     target_compatible_with = _LINUX_X86_64,
     deps = [
+        "@ayxg//:ayxg",
         requirement("angr"),
         requirement("capstone"),
         requirement("z3-solver"),

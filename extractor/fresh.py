@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ayxg.expr import Declaration, TermSort
+
 from dataclasses import dataclass
 import json
 from typing import Any
@@ -15,13 +17,11 @@ from extractor.amd64_state import (
 )
 from extractor.artifact import (
     DecodedInstructionEvidence,
-    Declaration,
     EdgeId,
     LocalEdge,
     Occurrence,
     OutcomeId,
     StaticOccurrenceId,
-    TermSort,
 )
 from extractor.binary_inventory import PinnedBinary
 from extractor.typed_z3 import step_summary_from_z3

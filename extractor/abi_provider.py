@@ -6,10 +6,12 @@ models stay in the provider's owning project.
 
 from __future__ import annotations
 
+from ayxg.expr import TypedExpr
+
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
 
-from extractor.artifact import LocalEdge, TypedExpr
+from extractor.artifact import LocalEdge
 from extractor.binary_inventory import InventoryPolicy, PinnedBinary
 
 
