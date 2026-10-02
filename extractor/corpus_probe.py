@@ -70,7 +70,7 @@ def scan(args):
           'source_sha256':{p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in args.source},
           'elf_sha256':hashlib.sha256(elf.read_bytes()).hexdigest(),'elf_base64':base64.b64encode(elf.read_bytes()).decode(),
           'candidates':candidates,'selected':selected,'selection_universe':sorted(selection_universe),'uncovered':sorted(remaining),
-          'inherited_vex_registry_count':len(registry),'observed_vex_not_in_registry':sorted(f for f in observed if f.startswith('vex:') and f[4:] not in registry),
+          'inherited_vex_registry_count':len(registry),'inherited_vex_registry':sorted(registry),'observed_vex_not_in_registry':sorted(f for f in observed if f.startswith('vex:') and f[4:] not in registry),
           'canonical_required':CANONICAL,'limitations':['VEX selection covers observed supported registry operations, not all inherited angr semantics.','Backend registry membership is availability, not proof of end-to-end WRUH support.','Aliasing input relationships untested.','No native candidate execution.','No FP/vector scope.']}
 
 def expression_ops(fresh):
@@ -104,7 +104,7 @@ def extract(args):
             ops,nodes=expression_ops(fresh)
             return {'root':args.root,'optimization':scan['optimization'],'status':'PASS','elf_sha256':scan['elf_sha256'],
               'occurrences':len(fresh.occurrences),'local_edges':len(fresh.local_edges),'canonical_ops':ops,'expression_objects':nodes,
-              'cfg':cfg,'seconds':time.monotonic()-started}
+              'cfg':cfg,'fresh_model':fresh.to_data(),'seconds':time.monotonic()-started}
         except Exception as exc:
             import traceback
             return {'root':args.root,'optimization':scan['optimization'],'status':'FAIL','stage':'inventory/cfg/fresh','error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'seconds':time.monotonic()-started}
