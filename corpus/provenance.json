@@ -1,0 +1,10 @@
+{
+  "upstream": "https://git.musl-libc.org/git/musl",
+  "revision": "9b2d8a1646391d5217f9a358555aebcaab5b8aaf",
+  "files": {
+    "corpus/real/memcmp.c": "826b1b5e84d3c0fb68be827c051f6dc0d67da17ee3a444e94be0e5360586916f",
+    "corpus/real/strncmp.c": "df801c43304b27dcda67f219a7a3ca34a8fb06f4e63d21e8a6bcb36b03c3c012",
+    "corpus/real/strcmp.c": "3e1793ea2dd358e5c884c4dd232083605d0f6775f7ebe19d03d64fe97068a78f"
+  },
+  "templates": "Explicit zeroth-pass templates; static analysis only; NOT approved for native execution."
+}
