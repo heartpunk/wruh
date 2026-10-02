@@ -8,6 +8,7 @@ from extractor import runtime as _runtime
 import angr
 from extractor.binary_inventory import PinnedBinary, inventory_project, exact_symbol_inventory_policy
 from extractor.binary_cfg import build_static_cfg
+from extractor import binary_cfg as cfg_module
 from extractor.fresh import extract_fresh_function
 
 ROOTS = ['arithmetic','shifts','signed_shift','division','branch','signed_branch','loop','alias','overlap','widths','extend','call','memcmp','strcmp','strncmp']
@@ -96,6 +97,16 @@ def extract(args):
         elf=Path(temp)/'corpus.elf';elf.write_bytes(base64.b64decode(scan['elf_base64']))
         policy=exact_symbol_inventory_policy((args.root,))
         project=angr.Project(str(elf),auto_load_libs=False)
+        partition_trace=[]
+        original_validate=cfg_module._validate_block_partition
+        def traced_validate(**kwargs):
+            for record in kwargs['blocks']:
+                block=project.factory.block(record['address'],size=record['size'])
+                partition_trace.append({**record,'root':kwargs['root_name'],
+                    'vex':str(block.vex),'jumpkind':block.vex.jumpkind,
+                    'exits':[{'statement':i,'jumpkind':stmt.jumpkind,'destination':str(stmt.dst),'guard':str(stmt.guard)} for i,stmt in enumerate(block.vex.statements) if stmt.tag=='Ist_Exit']})
+            return original_validate(**kwargs)
+        cfg_module._validate_block_partition=traced_validate
         try:
             manifest=inventory_project(project,elf,policy)
             pinned=PinnedBinary(elf,manifest,project)
@@ -107,7 +118,7 @@ def extract(args):
               'cfg':cfg,'fresh_model':fresh.to_data(),'seconds':time.monotonic()-started}
         except Exception as exc:
             import traceback
-            return {'root':args.root,'optimization':scan['optimization'],'status':'FAIL','stage':'inventory/cfg/fresh','error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'seconds':time.monotonic()-started}
+            return {'root':args.root,'optimization':scan['optimization'],'status':'FAIL','stage':'inventory/cfg/fresh','error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'partition_trace':partition_trace,'seconds':time.monotonic()-started}
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
