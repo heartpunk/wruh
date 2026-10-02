@@ -1,0 +1,239 @@
+{
+  "baseline": "5594bfc1157c180fef1fa4a88f119ca4a0a113af",
+  "mechanism": "ast-grep function/if/pair outlines inspected without excluding matches; dispatcher source inspected",
+  "translation_cases": [
+    {
+      "input_case": "z3.Z3_OP_BADD",
+      "output_operation": "bv_add",
+      "source": "extractor/typed_z3.py",
+      "line": 21
+    },
+    {
+      "input_case": "z3.Z3_OP_BSUB",
+      "output_operation": "bv_sub",
+      "source": "extractor/typed_z3.py",
+      "line": 22
+    },
+    {
+      "input_case": "z3.Z3_OP_BMUL",
+      "output_operation": "bv_mul",
+      "source": "extractor/typed_z3.py",
+      "line": 23
+    },
+    {
+      "input_case": "z3.Z3_OP_BUDIV",
+      "output_operation": "bv_udiv",
+      "source": "extractor/typed_z3.py",
+      "line": 24
+    },
+    {
+      "input_case": "z3.Z3_OP_BUREM",
+      "output_operation": "bv_urem",
+      "source": "extractor/typed_z3.py",
+      "line": 25
+    },
+    {
+      "input_case": "z3.Z3_OP_BAND",
+      "output_operation": "bv_and",
+      "source": "extractor/typed_z3.py",
+      "line": 26
+    },
+    {
+      "input_case": "z3.Z3_OP_BOR",
+      "output_operation": "bv_or",
+      "source": "extractor/typed_z3.py",
+      "line": 27
+    },
+    {
+      "input_case": "z3.Z3_OP_BXOR",
+      "output_operation": "bv_xor",
+      "source": "extractor/typed_z3.py",
+      "line": 28
+    },
+    {
+      "input_case": "z3.Z3_OP_BSHL",
+      "output_operation": "bv_shl",
+      "source": "extractor/typed_z3.py",
+      "line": 29
+    },
+    {
+      "input_case": "z3.Z3_OP_BLSHR",
+      "output_operation": "bv_lshr",
+      "source": "extractor/typed_z3.py",
+      "line": 30
+    },
+    {
+      "input_case": "z3.Z3_OP_BASHR",
+      "output_operation": "bv_ashr",
+      "source": "extractor/typed_z3.py",
+      "line": 31
+    },
+    {
+      "input_case": "z3.Z3_OP_ULT",
+      "output_operation": "bv_ult",
+      "source": "extractor/typed_z3.py",
+      "line": 32
+    },
+    {
+      "input_case": "z3.Z3_OP_ULEQ",
+      "output_operation": "bv_ule",
+      "source": "extractor/typed_z3.py",
+      "line": 33
+    },
+    {
+      "input_case": "z3.Z3_OP_SLT",
+      "output_operation": "bv_slt",
+      "source": "extractor/typed_z3.py",
+      "line": 34
+    },
+    {
+      "input_case": "z3.Z3_OP_SLEQ",
+      "output_operation": "bv_sle",
+      "source": "extractor/typed_z3.py",
+      "line": 35
+    },
+    {
+      "input_case": "z3.Z3_OP_EQ",
+      "output_operation": "eq",
+      "source": "extractor/typed_z3.py",
+      "line": 36
+    },
+    {
+      "input_case": "z3.Z3_OP_UGEQ",
+      "output_operation": "bv_ule",
+      "source": "extractor/typed_z3.py",
+      "line": 40
+    },
+    {
+      "input_case": "Z3 true/false",
+      "output_operation": "bool_lit",
+      "source": "extractor/typed_z3.py",
+      "line": 249
+    },
+    {
+      "input_case": "Z3 BV numeral",
+      "output_operation": "bv_lit",
+      "source": "extractor/typed_z3.py",
+      "line": 253
+    },
+    {
+      "input_case": "Z3 uninterpreted variable",
+      "output_operation": "var",
+      "source": "extractor/typed_z3.py",
+      "line": 261
+    },
+    {
+      "input_case": "Z3_OP_NOT",
+      "output_operation": "bool_not",
+      "source": "extractor/typed_z3.py",
+      "line": 263
+    },
+    {
+      "input_case": "Z3_OP_AND",
+      "output_operation": "bool_and",
+      "source": "extractor/typed_z3.py",
+      "line": 265
+    },
+    {
+      "input_case": "Z3_OP_OR",
+      "output_operation": "bool_or",
+      "source": "extractor/typed_z3.py",
+      "line": 267
+    },
+    {
+      "input_case": "Z3_OP_ITE",
+      "output_operation": "ite",
+      "source": "extractor/typed_z3.py",
+      "line": 269
+    },
+    {
+      "input_case": "Z3_OP_DISTINCT",
+      "output_operation": "bool_not + eq",
+      "source": "extractor/typed_z3.py",
+      "line": 303
+    },
+    {
+      "input_case": "Z3_OP_BNOT",
+      "output_operation": "bv_not",
+      "source": "extractor/typed_z3.py",
+      "line": 310
+    },
+    {
+      "input_case": "Z3_OP_ZERO_EXT",
+      "output_operation": "zero_extend",
+      "source": "extractor/typed_z3.py",
+      "line": 312
+    },
+    {
+      "input_case": "Z3_OP_SIGN_EXT",
+      "output_operation": "sign_extend",
+      "source": "extractor/typed_z3.py",
+      "line": 312
+    },
+    {
+      "input_case": "Z3_OP_EXTRACT",
+      "output_operation": "extract",
+      "source": "extractor/typed_z3.py",
+      "line": 322
+    },
+    {
+      "input_case": "Z3_OP_CONCAT",
+      "output_operation": "concat",
+      "source": "extractor/typed_z3.py",
+      "line": 337
+    },
+    {
+      "input_case": "Z3_OP_CONST_ARRAY",
+      "output_operation": "const_array",
+      "source": "extractor/typed_z3.py",
+      "line": 348
+    },
+    {
+      "input_case": "Z3_OP_SELECT",
+      "output_operation": "select",
+      "source": "extractor/typed_z3.py",
+      "line": 350
+    },
+    {
+      "input_case": "Z3_OP_STORE",
+      "output_operation": "store",
+      "source": "extractor/typed_z3.py",
+      "line": 352
+    }
+  ],
+  "control_cases": [
+    {
+      "feature": "jump:Ijk_Ret",
+      "source": "extractor/binary_cfg.py:364"
+    },
+    {
+      "feature": "jump:Ijk_Call",
+      "source": "extractor/binary_cfg.py:366"
+    },
+    {
+      "feature": "jump:Ijk_Boring",
+      "source": "extractor/binary_cfg.py:410"
+    },
+    {
+      "feature": "structural VEX exits/default",
+      "source": "extractor/amd64_state.py:777"
+    },
+    {
+      "feature": "symbolic/direct targets",
+      "source": "extractor/fresh_composition.py:319"
+    },
+    {
+      "feature": "internal-call continuation",
+      "source": "extractor/fresh_composition.py:296"
+    },
+    {
+      "feature": "return equality guard",
+      "source": "extractor/fresh_composition.py:257"
+    },
+    {
+      "feature": "path/step bounds",
+      "source": "extractor/fresh_composition.py:176"
+    }
+  ],
+  "inherited_vex": "angr 9.2.214 owns VEX statement/expression/irop dispatch. Collector records full runtime registry count and observed registry membership; no claim to inventory every inherited semantic case in zeroth pass."
+}

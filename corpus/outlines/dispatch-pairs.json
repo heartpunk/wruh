@@ -1,0 +1,434 @@
+[
+{
+  "text": "z3.Z3_OP_BADD: \"bv_add\"",
+  "range": {
+    "byteOffset": {
+      "start": 526,
+      "end": 549
+    },
+    "start": {
+      "line": 20,
+      "column": 4
+    },
+    "end": {
+      "line": 20,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BADD: \"bv_add\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BSUB: \"bv_sub\"",
+  "range": {
+    "byteOffset": {
+      "start": 555,
+      "end": 578
+    },
+    "start": {
+      "line": 21,
+      "column": 4
+    },
+    "end": {
+      "line": 21,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BSUB: \"bv_sub\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BMUL: \"bv_mul\"",
+  "range": {
+    "byteOffset": {
+      "start": 584,
+      "end": 607
+    },
+    "start": {
+      "line": 22,
+      "column": 4
+    },
+    "end": {
+      "line": 22,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BMUL: \"bv_mul\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BUDIV: \"bv_udiv\"",
+  "range": {
+    "byteOffset": {
+      "start": 613,
+      "end": 638
+    },
+    "start": {
+      "line": 23,
+      "column": 4
+    },
+    "end": {
+      "line": 23,
+      "column": 29
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BUDIV: \"bv_udiv\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BUREM: \"bv_urem\"",
+  "range": {
+    "byteOffset": {
+      "start": 644,
+      "end": 669
+    },
+    "start": {
+      "line": 24,
+      "column": 4
+    },
+    "end": {
+      "line": 24,
+      "column": 29
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BUREM: \"bv_urem\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BAND: \"bv_and\"",
+  "range": {
+    "byteOffset": {
+      "start": 675,
+      "end": 698
+    },
+    "start": {
+      "line": 25,
+      "column": 4
+    },
+    "end": {
+      "line": 25,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BAND: \"bv_and\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BOR: \"bv_or\"",
+  "range": {
+    "byteOffset": {
+      "start": 704,
+      "end": 725
+    },
+    "start": {
+      "line": 26,
+      "column": 4
+    },
+    "end": {
+      "line": 26,
+      "column": 25
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BOR: \"bv_or\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BXOR: \"bv_xor\"",
+  "range": {
+    "byteOffset": {
+      "start": 731,
+      "end": 754
+    },
+    "start": {
+      "line": 27,
+      "column": 4
+    },
+    "end": {
+      "line": 27,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BXOR: \"bv_xor\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BSHL: \"bv_shl\"",
+  "range": {
+    "byteOffset": {
+      "start": 760,
+      "end": 783
+    },
+    "start": {
+      "line": 28,
+      "column": 4
+    },
+    "end": {
+      "line": 28,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BSHL: \"bv_shl\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BLSHR: \"bv_lshr\"",
+  "range": {
+    "byteOffset": {
+      "start": 789,
+      "end": 814
+    },
+    "start": {
+      "line": 29,
+      "column": 4
+    },
+    "end": {
+      "line": 29,
+      "column": 29
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BLSHR: \"bv_lshr\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_BASHR: \"bv_ashr\"",
+  "range": {
+    "byteOffset": {
+      "start": 820,
+      "end": 845
+    },
+    "start": {
+      "line": 30,
+      "column": 4
+    },
+    "end": {
+      "line": 30,
+      "column": 29
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_BASHR: \"bv_ashr\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_ULT: \"bv_ult\"",
+  "range": {
+    "byteOffset": {
+      "start": 851,
+      "end": 873
+    },
+    "start": {
+      "line": 31,
+      "column": 4
+    },
+    "end": {
+      "line": 31,
+      "column": 26
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_ULT: \"bv_ult\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_ULEQ: \"bv_ule\"",
+  "range": {
+    "byteOffset": {
+      "start": 879,
+      "end": 902
+    },
+    "start": {
+      "line": 32,
+      "column": 4
+    },
+    "end": {
+      "line": 32,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_ULEQ: \"bv_ule\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_SLT: \"bv_slt\"",
+  "range": {
+    "byteOffset": {
+      "start": 908,
+      "end": 930
+    },
+    "start": {
+      "line": 33,
+      "column": 4
+    },
+    "end": {
+      "line": 33,
+      "column": 26
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_SLT: \"bv_slt\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_SLEQ: \"bv_sle\"",
+  "range": {
+    "byteOffset": {
+      "start": 936,
+      "end": 959
+    },
+    "start": {
+      "line": 34,
+      "column": 4
+    },
+    "end": {
+      "line": 34,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_SLEQ: \"bv_sle\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_EQ: \"eq\"",
+  "range": {
+    "byteOffset": {
+      "start": 965,
+      "end": 982
+    },
+    "start": {
+      "line": 35,
+      "column": 4
+    },
+    "end": {
+      "line": 35,
+      "column": 21
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_EQ: \"eq\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "z3.Z3_OP_UGEQ: \"bv_ule\"",
+  "range": {
+    "byteOffset": {
+      "start": 1012,
+      "end": 1035
+    },
+    "start": {
+      "line": 39,
+      "column": 4
+    },
+    "end": {
+      "line": 39,
+      "column": 27
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    z3.Z3_OP_UGEQ: \"bv_ule\",",
+  "charCount": {
+    "leading": 4,
+    "trailing": 1
+  },
+  "language": "Python"
+},
+{
+  "text": "declaration.name: declaration",
+  "range": {
+    "byteOffset": {
+      "start": 12594,
+      "end": 12623
+    },
+    "start": {
+      "line": 362,
+      "column": 16
+    },
+    "end": {
+      "line": 362,
+      "column": 45
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    declared = {declaration.name: declaration for declaration in declarations}",
+  "charCount": {
+    "leading": 16,
+    "trailing": 33
+  },
+  "language": "Python"
+}
+]

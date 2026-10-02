@@ -2,6 +2,8 @@
 from __future__ import annotations
 import argparse, base64, hashlib, json, os, shutil, subprocess, tempfile, time
 from pathlib import Path
+from extractor.runtime_trace import start_runtime_trace
+start_runtime_trace()
 from extractor import runtime as _runtime
 import angr
 from extractor.binary_inventory import PinnedBinary, inventory_project, exact_symbol_inventory_policy

@@ -1,0 +1,1178 @@
+[
+{
+  "text": "if existing is not None:\n        yield\n        return",
+  "range": {
+    "byteOffset": {
+      "start": 1392,
+      "end": 1445
+    },
+    "start": {
+      "line": 58,
+      "column": 4
+    },
+    "end": {
+      "line": 60,
+      "column": 14
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if existing is not None:\n        yield\n        return",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort.kind() == z3.Z3_BOOL_SORT:\n        return BOOL",
+  "range": {
+    "byteOffset": {
+      "start": 1605,
+      "end": 1659
+    },
+    "start": {
+      "line": 69,
+      "column": 4
+    },
+    "end": {
+      "line": 70,
+      "column": 19
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if sort.kind() == z3.Z3_BOOL_SORT:\n        return BOOL",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort.kind() == z3.Z3_BV_SORT:\n        return TermSort.bv(sort.size())",
+  "range": {
+    "byteOffset": {
+      "start": 1664,
+      "end": 1736
+    },
+    "start": {
+      "line": 71,
+      "column": 4
+    },
+    "end": {
+      "line": 72,
+      "column": 39
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if sort.kind() == z3.Z3_BV_SORT:\n        return TermSort.bv(sort.size())",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort.kind() == z3.Z3_ARRAY_SORT:\n        domain = sort.domain()\n        range_sort = sort.range()\n        if (\n            domain.kind() != z3.Z3_BV_SORT\n            or range_sort.kind() != z3.Z3_BV_SORT\n        ):\n            raise ArtifactError(\"only BV-indexed BV-valued arrays are admitted\")\n        return TermSort.array(domain.size(), range_sort.size())",
+  "range": {
+    "byteOffset": {
+      "start": 1741,
+      "end": 2103
+    },
+    "start": {
+      "line": 73,
+      "column": 4
+    },
+    "end": {
+      "line": 81,
+      "column": 63
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if sort.kind() == z3.Z3_ARRAY_SORT:\n        domain = sort.domain()\n        range_sort = sort.range()\n        if (\n            domain.kind() != z3.Z3_BV_SORT\n            or range_sort.kind() != z3.Z3_BV_SORT\n        ):\n            raise ArtifactError(\"only BV-indexed BV-valued arrays are admitted\")\n        return TermSort.array(domain.size(), range_sort.size())",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if (\n            domain.kind() != z3.Z3_BV_SORT\n            or range_sort.kind() != z3.Z3_BV_SORT\n        ):\n            raise ArtifactError(\"only BV-indexed BV-valued arrays are admitted\")",
+  "range": {
+    "byteOffset": {
+      "start": 1850,
+      "end": 2039
+    },
+    "start": {
+      "line": 76,
+      "column": 8
+    },
+    "end": {
+      "line": 80,
+      "column": 80
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if (\n            domain.kind() != z3.Z3_BV_SORT\n            or range_sort.kind() != z3.Z3_BV_SORT\n        ):\n            raise ArtifactError(\"only BV-indexed BV-valued arrays are admitted\")",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort == BOOL:\n        return z3.BoolSort(ctx=ctx)",
+  "range": {
+    "byteOffset": {
+      "start": 2304,
+      "end": 2356
+    },
+    "start": {
+      "line": 88,
+      "column": 4
+    },
+    "end": {
+      "line": 89,
+      "column": 35
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if sort == BOOL:\n        return z3.BoolSort(ctx=ctx)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort.kind == \"bv\":\n        return z3.BitVecSort(sort.width, ctx=ctx)",
+  "range": {
+    "byteOffset": {
+      "start": 2361,
+      "end": 2432
+    },
+    "start": {
+      "line": 90,
+      "column": 4
+    },
+    "end": {
+      "line": 91,
+      "column": 49
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if sort.kind == \"bv\":\n        return z3.BitVecSort(sort.width, ctx=ctx)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort.kind == \"array\":\n        return z3.ArraySort(\n            z3.BitVecSort(sort.index_width, ctx=ctx),\n            z3.BitVecSort(sort.value_width, ctx=ctx),\n        )",
+  "range": {
+    "byteOffset": {
+      "start": 2437,
+      "end": 2608
+    },
+    "start": {
+      "line": 92,
+      "column": 4
+    },
+    "end": {
+      "line": 96,
+      "column": 9
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if sort.kind == \"array\":\n        return z3.ArraySort(\n            z3.BitVecSort(sort.index_width, ctx=ctx),\n            z3.BitVecSort(sort.value_width, ctx=ctx),\n        )",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if key in conversion_memo:\n            continue",
+  "range": {
+    "byteOffset": {
+      "start": 3523,
+      "end": 3570
+    },
+    "start": {
+      "line": 127,
+      "column": 8
+    },
+    "end": {
+      "line": 128,
+      "column": 20
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if key in conversion_memo:\n            continue",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if node.op == \"var\":\n            result = variables.get(node.name)\n            if result is None:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} is not declared\"\n                )\n            if sort_from_z3(result.sort()) != node.sort:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} has the wrong sort\"\n                )\n        elif node.op == \"bool_lit\":\n            result = z3.BoolVal(node.value, ctx=ctx)\n        elif node.op == \"bv_lit\":\n            result = z3.BitVecVal(node.value, node.sort.width, ctx=ctx)\n        elif not expanded:\n            stack.append((node, True))\n            stack.extend(\n                (argument, False)\n                for argument in reversed(node.args)\n                if id(argument) not in conversion_memo\n            )\n            continue\n        else:\n            args = tuple(conversion_memo[id(arg)][1] for arg in node.args)\n            if node.op == \"const_array\":\n                result = z3.K(sort_to_z3(node.sort, ctx).domain(), args[0])\n            elif node.op == \"bool_not\":\n                result = z3.Not(args[0])\n            elif node.op == \"bv_not\":\n                result = ~args[0]\n            elif node.op == \"bool_and\":\n                result = z3.And(args[0], args[1])\n            elif node.op == \"bool_or\":\n                result = z3.Or(args[0], args[1])\n            elif node.op == \"bv_add\":\n                result = args[0] + args[1]\n            elif node.op == \"bv_sub\":\n                result = args[0] - args[1]\n            elif node.op == \"bv_mul\":\n                result = args[0] * args[1]\n            elif node.op == \"bv_udiv\":\n                result = z3.UDiv(args[0], args[1])\n            elif node.op == \"bv_urem\":\n                result = z3.URem(args[0], args[1])\n            elif node.op == \"bv_and\":\n                result = args[0] & args[1]\n            elif node.op == \"bv_or\":\n                result = args[0] | args[1]\n            elif node.op == \"bv_xor\":\n                result = args[0] ^ args[1]\n            elif node.op == \"bv_shl\":\n                result = args[0] << args[1]\n            elif node.op == \"bv_lshr\":\n                result = z3.LShR(args[0], args[1])\n            elif node.op == \"bv_ashr\":\n                result = args[0] >> args[1]\n            elif node.op == \"bv_ult\":\n                result = z3.ULT(args[0], args[1])\n            elif node.op == \"bv_ule\":\n                result = z3.ULE(args[0], args[1])\n            elif node.op == \"bv_slt\":\n                result = args[0] < args[1]\n            elif node.op == \"bv_sle\":\n                result = args[0] <= args[1]\n            elif node.op == \"eq\":\n                result = args[0] == args[1]\n            elif node.op == \"ite\":\n                result = z3.If(args[0], args[1], args[2])\n            elif node.op == \"zero_extend\":\n                result = z3.ZeroExt(node.amount, args[0])\n            elif node.op == \"sign_extend\":\n                result = z3.SignExt(node.amount, args[0])\n            elif node.op == \"extract\":\n                result = z3.Extract(node.hi, node.lo, args[0])\n            elif node.op == \"concat\":\n                result = z3.Concat(args[0], args[1])\n            elif node.op == \"select\":\n                result = z3.Select(args[0], args[1])\n            elif node.op == \"store\":\n                result = z3.Store(args[0], args[1], args[2])\n            else:\n                raise ArtifactError(\n                    f\"unsupported typed expression operator: {node.op!r}\"\n                )",
+  "range": {
+    "byteOffset": {
+      "start": 3579,
+      "end": 7153
+    },
+    "start": {
+      "line": 129,
+      "column": 8
+    },
+    "end": {
+      "line": 212,
+      "column": 17
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if node.op == \"var\":\n            result = variables.get(node.name)\n            if result is None:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} is not declared\"\n                )\n            if sort_from_z3(result.sort()) != node.sort:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} has the wrong sort\"\n                )\n        elif node.op == \"bool_lit\":\n            result = z3.BoolVal(node.value, ctx=ctx)\n        elif node.op == \"bv_lit\":\n            result = z3.BitVecVal(node.value, node.sort.width, ctx=ctx)\n        elif not expanded:\n            stack.append((node, True))\n            stack.extend(\n                (argument, False)\n                for argument in reversed(node.args)\n                if id(argument) not in conversion_memo\n            )\n            continue\n        else:\n            args = tuple(conversion_memo[id(arg)][1] for arg in node.args)\n            if node.op == \"const_array\":\n                result = z3.K(sort_to_z3(node.sort, ctx).domain(), args[0])\n            elif node.op == \"bool_not\":\n                result = z3.Not(args[0])\n            elif node.op == \"bv_not\":\n                result = ~args[0]\n            elif node.op == \"bool_and\":\n                result = z3.And(args[0], args[1])\n            elif node.op == \"bool_or\":\n                result = z3.Or(args[0], args[1])\n            elif node.op == \"bv_add\":\n                result = args[0] + args[1]\n            elif node.op == \"bv_sub\":\n                result = args[0] - args[1]\n            elif node.op == \"bv_mul\":\n                result = args[0] * args[1]\n            elif node.op == \"bv_udiv\":\n                result = z3.UDiv(args[0], args[1])\n            elif node.op == \"bv_urem\":\n                result = z3.URem(args[0], args[1])\n            elif node.op == \"bv_and\":\n                result = args[0] & args[1]\n            elif node.op == \"bv_or\":\n                result = args[0] | args[1]\n            elif node.op == \"bv_xor\":\n                result = args[0] ^ args[1]\n            elif node.op == \"bv_shl\":\n                result = args[0] << args[1]\n            elif node.op == \"bv_lshr\":\n                result = z3.LShR(args[0], args[1])\n            elif node.op == \"bv_ashr\":\n                result = args[0] >> args[1]\n            elif node.op == \"bv_ult\":\n                result = z3.ULT(args[0], args[1])\n            elif node.op == \"bv_ule\":\n                result = z3.ULE(args[0], args[1])\n            elif node.op == \"bv_slt\":\n                result = args[0] < args[1]\n            elif node.op == \"bv_sle\":\n                result = args[0] <= args[1]\n            elif node.op == \"eq\":\n                result = args[0] == args[1]\n            elif node.op == \"ite\":\n                result = z3.If(args[0], args[1], args[2])\n            elif node.op == \"zero_extend\":\n                result = z3.ZeroExt(node.amount, args[0])\n            elif node.op == \"sign_extend\":\n                result = z3.SignExt(node.amount, args[0])\n            elif node.op == \"extract\":\n                result = z3.Extract(node.hi, node.lo, args[0])\n            elif node.op == \"concat\":\n                result = z3.Concat(args[0], args[1])\n            elif node.op == \"select\":\n                result = z3.Select(args[0], args[1])\n            elif node.op == \"store\":\n                result = z3.Store(args[0], args[1], args[2])\n            else:\n                raise ArtifactError(\n                    f\"unsupported typed expression operator: {node.op!r}\"\n                )",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if result is None:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} is not declared\"\n                )",
+  "range": {
+    "byteOffset": {
+      "start": 3658,
+      "end": 3804
+    },
+    "start": {
+      "line": 131,
+      "column": 12
+    },
+    "end": {
+      "line": 134,
+      "column": 17
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "            if result is None:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} is not declared\"\n                )",
+  "charCount": {
+    "leading": 12,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if sort_from_z3(result.sort()) != node.sort:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} has the wrong sort\"\n                )",
+  "range": {
+    "byteOffset": {
+      "start": 3817,
+      "end": 3992
+    },
+    "start": {
+      "line": 135,
+      "column": 12
+    },
+    "end": {
+      "line": 138,
+      "column": 17
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "            if sort_from_z3(result.sort()) != node.sort:\n                raise ArtifactError(\n                    f\"expression variable {node.name!r} has the wrong sort\"\n                )",
+  "charCount": {
+    "leading": 12,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if node.op == \"const_array\":\n                result = z3.K(sort_to_z3(node.sort, ctx).domain(), args[0])\n            elif node.op == \"bool_not\":\n                result = z3.Not(args[0])\n            elif node.op == \"bv_not\":\n                result = ~args[0]\n            elif node.op == \"bool_and\":\n                result = z3.And(args[0], args[1])\n            elif node.op == \"bool_or\":\n                result = z3.Or(args[0], args[1])\n            elif node.op == \"bv_add\":\n                result = args[0] + args[1]\n            elif node.op == \"bv_sub\":\n                result = args[0] - args[1]\n            elif node.op == \"bv_mul\":\n                result = args[0] * args[1]\n            elif node.op == \"bv_udiv\":\n                result = z3.UDiv(args[0], args[1])\n            elif node.op == \"bv_urem\":\n                result = z3.URem(args[0], args[1])\n            elif node.op == \"bv_and\":\n                result = args[0] & args[1]\n            elif node.op == \"bv_or\":\n                result = args[0] | args[1]\n            elif node.op == \"bv_xor\":\n                result = args[0] ^ args[1]\n            elif node.op == \"bv_shl\":\n                result = args[0] << args[1]\n            elif node.op == \"bv_lshr\":\n                result = z3.LShR(args[0], args[1])\n            elif node.op == \"bv_ashr\":\n                result = args[0] >> args[1]\n            elif node.op == \"bv_ult\":\n                result = z3.ULT(args[0], args[1])\n            elif node.op == \"bv_ule\":\n                result = z3.ULE(args[0], args[1])\n            elif node.op == \"bv_slt\":\n                result = args[0] < args[1]\n            elif node.op == \"bv_sle\":\n                result = args[0] <= args[1]\n            elif node.op == \"eq\":\n                result = args[0] == args[1]\n            elif node.op == \"ite\":\n                result = z3.If(args[0], args[1], args[2])\n            elif node.op == \"zero_extend\":\n                result = z3.ZeroExt(node.amount, args[0])\n            elif node.op == \"sign_extend\":\n                result = z3.SignExt(node.amount, args[0])\n            elif node.op == \"extract\":\n                result = z3.Extract(node.hi, node.lo, args[0])\n            elif node.op == \"concat\":\n                result = z3.Concat(args[0], args[1])\n            elif node.op == \"select\":\n                result = z3.Select(args[0], args[1])\n            elif node.op == \"store\":\n                result = z3.Store(args[0], args[1], args[2])\n            else:\n                raise ArtifactError(\n                    f\"unsupported typed expression operator: {node.op!r}\"\n                )",
+  "range": {
+    "byteOffset": {
+      "start": 4557,
+      "end": 7153
+    },
+    "start": {
+      "line": 153,
+      "column": 12
+    },
+    "end": {
+      "line": 212,
+      "column": 17
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "            if node.op == \"const_array\":\n                result = z3.K(sort_to_z3(node.sort, ctx).domain(), args[0])\n            elif node.op == \"bool_not\":\n                result = z3.Not(args[0])\n            elif node.op == \"bv_not\":\n                result = ~args[0]\n            elif node.op == \"bool_and\":\n                result = z3.And(args[0], args[1])\n            elif node.op == \"bool_or\":\n                result = z3.Or(args[0], args[1])\n            elif node.op == \"bv_add\":\n                result = args[0] + args[1]\n            elif node.op == \"bv_sub\":\n                result = args[0] - args[1]\n            elif node.op == \"bv_mul\":\n                result = args[0] * args[1]\n            elif node.op == \"bv_udiv\":\n                result = z3.UDiv(args[0], args[1])\n            elif node.op == \"bv_urem\":\n                result = z3.URem(args[0], args[1])\n            elif node.op == \"bv_and\":\n                result = args[0] & args[1]\n            elif node.op == \"bv_or\":\n                result = args[0] | args[1]\n            elif node.op == \"bv_xor\":\n                result = args[0] ^ args[1]\n            elif node.op == \"bv_shl\":\n                result = args[0] << args[1]\n            elif node.op == \"bv_lshr\":\n                result = z3.LShR(args[0], args[1])\n            elif node.op == \"bv_ashr\":\n                result = args[0] >> args[1]\n            elif node.op == \"bv_ult\":\n                result = z3.ULT(args[0], args[1])\n            elif node.op == \"bv_ule\":\n                result = z3.ULE(args[0], args[1])\n            elif node.op == \"bv_slt\":\n                result = args[0] < args[1]\n            elif node.op == \"bv_sle\":\n                result = args[0] <= args[1]\n            elif node.op == \"eq\":\n                result = args[0] == args[1]\n            elif node.op == \"ite\":\n                result = z3.If(args[0], args[1], args[2])\n            elif node.op == \"zero_extend\":\n                result = z3.ZeroExt(node.amount, args[0])\n            elif node.op == \"sign_extend\":\n                result = z3.SignExt(node.amount, args[0])\n            elif node.op == \"extract\":\n                result = z3.Extract(node.hi, node.lo, args[0])\n            elif node.op == \"concat\":\n                result = z3.Concat(args[0], args[1])\n            elif node.op == \"select\":\n                result = z3.Select(args[0], args[1])\n            elif node.op == \"store\":\n                result = z3.Store(args[0], args[1], args[2])\n            else:\n                raise ArtifactError(\n                    f\"unsupported typed expression operator: {node.op!r}\"\n                )",
+  "charCount": {
+    "leading": 12,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if not args:\n        return TypedExpr.bool_lit(identity)",
+  "range": {
+    "byteOffset": {
+      "start": 7330,
+      "end": 7386
+    },
+    "start": {
+      "line": 218,
+      "column": 4
+    },
+    "end": {
+      "line": 219,
+      "column": 43
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if not args:\n        return TypedExpr.bool_lit(identity)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if cache is None:\n        with typed_conversion_cache():\n            return expr_from_z3(expression)",
+  "range": {
+    "byteOffset": {
+      "start": 7684,
+      "end": 7784
+    },
+    "start": {
+      "line": 230,
+      "column": 4
+    },
+    "end": {
+      "line": 232,
+      "column": 43
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if cache is None:\n        with typed_conversion_cache():\n            return expr_from_z3(expression)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if cached is not None:\n        return cached[1]",
+  "range": {
+    "byteOffset": {
+      "start": 7877,
+      "end": 7924
+    },
+    "start": {
+      "line": 235,
+      "column": 4
+    },
+    "end": {
+      "line": 236,
+      "column": 24
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if cached is not None:\n        return cached[1]",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if not isinstance(expression, z3.ExprRef):\n        raise ArtifactError(\"typed Z3 input must be an expression\")",
+  "range": {
+    "byteOffset": {
+      "start": 8173,
+      "end": 8283
+    },
+    "start": {
+      "line": 245,
+      "column": 4
+    },
+    "end": {
+      "line": 246,
+      "column": 67
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if not isinstance(expression, z3.ExprRef):\n        raise ArtifactError(\"typed Z3 input must be an expression\")",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if z3.is_true(expression):\n        return TypedExpr.bool_lit(True)",
+  "range": {
+    "byteOffset": {
+      "start": 8331,
+      "end": 8397
+    },
+    "start": {
+      "line": 248,
+      "column": 4
+    },
+    "end": {
+      "line": 249,
+      "column": 39
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if z3.is_true(expression):\n        return TypedExpr.bool_lit(True)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if z3.is_false(expression):\n        return TypedExpr.bool_lit(False)",
+  "range": {
+    "byteOffset": {
+      "start": 8402,
+      "end": 8470
+    },
+    "start": {
+      "line": 250,
+      "column": 4
+    },
+    "end": {
+      "line": 251,
+      "column": 40
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if z3.is_false(expression):\n        return TypedExpr.bool_lit(False)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if z3.is_bv_value(expression):\n        return TypedExpr.bv_lit(expression.size(), expression.as_long())",
+  "range": {
+    "byteOffset": {
+      "start": 8475,
+      "end": 8578
+    },
+    "start": {
+      "line": 252,
+      "column": 4
+    },
+    "end": {
+      "line": 253,
+      "column": 72
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if z3.is_bv_value(expression):\n        return TypedExpr.bv_lit(expression.size(), expression.as_long())",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind in {z3.Z3_OP_AND, z3.Z3_OP_OR}:\n        raw_children = tuple(sorted(raw_children, key=lambda child: child.sexpr()))",
+  "range": {
+    "byteOffset": {
+      "start": 8668,
+      "end": 8791
+    },
+    "start": {
+      "line": 257,
+      "column": 4
+    },
+    "end": {
+      "line": 258,
+      "column": 83
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind in {z3.Z3_OP_AND, z3.Z3_OP_OR}:\n        raw_children = tuple(sorted(raw_children, key=lambda child: child.sexpr()))",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_UNINTERPRETED and not children:\n        return TypedExpr.var(str(expression.decl().name()), sort)",
+  "range": {
+    "byteOffset": {
+      "start": 8864,
+      "end": 8981
+    },
+    "start": {
+      "line": 260,
+      "column": 4
+    },
+    "end": {
+      "line": 261,
+      "column": 65
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_UNINTERPRETED and not children:\n        return TypedExpr.var(str(expression.decl().name()), sort)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_NOT:\n        return TypedExpr.unary(\"bool_not\", children[0])",
+  "range": {
+    "byteOffset": {
+      "start": 8986,
+      "end": 9066
+    },
+    "start": {
+      "line": 262,
+      "column": 4
+    },
+    "end": {
+      "line": 263,
+      "column": 55
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_NOT:\n        return TypedExpr.unary(\"bool_not\", children[0])",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_AND:\n        return _fold(\"bool_and\", children, True)",
+  "range": {
+    "byteOffset": {
+      "start": 9071,
+      "end": 9144
+    },
+    "start": {
+      "line": 264,
+      "column": 4
+    },
+    "end": {
+      "line": 265,
+      "column": 48
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_AND:\n        return _fold(\"bool_and\", children, True)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_OR:\n        return _fold(\"bool_or\", children, False)",
+  "range": {
+    "byteOffset": {
+      "start": 9149,
+      "end": 9221
+    },
+    "start": {
+      "line": 266,
+      "column": 4
+    },
+    "end": {
+      "line": 267,
+      "column": 48
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_OR:\n        return _fold(\"bool_or\", children, False)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_ITE:\n        return TypedExpr.ite(children[0], children[1], children[2])",
+  "range": {
+    "byteOffset": {
+      "start": 9226,
+      "end": 9318
+    },
+    "start": {
+      "line": 268,
+      "column": 4
+    },
+    "end": {
+      "line": 269,
+      "column": 67
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_ITE:\n        return TypedExpr.ite(children[0], children[1], children[2])",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind in _BINARY:\n        if kind == z3.Z3_OP_EQ and len(children) >= 2:\n            return _fold(\n                \"bool_and\",\n                tuple(\n                    TypedExpr.binary(\"eq\", children[0], child)\n                    for child in children[1:]\n                ),\n                True,\n            )\n        if kind in _ASSOCIATIVE_BV and len(children) >= 2:\n            result = children[0]\n            for child in children[1:]:\n                result = TypedExpr.binary(_BINARY[kind], result, child)\n            return result\n        if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )\n        return TypedExpr.binary(_BINARY[kind], children[0], children[1])",
+  "range": {
+    "byteOffset": {
+      "start": 9323,
+      "end": 10143
+    },
+    "start": {
+      "line": 270,
+      "column": 4
+    },
+    "end": {
+      "line": 290,
+      "column": 72
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind in _BINARY:\n        if kind == z3.Z3_OP_EQ and len(children) >= 2:\n            return _fold(\n                \"bool_and\",\n                tuple(\n                    TypedExpr.binary(\"eq\", children[0], child)\n                    for child in children[1:]\n                ),\n                True,\n            )\n        if kind in _ASSOCIATIVE_BV and len(children) >= 2:\n            result = children[0]\n            for child in children[1:]:\n                result = TypedExpr.binary(_BINARY[kind], result, child)\n            return result\n        if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )\n        return TypedExpr.binary(_BINARY[kind], children[0], children[1])",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_EQ and len(children) >= 2:\n            return _fold(\n                \"bool_and\",\n                tuple(\n                    TypedExpr.binary(\"eq\", children[0], child)\n                    for child in children[1:]\n                ),\n                True,\n            )",
+  "range": {
+    "byteOffset": {
+      "start": 9351,
+      "end": 9638
+    },
+    "start": {
+      "line": 271,
+      "column": 8
+    },
+    "end": {
+      "line": 279,
+      "column": 13
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if kind == z3.Z3_OP_EQ and len(children) >= 2:\n            return _fold(\n                \"bool_and\",\n                tuple(\n                    TypedExpr.binary(\"eq\", children[0], child)\n                    for child in children[1:]\n                ),\n                True,\n            )",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind in _ASSOCIATIVE_BV and len(children) >= 2:\n            result = children[0]\n            for child in children[1:]:\n                result = TypedExpr.binary(_BINARY[kind], result, child)\n            return result",
+  "range": {
+    "byteOffset": {
+      "start": 9647,
+      "end": 9867
+    },
+    "start": {
+      "line": 280,
+      "column": 8
+    },
+    "end": {
+      "line": 284,
+      "column": 25
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if kind in _ASSOCIATIVE_BV and len(children) >= 2:\n            result = children[0]\n            for child in children[1:]:\n                result = TypedExpr.binary(_BINARY[kind], result, child)\n            return result",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )",
+  "range": {
+    "byteOffset": {
+      "start": 9876,
+      "end": 10070
+    },
+    "start": {
+      "line": 285,
+      "column": 8
+    },
+    "end": {
+      "line": 289,
+      "column": 13
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind in _REVERSED_BINARY:\n        if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )\n        return TypedExpr.binary(\n            _REVERSED_BINARY[kind],\n            children[1],\n            children[0],\n        )",
+  "range": {
+    "byteOffset": {
+      "start": 10148,
+      "end": 10508
+    },
+    "start": {
+      "line": 291,
+      "column": 4
+    },
+    "end": {
+      "line": 301,
+      "column": 9
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind in _REVERSED_BINARY:\n        if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )\n        return TypedExpr.binary(\n            _REVERSED_BINARY[kind],\n            children[1],\n            children[0],\n        )",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )",
+  "range": {
+    "byteOffset": {
+      "start": 10185,
+      "end": 10379
+    },
+    "start": {
+      "line": 292,
+      "column": 8
+    },
+    "end": {
+      "line": 296,
+      "column": 13
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if len(children) != 2:\n            raise ArtifactError(\n                f\"Z3 operator {expression.decl().name()} ({kind}) has \"\n                f\"arity {len(children)}; expected 2\"\n            )",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_DISTINCT:\n        if len(children) != 2:\n            raise ArtifactError(\"only binary distinct is admitted\")\n        return TypedExpr.unary(\n            \"bool_not\",\n            TypedExpr.binary(\"eq\", children[0], children[1]),\n        )",
+  "range": {
+    "byteOffset": {
+      "start": 10513,
+      "end": 10769
+    },
+    "start": {
+      "line": 302,
+      "column": 4
+    },
+    "end": {
+      "line": 308,
+      "column": 9
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_DISTINCT:\n        if len(children) != 2:\n            raise ArtifactError(\"only binary distinct is admitted\")\n        return TypedExpr.unary(\n            \"bool_not\",\n            TypedExpr.binary(\"eq\", children[0], children[1]),\n        )",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if len(children) != 2:\n            raise ArtifactError(\"only binary distinct is admitted\")",
+  "range": {
+    "byteOffset": {
+      "start": 10551,
+      "end": 10641
+    },
+    "start": {
+      "line": 303,
+      "column": 8
+    },
+    "end": {
+      "line": 304,
+      "column": 67
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if len(children) != 2:\n            raise ArtifactError(\"only binary distinct is admitted\")",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_BNOT:\n        return TypedExpr.unary(\"bv_not\", children[0])",
+  "range": {
+    "byteOffset": {
+      "start": 10774,
+      "end": 10853
+    },
+    "start": {
+      "line": 309,
+      "column": 4
+    },
+    "end": {
+      "line": 310,
+      "column": 53
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_BNOT:\n        return TypedExpr.unary(\"bv_not\", children[0])",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind in {z3.Z3_OP_ZERO_EXT, z3.Z3_OP_SIGN_EXT}:\n        params = expression.params()\n        if len(params) != 1 or type(params[0]) is not int:\n            raise ArtifactError(\"Z3 extension has malformed parameters\")\n        return TypedExpr(\n            \"zero_extend\" if kind == z3.Z3_OP_ZERO_EXT else \"sign_extend\",\n            sort,\n            children,\n            amount=params[0],\n        )",
+  "range": {
+    "byteOffset": {
+      "start": 10858,
+      "end": 11258
+    },
+    "start": {
+      "line": 311,
+      "column": 4
+    },
+    "end": {
+      "line": 320,
+      "column": 9
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind in {z3.Z3_OP_ZERO_EXT, z3.Z3_OP_SIGN_EXT}:\n        params = expression.params()\n        if len(params) != 1 or type(params[0]) is not int:\n            raise ArtifactError(\"Z3 extension has malformed parameters\")\n        return TypedExpr(\n            \"zero_extend\" if kind == z3.Z3_OP_ZERO_EXT else \"sign_extend\",\n            sort,\n            children,\n            amount=params[0],\n        )",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if len(params) != 1 or type(params[0]) is not int:\n            raise ArtifactError(\"Z3 extension has malformed parameters\")",
+  "range": {
+    "byteOffset": {
+      "start": 10954,
+      "end": 11077
+    },
+    "start": {
+      "line": 313,
+      "column": 8
+    },
+    "end": {
+      "line": 314,
+      "column": 72
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if len(params) != 1 or type(params[0]) is not int:\n            raise ArtifactError(\"Z3 extension has malformed parameters\")",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_EXTRACT:\n        params = expression.params()\n        if (\n            len(params) != 2\n            or type(params[0]) is not int\n            or type(params[1]) is not int\n        ):\n            raise ArtifactError(\"Z3 extract has malformed parameters\")\n        return TypedExpr(\n            \"extract\",\n            sort,\n            children,\n            hi=params[0],\n            lo=params[1],\n        )",
+  "range": {
+    "byteOffset": {
+      "start": 11263,
+      "end": 11687
+    },
+    "start": {
+      "line": 321,
+      "column": 4
+    },
+    "end": {
+      "line": 335,
+      "column": 9
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_EXTRACT:\n        params = expression.params()\n        if (\n            len(params) != 2\n            or type(params[0]) is not int\n            or type(params[1]) is not int\n        ):\n            raise ArtifactError(\"Z3 extract has malformed parameters\")\n        return TypedExpr(\n            \"extract\",\n            sort,\n            children,\n            hi=params[0],\n            lo=params[1],\n        )",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if (\n            len(params) != 2\n            or type(params[0]) is not int\n            or type(params[1]) is not int\n        ):\n            raise ArtifactError(\"Z3 extract has malformed parameters\")",
+  "range": {
+    "byteOffset": {
+      "start": 11337,
+      "end": 11536
+    },
+    "start": {
+      "line": 323,
+      "column": 8
+    },
+    "end": {
+      "line": 328,
+      "column": 70
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if (\n            len(params) != 2\n            or type(params[0]) is not int\n            or type(params[1]) is not int\n        ):\n            raise ArtifactError(\"Z3 extract has malformed parameters\")",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_CONCAT:\n        if len(children) < 2:\n            raise ArtifactError(\"Z3 concat must have at least two operands\")\n        result = children[0]\n        for child in children[1:]:\n            result = TypedExpr(\n                \"concat\",\n                TermSort.bv(result.sort.width + child.sort.width),\n                (result, child),\n            )\n        return result",
+  "range": {
+    "byteOffset": {
+      "start": 11692,
+      "end": 12084
+    },
+    "start": {
+      "line": 336,
+      "column": 4
+    },
+    "end": {
+      "line": 346,
+      "column": 21
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_CONCAT:\n        if len(children) < 2:\n            raise ArtifactError(\"Z3 concat must have at least two operands\")\n        result = children[0]\n        for child in children[1:]:\n            result = TypedExpr(\n                \"concat\",\n                TermSort.bv(result.sort.width + child.sort.width),\n                (result, child),\n            )\n        return result",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if len(children) < 2:\n            raise ArtifactError(\"Z3 concat must have at least two operands\")",
+  "range": {
+    "byteOffset": {
+      "start": 11728,
+      "end": 11826
+    },
+    "start": {
+      "line": 337,
+      "column": 8
+    },
+    "end": {
+      "line": 338,
+      "column": 76
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if len(children) < 2:\n            raise ArtifactError(\"Z3 concat must have at least two operands\")",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_CONST_ARRAY:\n        return TypedExpr(\"const_array\", sort, children)",
+  "range": {
+    "byteOffset": {
+      "start": 12089,
+      "end": 12177
+    },
+    "start": {
+      "line": 347,
+      "column": 4
+    },
+    "end": {
+      "line": 348,
+      "column": 55
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_CONST_ARRAY:\n        return TypedExpr(\"const_array\", sort, children)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_SELECT:\n        return TypedExpr(\"select\", sort, children)",
+  "range": {
+    "byteOffset": {
+      "start": 12182,
+      "end": 12260
+    },
+    "start": {
+      "line": 349,
+      "column": 4
+    },
+    "end": {
+      "line": 350,
+      "column": 50
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_SELECT:\n        return TypedExpr(\"select\", sort, children)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if kind == z3.Z3_OP_STORE:\n        return TypedExpr(\"store\", sort, children)",
+  "range": {
+    "byteOffset": {
+      "start": 12265,
+      "end": 12341
+    },
+    "start": {
+      "line": 351,
+      "column": 4
+    },
+    "end": {
+      "line": 352,
+      "column": 49
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if kind == z3.Z3_OP_STORE:\n        return TypedExpr(\"store\", sort, children)",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if unknown:\n        raise ArtifactError(\n            f\"update names are not declared: {sorted(unknown)}\"\n        )",
+  "range": {
+    "byteOffset": {
+      "start": 12704,
+      "end": 12818
+    },
+    "start": {
+      "line": 364,
+      "column": 4
+    },
+    "end": {
+      "line": 367,
+      "column": 9
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if unknown:\n        raise ArtifactError(\n            f\"update names are not declared: {sorted(unknown)}\"\n        )",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if value.sort != declaration.sort:\n            raise ArtifactError(\n                f\"update for {declaration.name!r} has wrong sort\"\n            )",
+  "range": {
+    "byteOffset": {
+      "start": 13070,
+      "end": 13217
+    },
+    "start": {
+      "line": 375,
+      "column": 8
+    },
+    "end": {
+      "line": 378,
+      "column": 13
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "        if value.sort != declaration.sort:\n            raise ArtifactError(\n                f\"update for {declaration.name!r} has wrong sort\"\n            )",
+  "charCount": {
+    "leading": 8,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if typed_guard.sort != BOOL:\n        raise ArtifactError(\"step guard is not Bool\")",
+  "range": {
+    "byteOffset": {
+      "start": 13612,
+      "end": 13694
+    },
+    "start": {
+      "line": 393,
+      "column": 4
+    },
+    "end": {
+      "line": 394,
+      "column": 53
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if typed_guard.sort != BOOL:\n        raise ArtifactError(\"step guard is not Bool\")",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if typed_pc.sort != BV64:\n        raise ArtifactError(\"mirrored PC is not BV64\")",
+  "range": {
+    "byteOffset": {
+      "start": 13699,
+      "end": 13779
+    },
+    "start": {
+      "line": 395,
+      "column": 4
+    },
+    "end": {
+      "line": 396,
+      "column": 54
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if typed_pc.sort != BV64:\n        raise ArtifactError(\"mirrored PC is not BV64\")",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+},
+{
+  "text": "if type(target) is int:\n        typed_target = Target(\"address\", target)\n    elif isinstance(target, z3.ExprRef):\n        typed_target = Target(\"symbolic\", expr_from_z3(target))\n    elif target in {\"halt\", \"error\", \"stuck\"}:\n        typed_target = Target(target)\n    else:\n        raise ArtifactError(\"target is neither address, BV64, nor terminal\")",
+  "range": {
+    "byteOffset": {
+      "start": 13784,
+      "end": 14133
+    },
+    "start": {
+      "line": 397,
+      "column": 4
+    },
+    "end": {
+      "line": 404,
+      "column": 76
+    }
+  },
+  "file": "extractor/typed_z3.py",
+  "lines": "    if type(target) is int:\n        typed_target = Target(\"address\", target)\n    elif isinstance(target, z3.ExprRef):\n        typed_target = Target(\"symbolic\", expr_from_z3(target))\n    elif target in {\"halt\", \"error\", \"stuck\"}:\n        typed_target = Target(target)\n    else:\n        raise ArtifactError(\"target is neither address, BV64, nor terminal\")",
+  "charCount": {
+    "leading": 4,
+    "trailing": 0
+  },
+  "language": "Python"
+}
+]
