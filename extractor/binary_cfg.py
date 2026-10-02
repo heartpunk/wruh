@@ -72,7 +72,9 @@ def _validate_block_partition(
                 f"leaves [{entry:#x}, {extent_end:#x})"
             )
         if block_start < previous_end:
-            pass  # User-requested diagnostic bypass; not a correctness fix.
+            raise InventoryError(
+                f"{root_name}: overlapping static block at {block_start:#x}"
+            )
         previous_end = block_end
         records = block["instructions"]
         if not records or records[0]["address"] != block_start:
@@ -345,6 +347,8 @@ def _walk_function(
         for statement in block.vex.statements:
             if not isinstance(statement, pyvex.stmt.Exit):
                 continue
+            if statement.jumpkind == "Ijk_SigFPE_IntDiv":
+                continue  # Diagnostic CFG classification; STS fault handling unresolved.
             target = _constant_target(statement.dst)
             if target is None:
                 raise InventoryError(
