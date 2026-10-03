@@ -11,7 +11,7 @@ private def model : QFAbvSTS registers := ⟨[swap]⟩
 
 /-- Evaluate the actual extracted update: assignments remain simultaneous. -/
 example (x y : BitVec 8) :
-    ((extract (adapter registers) model).steps[0]'(by decide)).update.eval
+    ((extract (adapter registers) model).steps[0]'(by exact Nat.zero_lt_succ 0)).update.eval
       (.cons x (.cons y .nil)) = .cons y (.cons x .nil) := rfl
 
 /-- Empty source remains empty, with no invented transition. -/
@@ -27,8 +27,8 @@ example {Γ : Ctx} (s t : Env Γ) :
 
 /-- Disabled source edge stays disabled in the actual output. -/
 example (s t : Env registers) :
-    ¬ ((extract (adapter registers)
-      (⟨[⟨.boolLit false, swap.update⟩]⟩ : QFAbvSTS registers))).steps[0]'(by decide).denotes s t := by
+    ¬ (((extract (adapter registers)
+      (⟨[⟨.boolLit false, swap.update⟩]⟩ : QFAbvSTS registers)).steps[0]'(by exact Nat.zero_lt_succ 0)).denotes s t) := by
   simp [extract, extractTagged, adapter, observation, QFAbvSTS.symbolicStep,
     ShareCommon.shareCommon', Wruh.FreshTransform.transform,
     Wruh.FreshTransform.resolve, Wruh.FreshTransform.fromResolved,
