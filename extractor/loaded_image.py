@@ -25,6 +25,13 @@ def load_object_set(artifact: Path, specification: Path | None = None) -> angr.P
     expected = {str(artifact.resolve()), *paths}
     if actual != expected:
         raise ValueError(f"loaded object set differs: expected={expected}, actual={actual}")
+    hook_candidates = {project.entry}
+    for obj in project.loader.all_objects:
+        hook_candidates.update(symbol.rebased_addr for symbol in obj.symbols)
+        hook_candidates.update(getattr(obj, "plt", {}).values())
+    for address in hook_candidates:
+        if project.is_hooked(address):
+            project.unhook(address)
     if project.is_hooked(project.entry):
         raise ValueError('entry unexpectedly hooked')
     return project
