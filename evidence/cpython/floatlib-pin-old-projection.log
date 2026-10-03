@@ -1,0 +1,28 @@
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-4fa1769e':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-3Ro8GoJVh7MbfLPZa0mWhQIUCqG4ZWJ/5BR2f5gjKPc%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: fa80999b-e210-474d-a652-d63ba7c28d5e
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //extractor:angr_upgrade_parity (0 packages loaded, 0 targets configured)
+Analyzing: target //extractor:angr_upgrade_parity (0 packages loaded, 0 targets configured)
+
+Analyzing: target //extractor:angr_upgrade_parity (0 packages loaded, 516 targets configured)
+
+INFO: Analyzed target //extractor:angr_upgrade_parity (1 packages loaded, 547 targets configured).
+INFO: Found 1 target...
+Target //extractor:angr_upgrade_parity up-to-date:
+  bazel-bin/extractor/angr_upgrade_parity
+INFO: Elapsed time: 2.916s, Critical Path: 0.01s
+INFO: 9 processes: 1 action cache hit, 9 internal.
+INFO: Build completed successfully, 9 total actions
+INFO: Running command line: bazel-bin/extractor/angr_upgrade_parity <args omitted>
+corpus_native_model_O0_alias.json 24 UNSAT
+corpus_native_model_O0_division.json 56 UNSAT
+corpus_native_model_O0_overlap.json 42 UNSAT
+corpus_native_model_O2_alias.json 12 UNSAT
+corpus_native_model_O2_division.json 50 UNSAT
+corpus_native_model_O2_overlap.json 12 UNSAT
