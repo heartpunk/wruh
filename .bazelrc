@@ -1,5 +1,6 @@
 common --enable_bzlmod
 common --repo_env=GIT_CONFIG_GLOBAL=/dev/null
+common --repo_env=GHOT_NIX_ANGR_ROOT
 common --repo_env=GHOT_NIX_LIBSTDCXX_ROOT
 common --repo_env=GHOT_REAPI_WORKER_RUNTIME_ROOT
 build --show_result=20
