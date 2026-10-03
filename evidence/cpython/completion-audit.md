@@ -17,11 +17,15 @@ This is an interim audit, not a completion claim.
 | Python FP sorts/operations/codec/DAG/Z3/interpretation | AYXGf27e3824; supported fp_test/z3_test pass, evidence/cpython/floatlib-ayxg-pin-tests.log | Integrated/tested Python |
 | Lean FP types/eval/substitution/laws | AYXG0d279809; all12 core modules typechecked; evidence/cpython/ayxg-fp-lean-core.log; fresh read-only review found no blocking defect | Core checked and committed pin integrated; cross-language checks pending |
 | FloatLib RNA support | 222236f0 removes non-IEEE sqrt fallback; scoped kernel proofs and1,020 operational comparisons pass | Corrected IEEE checks and expanded1,305 FloatLib/Z3 fixtures pass; evidence in AYXGf27e3824 |
-| Canonical Python/Lean/Z3 FP correspondence | FloatLib operational fixtures plus Python tests; AYXG cross-language bridge pending | Incomplete |
+| Canonical Python/Lean/Z3 FP correspondence | FloatLib operational fixtures plus Python tests; actual Lean shared bridge builds (4351 targets), FFI launch repair in progress | Incomplete |
 | Exact extraction CPython closure/build | identity.json and each successful action runtime trace; hashes/build match | Complete |
 | Real CPython integer/memory/dynamic-transfer STSes | Three full compressed artifacts,23/82/191 edges; fresh independent review | Complete selected-function scope |
-| Real CPython arithmetic FP STSes | float_add/float_mul fail public angr SMT export conversion width | Incomplete; upstream repair question pending |
+| Real CPython arithmetic FP STSes | float_add/float_mul fail public angr SMT export conversion width | Incomplete; scoped angr source repair approved, committed and building |
 | No candidate native execution | Probe treats ELF inputs as data; fixture compilation/static loading only | Maintained |
 | Final committed integrated evidence | Current local integration, interim evidence and pins committed | Incomplete until Lean/FP lifting/remaining validations finish |
 
 No whole-interpreter composition, physical x87/NaN-payload/exception fidelity, dynamic-linker execution, initialized interpreter state, or release claim follows from these checks.
+
+## Approved exporter repair in flight
+
+ANGR_NIX `52f1b96515da7fbe5059e3251fd603acf56deb2b` builds pinned angr 10.0.1 source with four `mantissa + 1` SMT export corrections, upstream-required grpcio-tools 1.80 wheels, and declared angr-data. WRUH `b02dac78` declares the Nix-built package as its Bazel pip repository override and checks all four conversion forms at binary32/binary64. These checks are committed but not yet executed against the rebuilt package. Frozen snapshots retain earlier logs; no candidate native execution occurred.
