@@ -51,6 +51,7 @@ class InventoryPolicy:
     resolve_root_symbol: Callable[[str, list[str]], str]
     require_pic: bool = False
     open_transfers: bool = False
+    discover_direct_targets: bool = True
 
 
 def classify_call(
@@ -101,6 +102,7 @@ def exact_symbol_inventory_policy(
     declared_primitives: frozenset[str] = frozenset(),
     require_pic: bool = False,
     open_transfers: bool = False,
+    discover_direct_targets: bool = True,
 ) -> InventoryPolicy:
     """Select arbitrary roots whose inventory IDs are exact ELF symbols."""
 
@@ -121,6 +123,7 @@ def exact_symbol_inventory_policy(
         resolve_root_symbol=resolve,
         require_pic=require_pic,
         open_transfers=open_transfers,
+        discover_direct_targets=discover_direct_targets,
     )
 
 
@@ -281,7 +284,7 @@ def inventory_project(
                     else None
                 )
                 local = root_at_address.get(encoded_target)
-                if local is None and encoded_target is not None:
+                if local is None and encoded_target is not None and policy.discover_direct_targets:
                     local_symbol = _function_symbol_at(project, encoded_target)
                     if local_symbol is not None and not policy.open_transfers and local_symbol.name.startswith("plt:"):
                         local_symbol = None
@@ -311,7 +314,7 @@ def inventory_project(
                         pending.append(local_id)
                         local = (local_id, local_symbol.name)
                 plt_names = plt_at_address.get(encoded_target, ())
-                if local is None and len(plt_names) == 1:
+                if local is None and len(plt_names) == 1 and policy.discover_direct_targets:
                     self_plt_symbol = _function_symbol_named(project, plt_names[0])
                     if self_plt_symbol is not None:
                         local_id = self_plt_symbol.name

@@ -32,6 +32,11 @@ def main():
         roots=('direct_root','indirect_root','tail_root','child')
         manifest=inventory_project(project,entry,exact_symbol_inventory_policy(roots,open_transfers=True))
         pinned=PinnedBinary(entry,manifest,project); cfg=build_static_cfg(pinned)
+        selected_only=inventory_project(project,entry,exact_symbol_inventory_policy(('direct_root',),open_transfers=True,discover_direct_targets=False))
+        assert set(selected_only['roots'])=={'direct_root'}
+        selected_cfg=build_static_cfg(PinnedBinary(entry,selected_only,project))
+        assert selected_cfg['roots']['direct_root']['calls'][0]['kind']=='open'
+        assert selected_cfg['roots']['direct_root']['calls'][0]['target']==project.loader.main_object.plt['child']
         functions=[extract_fresh_function(pinned,cfg,name) for name in cfg["roots"]]
         assert any(name.startswith("plt:child:") for name in cfg["roots"])
         library_hash=hashlib.sha256(library.read_bytes()).hexdigest()
@@ -56,7 +61,7 @@ def main():
         try: relocation_write_size(UnknownRelocation(owner,symbol,0))
         except ValueError: pass
         else: raise AssertionError('unknown write extent accepted')
-        result={'relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
+        result={'root_only_selection':'direct callee remains exact open target','relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
             'objects':[{key:obj[key] for key in ('sha256','mapped_base','linked_base','relocations','undefined_bytes')} for obj in image['objects']],
             'roots':manifest['roots'],'local_edges':{f.function_id:len(f.local_edges) for f in functions},
             'indirect_calls':cfg['roots']['indirect_root']['calls'], 'native_execution':False}
