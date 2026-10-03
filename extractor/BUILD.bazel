@@ -1,4 +1,4 @@
-load("@extractor_pypi//:requirements.bzl", "requirement")
+load("@wruh_pypi//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//tools:reapi_artifact_action.bzl", "reapi_artifact_action")
 

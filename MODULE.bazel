@@ -35,7 +35,7 @@ register_toolchains("@nix_python_toolchains//:all")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
-    hub_name = "extractor_pypi",
+    hub_name = "wruh_pypi",
     python_interpreter = "python3.12",
     python_version = "3.12",
     requirements_by_platform = {
@@ -44,10 +44,10 @@ pip.parse(
 )
 override_repo(
     pip,
-    extractor_pypi_312_arpy = "ghot_vendored_arpy",
-    extractor_pypi_312_mulpyplexer = "ghot_vendored_mulpyplexer",
+    wruh_pypi_312_arpy = "ghot_vendored_arpy",
+    wruh_pypi_312_mulpyplexer = "ghot_vendored_mulpyplexer",
 )
-use_repo(pip, "extractor_pypi")
+use_repo(pip, "wruh_pypi")
 
 nix_native_deps = use_extension("//tools:nix_native_deps.bzl", "nix_native_deps")
 use_repo(nix_native_deps, "nix_native_deps")
