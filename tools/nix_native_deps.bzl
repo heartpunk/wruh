@@ -49,3 +49,48 @@ def _extension_impl(_module_ctx):
 
 
 nix_native_deps = module_extension(implementation = _extension_impl)
+
+
+_ANGR_ENV = "GHOT_NIX_ANGR_ROOT"
+
+
+def _angr_repository_impl(ctx):
+    root = ctx.os.environ.get(_ANGR_ENV)
+    if not root or not root.startswith("/nix/store/"):
+        fail("{} must name an immutable Nix store output".format(_ANGR_ENV))
+    site = ctx.path(root + "/lib/python3.12/site-packages")
+    if not site.get_child("angr/__init__.py").exists:
+        fail("{} lacks the Python 3.12 angr package".format(_ANGR_ENV))
+    ctx.symlink(site, "site-packages")
+    ctx.file("BUILD.bazel", """\
+load("@rules_python//python:defs.bzl", "py_library")
+package(default_visibility = ["//visibility:public"])
+py_library(
+    name = "pkg",
+    srcs = glob(["site-packages/angr/**/*.py"]),
+    data = glob(["site-packages/angr/**/*"], exclude = ["**/*.py", "**/__pycache__/**"]),
+    imports = ["site-packages"],
+    deps = ["@wruh_pypi//{}:pkg".format(name) for name in [
+        "angr_data", "archinfo", "cachetools", "capstone", "cffi", "cle",
+        "cxxheaderparser", "gitpython", "lmdb", "msgspec", "mulpyplexer",
+        "networkx", "platformdirs", "protobuf", "psutil", "pycparser",
+        "pydemumble", "pypcode", "pyvex", "rich", "sortedcontainers", "sympy",
+        "typing_extensions", "z3_solver",
+    ]],
+)
+""")
+
+
+_angr_repository = repository_rule(
+    implementation = _angr_repository_impl,
+    configure = True,
+    environ = [_ANGR_ENV],
+    local = True,
+)
+
+
+def _angr_extension_impl(_module_ctx):
+    _angr_repository(name = "nix_angr")
+
+
+nix_angr = module_extension(implementation = _angr_extension_impl)

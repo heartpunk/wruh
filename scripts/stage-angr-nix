@@ -2,7 +2,7 @@
 set -euo pipefail
 # Supply the owning ANGR_NIX clone root, not a linked JJ workspace.
 source_root="${1:?usage: scripts/stage-angr-nix ANGR_NIX_CLONE_ROOT}"
-revision=ca288bef3145174ae8385004e2cbcf6caabb9a76
+revision=52f1b96515da7fbe5059e3251fd603acf56deb2b
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 archive="$(mktemp -t wruh-angr-nix.XXXXXX)"
 trap 'rm -f "$archive"' EXIT

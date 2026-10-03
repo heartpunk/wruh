@@ -44,6 +44,7 @@ pip.parse(
 )
 override_repo(
     pip,
+    wruh_pypi_312_angr = "nix_angr",
     wruh_pypi_312_arpy = "ghot_vendored_arpy",
     wruh_pypi_312_mulpyplexer = "ghot_vendored_mulpyplexer",
 )
@@ -51,3 +52,6 @@ use_repo(pip, "wruh_pypi")
 
 nix_native_deps = use_extension("//tools:nix_native_deps.bzl", "nix_native_deps")
 use_repo(nix_native_deps, "nix_native_deps")
+
+nix_angr = use_extension("//tools:nix_native_deps.bzl", "nix_angr")
+use_repo(nix_angr, "nix_angr")
