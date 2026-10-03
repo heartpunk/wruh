@@ -295,25 +295,33 @@ def compose_fresh_paths(
 
             call = call_at.get(path.pc)
             if call is not None:
-                target_address = int(call["target"])
-                target_value = (
-                    int(target.value)
-                    if target.kind == "address"
-                    else _target_value(target.value, declarations)
-                    if target.kind == "symbolic" and isinstance(target.value, TypedExpr)
-                    else None
-                )
-                if target_value != target_address:
-                    raise FreshCompositionError(
-                        f"call edge at {path.pc:#x} disagrees with CFG target"
-                    )
                 continuation = path.pc + instruction["size"]
-                queue.append(replace_pending(
-                    updated,
-                    function_id=root_at.get(target_address, path.function_id),
-                    pc=target_address,
-                    calls=path.calls + (continuation,),
-                ))
+                if target.kind == "address":
+                    address = int(target.value)
+                    if address in instruction_at or address in primitive_by_source:
+                        queue.append(replace_pending(updated, pc=address,
+                            function_id=root_at.get(address, path.function_id),
+                            calls=path.calls + (continuation,)))
+                    else:
+                        record(updated, state_after, target)
+                    continue
+                if target.kind == "symbolic" and isinstance(target.value, TypedExpr):
+                    concrete = _target_value(target.value, declarations)
+                    addresses = (concrete,) if concrete is not None else tuple(sorted(root_at))
+                    equalities = tuple(TypedExpr.equal(target.value,
+                        TypedExpr.bv_lit(64, address)) for address in addresses)
+                    record(replace_pending(updated, guard=_and(updated.guard,
+                        TypedExpr.negate(TypedExpr.disjoin(*equalities)))), state_after, target)
+                    for address, equality in zip(addresses, equalities, strict=True):
+                        branch = replace_pending(updated, guard=_and(updated.guard, equality))
+                        if address not in instruction_at and address not in primitive_by_source:
+                            record(branch, state_after, target)
+                        else:
+                            queue.append(replace_pending(branch, pc=address,
+                                function_id=root_at.get(address, path.function_id),
+                                calls=path.calls + (continuation,)))
+                    continue
+                record(updated, state_after, target)
                 continue
 
             if target.kind == "address":
@@ -334,9 +342,7 @@ def compose_fresh_paths(
                 else:
                     successors = successors_at.get(path.pc, ())
                 if not successors:
-                    raise FreshCompositionError(
-                        f"symbolic control target at {path.pc:#x} has no CFG successors"
-                    )
+                    successors = tuple(sorted(root_at))
                 target_guards = tuple(
                     TypedExpr.equal(
                         target.value, TypedExpr.bv_lit(64, address)

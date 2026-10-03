@@ -204,7 +204,7 @@ def extract_fresh_function(
             Occurrence(
                 occurrence_id,
                 DecodedInstructionEvidence(
-                    image_sha256=cfg["image_sha256"],
+                    image_sha256=root.get("image_sha256", cfg["image_sha256"]),
                     canonical_address=address,
                     instruction_bytes=instruction["bytes"],
                     architecture="AMD64",

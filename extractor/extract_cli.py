@@ -20,7 +20,8 @@ from extractor.native_runtime import preload_libstdcxx
 _LIBSTDCXX = preload_libstdcxx()
 
 from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import load_pinned_binary
+from extractor.binary_inventory import load_pinned_binary, exact_symbol_inventory_policy, inventory_project, PinnedBinary
+from extractor.loaded_image import load_object_set, loaded_image_data
 from extractor.fresh import extract_fresh_function
 
 
@@ -55,9 +56,16 @@ def _root_closure(cfg: dict[str, Any], root_id: str) -> tuple[str, ...]:
 
 
 def _run(arguments: argparse.Namespace) -> dict[str, Any]:
-    provider = _provider(arguments.provider)
-    policy = provider.inventory_policy()
-    pinned = load_pinned_binary(arguments.artifact, arguments.manifest, policy)
+    provider = _provider(arguments.provider) if arguments.provider else None
+    if provider is not None:
+        if arguments.manifest is None:
+            raise ValueError("provider extraction requires --manifest")
+        pinned = load_pinned_binary(arguments.artifact, arguments.manifest, provider.inventory_policy())
+    else:
+        project = load_object_set(arguments.artifact, arguments.objects)
+        policy = exact_symbol_inventory_policy((arguments.root,), open_transfers=True)
+        manifest = inventory_project(project, arguments.artifact, policy)
+        pinned = PinnedBinary(arguments.artifact, manifest, project)
     actual_cfg = build_static_cfg(pinned)
     if arguments.cfg is None:
         cfg = actual_cfg
@@ -71,8 +79,8 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         extract_fresh_function(pinned, cfg, function_id)
         for function_id in roots
     )
-    external_edges = provider.external_call_edges(pinned, cfg)
-    return {
+    external_edges = provider.external_call_edges(pinned, cfg) if provider else ()
+    result = {
         "schema": "wruh-fresh-bundle-v1",
         "image_sha256": pinned.manifest["image_sha256"],
         "root_id": arguments.root,
@@ -81,12 +89,17 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         "external_edges": [edge.to_data() for edge in external_edges],
     }
 
+    if provider is None:
+        result["loaded_image"] = loaded_image_data(pinned.project)
+    return result
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--provider", type=Path, required=True)
+    parser.add_argument("--provider", type=Path)
     parser.add_argument("--artifact", type=Path, required=True)
-    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--objects", type=Path, help="explicit object-set JSON paths and base addresses")
     parser.add_argument("--cfg", type=Path)
     parser.add_argument("--root", required=True)
     parser.add_argument("--output", type=Path, required=True)

@@ -118,7 +118,7 @@ def _resolve_call_target(
         return ("direct-local", root_at_address[target])
     if target in primitive_at_address:
         return ("modeled-primitive", primitive_at_address[target])
-    raise InventoryError(f"CFG discovered undeclared call target {target:#x}")
+    return ("open", "indirect" if target is None else f"address:{target:#x}")
 
 
 def _constant_target(expression: Any) -> int | None:
@@ -355,22 +355,16 @@ def _walk_function(
                     f"{root_name}: symbolic conditional target at "
                     f"{block_address:#x}"
                 )
-            if not (entry <= target < extent_end):
-                raise InventoryError(
-                    f"{root_name}: conditional edge leaves the function "
-                    f"for {target:#x}"
-                )
-            successors.add(target)
+            if entry <= target < extent_end:
+                successors.add(target)
+            elif not pinned.manifest.get("open_transfers"):
+                raise InventoryError(f"{root_name}: conditional edge leaves function")
 
         jumpkind = block.vex.jumpkind
         if jumpkind == "Ijk_Ret":
             pass
         elif jumpkind == "Ijk_Call":
             target = _constant_target(block.vex.next)
-            if target is None:
-                raise InventoryError(
-                    f"{root_name}: indirect call at {block_address:#x}"
-                )
             call_instruction = instructions[-1]
             if not call_instruction["mnemonic"].startswith("call"):
                 raise InventoryError(
@@ -388,9 +382,9 @@ def _walk_function(
             if (
                 len(decoded) != 1
                 or len(decoded[0].operands) != 1
-                or decoded[0].operands[0].type
-                != capstone.x86.X86_OP_IMM
-                or decoded[0].operands[0].imm != target
+                or (target is not None and (
+                    decoded[0].operands[0].type != capstone.x86.X86_OP_IMM
+                    or decoded[0].operands[0].imm != target))
             ):
                 raise InventoryError(
                     f"{root_name}: encoded and VEX call targets disagree "
@@ -413,19 +407,19 @@ def _walk_function(
             target = _constant_target(block.vex.next)
             if target is not None:
                 if not (entry <= target < extent_end):
-                    raise InventoryError(
-                        f"{root_name}: non-call edge leaves the function "
-                        f"for {target:#x}"
-                    )
-                successors.add(target)
+                    if not pinned.manifest.get("open_transfers"):
+                        raise InventoryError(f"{root_name}: non-call edge leaves function")
+                else:
+                    successors.add(target)
             else:
                 site = instructions[-1]["address"]
-                if site not in jump_tables:
+                if site not in jump_tables and not pinned.manifest.get("open_transfers"):
                     raise InventoryError(
                         f"{root_name}: undeclared indirect jump at {site:#x}"
                     )
-                walked_indirect_sites.add(site)
-                successors.update(jump_tables[site])
+                if site in jump_tables:
+                    walked_indirect_sites.add(site)
+                    successors.update(jump_tables[site])
         else:
             raise InventoryError(
                 f"{root_name}: unsupported jumpkind {jumpkind!r} at "
@@ -478,11 +472,8 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
     for root_name in ordered_roots:
         root = roots[root_name]
         entry = root["address"]
-        jump_tables = _recover_relative_jump_tables(
-            pinned,
-            root_name=root_name,
-            root=root,
-        )
+        jump_tables = {} if pinned.manifest.get("open_transfers") else _recover_relative_jump_tables(
+            pinned, root_name=root_name, root=root)
         blocks, raw_calls, walked_indirect_sites = _walk_function(
             pinned,
             root_name=root_name,
@@ -506,7 +497,7 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
                 primitive_at_address=primitive_at_address,
             )
             graph_name = (
-                name if kind == "direct-local" else f"primitive:{name}"
+                name if kind == "direct-local" else f"{'primitive' if kind == 'modeled-primitive' else 'open'}:{name}"
             )
             call_counts[graph_name] += 1
             calls.append(
@@ -520,7 +511,7 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
 
         recovered_call_graph[root_name] = dict(sorted(call_counts.items()))
         expected_calls = pinned.manifest["call_graph"][root_name]
-        if recovered_call_graph[root_name] != expected_calls:
+        if not pinned.manifest.get("open_transfers") and recovered_call_graph[root_name] != expected_calls:
             raise InventoryError(
                 f"{root_name}: CFG call graph disagrees with the pinned "
                 f"inventory: expected={expected_calls!r}, "
@@ -542,6 +533,7 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
             "calls": calls,
             "size": root["size"],
             "symbol": root["symbol"],
+            **({key: root[key] for key in ("image_sha256", "object_path") if key in root}),
         }
 
     return {

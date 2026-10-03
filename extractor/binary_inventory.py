@@ -21,6 +21,7 @@ class InventoryError(RuntimeError):
 class CallKind(Enum):
     DIRECT_LOCAL = "direct-local"
     MODELED_PRIMITIVE = "modeled-primitive"
+    OPEN = "open"
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class InventoryPolicy:
     declared_primitives: frozenset[str]
     resolve_root_symbol: Callable[[str, list[str]], str]
     require_pic: bool = False
+    open_transfers: bool = False
 
 
 def classify_call(
@@ -56,13 +58,18 @@ def classify_call(
     resolution: CallResolution,
     selected_symbols: frozenset[str],
     declared_primitives: frozenset[str],
+    open_transfers: bool = False,
 ) -> tuple[CallKind, str]:
     """Classify one encoded call without retargeting past its successor."""
 
     if encoded_target is None:
+        if open_transfers:
+            return (CallKind.OPEN, "indirect")
         raise InventoryError("indirect call is forbidden")
 
     names = resolution.local_names + resolution.plt_names
+    if not names and open_transfers:
+        return (CallKind.OPEN, f"address:{encoded_target:#x}")
     if not names:
         raise InventoryError(f"unresolved direct call target {encoded_target:#x}")
     if len(names) != 1:
@@ -77,6 +84,8 @@ def classify_call(
         raise InventoryError(
             f"rooted self-PLT call is forbidden: {name} at {encoded_target:#x}"
         )
+    if name not in declared_primitives and open_transfers:
+        return (CallKind.OPEN, name)
     if name not in declared_primitives:
         raise InventoryError(
             f"undeclared external call is forbidden: {name} at "
@@ -90,6 +99,7 @@ def exact_symbol_inventory_policy(
     *,
     declared_primitives: frozenset[str] = frozenset(),
     require_pic: bool = False,
+    open_transfers: bool = False,
 ) -> InventoryPolicy:
     """Select arbitrary roots whose inventory IDs are exact ELF symbols."""
 
@@ -109,6 +119,7 @@ def exact_symbol_inventory_policy(
         declared_primitives=declared_primitives,
         resolve_root_symbol=resolve,
         require_pic=require_pic,
+        open_transfers=open_transfers,
     )
 
 
@@ -118,7 +129,8 @@ def _function_symbol_at(project: angr.Project, address: int) -> Any | None:
     image = project.loader.main_object
     candidates = [
         symbol
-        for symbol in image.symbols
+        for obj in project.loader.all_objects
+        for symbol in obj.symbols
         if symbol.name
         and symbol.size > 0
         and symbol.rebased_addr == address
@@ -173,11 +185,14 @@ def inventory_project(
     if policy.require_pic and not image.pic:
         raise InventoryError("extractor artifact must be a PIE")
 
-    symbols = {
-        symbol.name: symbol
-        for symbol in image.symbols
-        if symbol.name and symbol.size > 0
-    }
+    symbols = {}
+    for obj in project.loader.all_objects:
+        for symbol in obj.symbols:
+            if symbol.name and symbol.size > 0:
+                key = symbol.name
+                if key in symbols and symbols[key].rebased_addr != symbol.rebased_addr:
+                    key = f"{Path(obj.binary).name}:{symbol.name}"
+                symbols[key] = symbol
 
     roots: dict[str, Any] = {}
     root_at_address: dict[int, tuple[str, str]] = {}
@@ -229,7 +244,7 @@ def inventory_project(
         call_graph[root] = Counter()
         indirect_jumps[root] = []
         symbol_name = roots[root]["symbol"]
-        symbol = symbols[symbol_name]
+        symbol = next(value for value in symbols.values() if value.rebased_addr == roots[root]["address"])
         code = project.loader.memory.load(symbol.rebased_addr, symbol.size)
         instructions = list(
             project.arch.capstone.disasm(code, symbol.rebased_addr)
@@ -258,7 +273,7 @@ def inventory_project(
                 if local is None and encoded_target is not None:
                     local_symbol = _function_symbol_at(project, encoded_target)
                     if local_symbol is not None:
-                        local_id = local_symbol.name
+                        local_id = next((key for key, value in symbols.items() if value is local_symbol), local_symbol.name)
                         existing = roots.get(local_id)
                         if existing is not None and (
                             existing["address"] != local_symbol.rebased_addr
@@ -311,6 +326,7 @@ def inventory_project(
                         selected["symbol"] for selected in roots.values()
                     ),
                     declared_primitives=policy.declared_primitives,
+                    open_transfers=policy.open_transfers,
                 )
                 if kind is CallKind.DIRECT_LOCAL:
                     if local is None:
@@ -319,7 +335,8 @@ def inventory_project(
                         )
                     call_graph[root][local[0]] += 1
                 else:
-                    call_graph[root][f"primitive:{target_name}"] += 1
+                    prefix = "primitive" if kind is CallKind.MODELED_PRIMITIVE else "open"
+                    call_graph[root][f"{prefix}:{target_name}"] += 1
                 continue
 
             if not instruction.mnemonic.startswith("jmp"):
@@ -335,6 +352,8 @@ def inventory_project(
                     <= operand.imm
                     < symbol.rebased_addr + symbol.size
                 ):
+                    if policy.open_transfers:
+                        continue
                     raise InventoryError(
                         f"tail-call jump from {root} at "
                         f"{instruction.address:#x} to {operand.imm:#x}"
@@ -348,7 +367,7 @@ def inventory_project(
                 }
             )
 
-    return {
+    result = {
         "arch": project.arch.name,
         "bits": project.arch.bits,
         "call_graph": {
@@ -366,6 +385,15 @@ def inventory_project(
         "roots": roots,
         "schema": 1,
     }
+
+    if policy.open_transfers:
+        result["open_transfers"] = True
+    if policy.open_transfers:
+        for root in roots.values():
+            obj = project.loader.find_object_containing(root["address"])
+            root["image_sha256"] = hashlib.sha256(Path(obj.binary).read_bytes()).hexdigest()
+            root["object_path"] = str(obj.binary)
+    return result
 
 
 def inventory(artifact: Path, policy: InventoryPolicy) -> dict[str, Any]:
