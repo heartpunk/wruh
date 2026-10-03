@@ -1,6 +1,9 @@
 """Static lifting checks; no candidate code is executed natively."""
 from __future__ import annotations
 import json
+from pathlib import Path
+from extractor.runtime_trace import start_runtime_trace
+start_runtime_trace()
 import z3
 from extractor import runtime
 from extractor.amd64_state import (AMD64_LAYOUT, FLAG_NAMES, LTS_EXTRACTION_CONTEXT as CTX,
@@ -65,4 +68,12 @@ def check():
 
 
 if __name__ == "__main__":
-    print(json.dumps(check(), indent=2))
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output")
+    args = parser.parse_args()
+    output = json.dumps(check(), indent=2) + "\n"
+    if args.output:
+        Path(args.output).write_text(output)
+    else:
+        print(output)
