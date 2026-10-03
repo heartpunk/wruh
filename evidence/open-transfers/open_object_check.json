@@ -10,7 +10,7 @@
       "-nostdlib",
       "corpus/open-transfers/library.c",
       "-o",
-      "/tmp/tmp2gthp6an/libfixture.so"
+      "/tmp/tmpx8tstwxv/libfixture.so"
     ],
     [
       "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/clang",
@@ -21,10 +21,10 @@
       "-no-pie",
       "-Wl,-e,direct_root",
       "corpus/open-transfers/entry.c",
-      "-L/tmp/tmp2gthp6an",
+      "-L/tmp/tmpx8tstwxv",
       "-lfixture",
       "-o",
-      "/tmp/tmp2gthp6an/fixture.elf"
+      "/tmp/tmpx8tstwxv/fixture.elf"
     ]
   ],
   "indirect_calls": [
@@ -55,7 +55,7 @@
           "target": 9441280
         }
       ],
-      "sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
+      "sha256": "bebf840015c04d663acf50b9ae133aac6057f1f35b921f191601c5f10b7df110",
       "undefined_bytes": []
     },
     {
@@ -66,43 +66,52 @@
       "undefined_bytes": []
     }
   ],
+  "relocation_controls": {
+    "copy_bytes": 24,
+    "neighbor_sentinels": "retained",
+    "pc32_bytes": 4,
+    "unknown_extent": "explicit rejection",
+    "word_bytes": 8
+  },
+  "root_only_selection": "direct callee remains exact open target",
   "roots": {
     "child": {
       "address": 9441280,
       "image_sha256": "e8ed5782cf798342f732c58b7dc43d69bc781279029bfcdd8b5181e89b599806",
-      "object_path": "/tmp/tmp2gthp6an/libfixture.so",
+      "object_path": "/tmp/tmpx8tstwxv/libfixture.so",
       "size": 10,
       "symbol": "child"
     },
     "direct_root": {
       "address": 4198432,
-      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
-      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "image_sha256": "bebf840015c04d663acf50b9ae133aac6057f1f35b921f191601c5f10b7df110",
+      "object_path": "/tmp/tmpx8tstwxv/fixture.elf",
       "size": 14,
       "symbol": "direct_root"
     },
     "indirect_root": {
       "address": 4198448,
-      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
-      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "image_sha256": "bebf840015c04d663acf50b9ae133aac6057f1f35b921f191601c5f10b7df110",
+      "object_path": "/tmp/tmpx8tstwxv/fixture.elf",
       "size": 17,
       "symbol": "indirect_root"
     },
     "plt:child:401010": {
       "address": 4198416,
-      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
-      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "image_sha256": "bebf840015c04d663acf50b9ae133aac6057f1f35b921f191601c5f10b7df110",
+      "object_path": "/tmp/tmpx8tstwxv/fixture.elf",
       "size": 6,
       "symbol": "plt:child:401010"
     },
     "tail_root": {
       "address": 4198480,
-      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
-      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "image_sha256": "bebf840015c04d663acf50b9ae133aac6057f1f35b921f191601c5f10b7df110",
+      "object_path": "/tmp/tmpx8tstwxv/fixture.elf",
       "size": 10,
       "symbol": "tail_root"
     }
   },
+  "skipped_relocation_controls": "raw TLSDESC16 retained / unknown fails explicitly",
   "source_hashes": {
     "corpus/open-transfers/entry.c": "e13154390f3ad9c8e18e663dfd0529b390eda2e40cef8a7ac59a2acb9e352555",
     "corpus/open-transfers/library.c": "5130b8ff1eaa5c78a8c24f3459024897969cf58a75b8d4857c3608ef891e9f8b"

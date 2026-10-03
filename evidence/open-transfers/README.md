@@ -35,3 +35,22 @@ PLT thunk,24 local edges and per-object provenance. No candidate native executio
 The provider-selected path retains manifest/CFG pin checks and optional external
 models. Generic extraction requires no provider. Open transfers are not closed
 callee semantics; no fabricated return or unconstrained callee is supplied.
+
+## Reviewed corrections
+
+Integrated aa9a5d81 rerun: configured REAPI action build PASS in53.243s,
+including both controls and3 CPython roots. Recorded JSON now proves32-bit
+relocation masks cover4bytes while neighboring sentinel bytes remain known,
+word writes cover8bytes, COPY covers24bytes, unknown methods fail explicitly.
+RawELF TLSDESC metadata covers16bytes; unknown skipped relocation types fail
+explicitly. Footprint follows AMD64 psABI's two word64 TLS descriptor entries:
+https://raw.githubusercontent.com/wiki/hjl-tools/x86-psabi/x86-64-psABI-1.0.pdf
+
+Symbolic self-call candidate is admitted; synthetic call changes state then
+terminates. Z3 controls prove complete target partition and self-return/terminal
+branch conditions. Root-only selection leaves unselected directcallees exactopen.
+
+CLE source investigated: v10.0.1 c23d7f875775ffb4ec36b577516178351fc6dd9c.
+No CLE patch introduced. IRELATIVE/pending descriptor resolution remains
+undefined initial data; no resolver semantics invented. Sectionless ELF raw
+relocation inventory fails explicitly pending dynamic-table support.
