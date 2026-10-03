@@ -75,6 +75,8 @@ def skipped_elf_relocations(obj: Any) -> list[dict[str, Any]]:
     result = []
     with open(obj.binary, 'rb') as stream:
         elf = ELFFile(stream)
+        if elf.num_sections() == 0:
+            raise ValueError(f"ELF has no section-based relocation inventory: {obj.binary}")
         for section in elf.iter_sections():
             if not isinstance(section, RelocationSection):
                 continue
