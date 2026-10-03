@@ -62,7 +62,7 @@ def check():
     assert len(family.outcomes) == 8
     prove(z3.Or(*(o.guard for o in family.outcomes)))
     for out in family.outcomes:
-        prove(z3.Implies(out.guard, out.updates["ftop"] == ((canonical_register("ftop") + 1) & 7)))
+        prove(z3.Implies(out.guard, out.updates["ftop"] == (canonical_register("ftop") + 1)))
     family = instruction("direction-selector-partition", "a4")
     assert len(family.outcomes) == 2
     prove(z3.Or(*(o.guard for o in family.outcomes)) ==
