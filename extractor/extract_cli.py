@@ -63,7 +63,7 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         pinned = load_pinned_binary(arguments.artifact, arguments.manifest, provider.inventory_policy())
     else:
         project = load_object_set(arguments.artifact, arguments.objects)
-        policy = exact_symbol_inventory_policy((arguments.root,), open_transfers=True)
+        policy = exact_symbol_inventory_policy(tuple(dict.fromkeys((arguments.root, *arguments.candidate_root))), open_transfers=True)
         manifest = inventory_project(project, arguments.artifact, policy)
         pinned = PinnedBinary(arguments.artifact, manifest, project)
     actual_cfg = build_static_cfg(pinned)
@@ -74,7 +74,7 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         if cfg != actual_cfg:
             raise ValueError("supplied CFG differs from the recomputed CFG")
 
-    roots = _root_closure(cfg, arguments.root)
+    roots = tuple(dict.fromkeys((*_root_closure(cfg, arguments.root), *arguments.candidate_root)))
     functions = tuple(
         extract_fresh_function(pinned, cfg, function_id)
         for function_id in roots
@@ -102,6 +102,7 @@ def main() -> int:
     parser.add_argument("--objects", type=Path, help="explicit object-set JSON paths and base addresses")
     parser.add_argument("--cfg", type=Path)
     parser.add_argument("--root", required=True)
+    parser.add_argument("--candidate-root", action="append", default=[], help="additional discovered target to extract; unmatched transfers stay open")
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
     arguments.output.write_text(dumps(_run(arguments), indent=2, sort_keys=True) + "\n")

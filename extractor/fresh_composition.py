@@ -307,7 +307,7 @@ def compose_fresh_paths(
                     continue
                 if target.kind == "symbolic" and isinstance(target.value, TypedExpr):
                     concrete = _target_value(target.value, declarations)
-                    addresses = (concrete,) if concrete is not None else tuple(sorted(root_at))
+                    addresses = (concrete,) if concrete is not None else tuple(sorted(address for address in root_at if root_at[address] != path.function_id))
                     equalities = tuple(TypedExpr.equal(target.value,
                         TypedExpr.bv_lit(64, address)) for address in addresses)
                     record(replace_pending(updated, guard=_and(updated.guard,

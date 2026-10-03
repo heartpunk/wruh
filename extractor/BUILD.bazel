@@ -473,3 +473,13 @@ reapi_artifact_action(
     exec_compatible_with = _LINUX_X86_64,
     target_compatible_with = _LINUX_X86_64,
 )
+
+py_binary(
+    name = "open_transfers_smoke",
+    srcs = glob(["*.py"]),
+    main = "open_transfers_smoke.py",
+    data = ["@nix_native_deps//:libstdcxx"],
+    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
+    target_compatible_with = _LINUX_X86_64,
+    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
+)
