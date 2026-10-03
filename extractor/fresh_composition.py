@@ -12,7 +12,7 @@ import z3
 
 from extractor.artifact import LocalEdge, Target
 from extractor.fresh import FreshFunction
-from extractor.typed_z3 import declaration_variables, expr_to_z3
+from ayxg.z3 import declaration_variables, expr_to_z3
 from ayxg.substitution import substitute_exprs
 
 

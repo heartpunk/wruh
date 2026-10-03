@@ -26,7 +26,7 @@ py_binary(
     main = "fresh_equivalence.py",
     target_compatible_with = _LINUX_X86_64,
     deps = [
-        "@ayxg//:ayxg",
+        "@ayxg//:ayxg", "@ayxg//:z3",
         requirement("angr"),
         requirement("capstone"),
         requirement("z3-solver"),
@@ -86,7 +86,7 @@ py_binary(
     env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
     main = "corpus_probe.py",
     target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
+    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
 )
 
 reapi_artifact_action(
