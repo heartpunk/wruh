@@ -9,6 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any, Callable
+from types import SimpleNamespace
 
 import capstone
 import angr
@@ -138,6 +139,12 @@ def _function_symbol_at(project: angr.Project, address: int) -> Any | None:
         == "TYPE_FUNCTION"
     ]
     if not candidates:
+        for obj in project.loader.all_objects:
+            names = [name for name, target in getattr(obj, 'plt', {}).items() if target == address]
+            if len(names) == 1:
+                block = project.factory.block(address)
+                return SimpleNamespace(name=f"plt:{names[0]}:{address:x}",
+                    size=block.size, rebased_addr=address)
         return None
     candidates.sort(key=lambda symbol: (symbol.size, symbol.name), reverse=True)
     best = candidates[0]
@@ -276,8 +283,11 @@ def inventory_project(
                 local = root_at_address.get(encoded_target)
                 if local is None and encoded_target is not None:
                     local_symbol = _function_symbol_at(project, encoded_target)
+                    if local_symbol is not None and not policy.open_transfers and local_symbol.name.startswith("plt:"):
+                        local_symbol = None
                     if local_symbol is not None:
                         local_id = next((key for key, value in symbols.items() if value is local_symbol), local_symbol.name)
+                        symbols.setdefault(local_id, local_symbol)
                         existing = roots.get(local_id)
                         if existing is not None and (
                             existing["address"] != local_symbol.rebased_addr
