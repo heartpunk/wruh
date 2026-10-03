@@ -18,10 +18,21 @@ def _repository_impl(ctx):
     ctx.file("runtime.bzl", 'REAPI_WORKER_RUNTIME_ROOT = "{}"\n'.format(runtime))
     ctx.file("lib/.keep", "")
     ctx.symlink(library, "lib/libstdc++.so.6")
+    identity = json.decode(ctx.read(Label("//evidence/cpython:identity.json")))
+    cpython_files = []
+    for index, record in enumerate(identity["objects"]):
+        source = ctx.path(record["resolved_path"])
+        if not source.exists:
+            fail("pinned CPython closure object missing: {}".format(source))
+        destination = "cpython/object_{}".format(index)
+        ctx.symlink(source, destination)
+        cpython_files.append(destination)
     ctx.file("BUILD.bazel", """\
 package(default_visibility = ["//visibility:public"])
 exports_files(["runtime.bzl"])
 filegroup(name = "libstdcxx", srcs = ["lib/libstdc++.so.6"])
+filegroup(name = "cpython_closure", srcs = glob(["cpython/*"]))
+exports_files(glob(["cpython/*"]))
 """)
 
 

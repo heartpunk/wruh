@@ -532,3 +532,25 @@ reapi_artifact_action(
     exec_compatible_with = _LINUX_X86_64,
     target_compatible_with = _LINUX_X86_64,
 )
+
+py_binary(
+    name = "cpython_probe",
+    srcs = glob(["*.py"]),
+    main = "cpython_probe.py",
+    data = ["@nix_native_deps//:libstdcxx"],
+    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
+    target_compatible_with = _LINUX_X86_64,
+    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
+)
+[
+    reapi_artifact_action(
+        name = "cpython_extract_" + root,
+        arguments = ["--root=" + root],
+        dependencies = ["//evidence/cpython:identity.json"] + ["@nix_native_deps//:cpython/object_" + str(index) for index in range(5)],
+        dependency_arguments = ["--identity={path}"] + ["--object={path}"] * 5,
+        output = "cpython_extract_" + root + ".json",
+        tool = ":cpython_probe",
+        exec_compatible_with = _LINUX_X86_64,
+        target_compatible_with = _LINUX_X86_64,
+    ) for root in ["PyBytes_Size", "PyObject_Call", "PyFloat_AsDouble"]
+]
