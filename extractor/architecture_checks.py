@@ -58,8 +58,11 @@ def check():
     prove(out.updates["rflags_CF"] == 0)
     for flag in set(FLAG_NAMES) - {"CF"}:
         prove(out.updates.get(f"rflags_{flag}", canonical_flag(flag)) == canonical_flag(flag))
-    out = instruction("x87-counter-preserves-high-bits", "d9f7").outcomes[0]
-    prove(out.updates["ftop"] == canonical_register("ftop") + 1)
+    family = instruction("x87-counter-preserves-high-bits", "d9f7")
+    assert len(family.outcomes) == 8
+    prove(z3.Or(*(o.guard for o in family.outcomes)))
+    for out in family.outcomes:
+        prove(z3.Implies(out.guard, out.updates["ftop"] == ((canonical_register("ftop") + 1) & 7)))
     family = instruction("direction-selector-partition", "a4")
     assert len(family.outcomes) == 2
     prove(z3.Or(*(o.guard for o in family.outcomes)) ==
