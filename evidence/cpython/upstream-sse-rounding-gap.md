@@ -13,4 +13,4 @@ There is no read of sseround. Upstream angr10.0.1 `angr/engines/vex/claripy/irop
 
 Independent artifact review confirmed the issue. Other reviewed artifact properties passed: identity, DAG topology, complete91 updates, FPnodes, and explicit transfer/relocation boundaries. This is upstream-model fidelity, not a claim of all-rounding hardware fidelity. No candidate binary was executed: shellcode bytes were lifted as data only.
 
-A persistent user question requests authorization for a scoped upstream rounding repair. Dependent semantic repair and completion claim are paused; existing evidence is preserved.
+User decision: defer repair, not abandon it. Eventual repair may require upstream angr/VEX changes. Retain upstream behavior in this integration. Tracked by https://github.com/heartpunk/wruh/issues/1; no rounding repair is included.
