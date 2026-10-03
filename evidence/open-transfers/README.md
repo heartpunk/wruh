@@ -24,7 +24,13 @@ implement dynamic-linker startup/TLS allocation, IFUNC resolution or syscalls.
 Per-instruction provenance uses each root's containing object's SHA-256.
 
 Focused validation target: `nix develop --command scripts/bazelw run
-//extractor:open_transfers_smoke`. Execution evidence pending.
+//extractor:open_transfers_smoke`. Execution PASS in integrated frozen revision 5d8e79e6 on NixOS/REAPI; full action invocation a754ad7e-065f-4b12-902f-5c4cbf678248 exited 0 in45.646s.
+
+`open_transfers_check.json` proves target-partition completeness/disjointness,
+3 open admissions/3 strict rejections, no-candidate preservation, tail routing
+and external poststate. `open_object_check.json` records two pinned loaded ELF
+objects, resolved cross-object relocation,5 extracted roots including the real
+PLT thunk,24 local edges and per-object provenance. No candidate native execution.
 
 The provider-selected path retains manifest/CFG pin checks and optional external
 models. Generic extraction requires no provider. Open transfers are not closed

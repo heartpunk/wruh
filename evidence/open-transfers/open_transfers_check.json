@@ -1,0 +1,1 @@
+{"admission": "3 open / 3 strict rejects", "direct_external": "exact target/poststate retained", "no_candidate": "exact symbolic target preserved", "partition": "complete and disjoint UNSAT checks", "tail_transfer": "no invented return frame"}

@@ -1,0 +1,110 @@
+{
+  "commands": [
+    [
+      "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/clang",
+      "-O2",
+      "-fno-stack-protector",
+      "-fno-builtin",
+      "-fPIC",
+      "-shared",
+      "-nostdlib",
+      "corpus/open-transfers/library.c",
+      "-o",
+      "/tmp/tmp2gthp6an/libfixture.so"
+    ],
+    [
+      "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/clang",
+      "-O2",
+      "-fno-stack-protector",
+      "-fno-builtin",
+      "-nostdlib",
+      "-no-pie",
+      "-Wl,-e,direct_root",
+      "corpus/open-transfers/entry.c",
+      "-L/tmp/tmp2gthp6an",
+      "-lfixture",
+      "-o",
+      "/tmp/tmp2gthp6an/fixture.elf"
+    ]
+  ],
+  "indirect_calls": [
+    {
+      "address": 4198458,
+      "kind": "open",
+      "name": "indirect",
+      "target": null
+    }
+  ],
+  "local_edges": {
+    "child": 5,
+    "direct_root": 6,
+    "indirect_root": 8,
+    "plt:child:401010": 1,
+    "tail_root": 4
+  },
+  "native_execution": false,
+  "objects": [
+    {
+      "linked_base": 4194304,
+      "mapped_base": 4194304,
+      "relocations": [
+        {
+          "address": 4210688,
+          "resolved": true,
+          "symbol": "child",
+          "target": 9441280
+        }
+      ],
+      "sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
+      "undefined_bytes": []
+    },
+    {
+      "linked_base": 0,
+      "mapped_base": 9437184,
+      "relocations": [],
+      "sha256": "e8ed5782cf798342f732c58b7dc43d69bc781279029bfcdd8b5181e89b599806",
+      "undefined_bytes": []
+    }
+  ],
+  "roots": {
+    "child": {
+      "address": 9441280,
+      "image_sha256": "e8ed5782cf798342f732c58b7dc43d69bc781279029bfcdd8b5181e89b599806",
+      "object_path": "/tmp/tmp2gthp6an/libfixture.so",
+      "size": 10,
+      "symbol": "child"
+    },
+    "direct_root": {
+      "address": 4198432,
+      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
+      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "size": 14,
+      "symbol": "direct_root"
+    },
+    "indirect_root": {
+      "address": 4198448,
+      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
+      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "size": 17,
+      "symbol": "indirect_root"
+    },
+    "plt:child:401010": {
+      "address": 4198416,
+      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
+      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "size": 6,
+      "symbol": "plt:child:401010"
+    },
+    "tail_root": {
+      "address": 4198480,
+      "image_sha256": "c4b5361a9f3d01295e60f99765579e0322fa672bbdb3ee8e40c02247b9ac8fe4",
+      "object_path": "/tmp/tmp2gthp6an/fixture.elf",
+      "size": 10,
+      "symbol": "tail_root"
+    }
+  },
+  "source_hashes": {
+    "corpus/open-transfers/entry.c": "e13154390f3ad9c8e18e663dfd0529b390eda2e40cef8a7ac59a2acb9e352555",
+    "corpus/open-transfers/library.c": "5130b8ff1eaa5c78a8c24f3459024897969cf58a75b8d4857c3608ef891e9f8b"
+  }
+}
