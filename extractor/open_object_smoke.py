@@ -29,7 +29,8 @@ def main():
         roots=('direct_root','indirect_root','tail_root','child')
         manifest=inventory_project(project,entry,exact_symbol_inventory_policy(roots,open_transfers=True))
         pinned=PinnedBinary(entry,manifest,project); cfg=build_static_cfg(pinned)
-        functions=[extract_fresh_function(pinned,cfg,name) for name in roots]
+        functions=[extract_fresh_function(pinned,cfg,name) for name in cfg["roots"]]
+        assert any(name.startswith("plt:child:") for name in cfg["roots"])
         library_hash=hashlib.sha256(library.read_bytes()).hexdigest()
         child=next(f for f in functions if f.function_id=='child')
         assert all(item.origin.image_sha256==library_hash for item in child.occurrences)
