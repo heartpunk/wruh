@@ -100,7 +100,7 @@ def canonical_declarations(arch: Any | None = None) -> tuple[CanonicalDeclaratio
             CanonicalDeclaration(f"rflags_{name}", "bv", 1)
             for name in FLAG_NAMES
         )
-        + (CanonicalDeclaration(MEMORY_NAME, "array", 8, 64),)
+        + (CanonicalDeclaration(MEMORY_NAME, "array", 8, layout.address_bits),)
     )
 
 
@@ -147,7 +147,7 @@ def canonical_flag(name: str) -> z3.BitVecRef:
 
 @lru_cache(maxsize=None)
 def canonical_memory() -> z3.ArrayRef:
-    address = z3.BitVecSort(64, ctx=LTS_EXTRACTION_CONTEXT)
+    address = z3.BitVecSort(AMD64_LAYOUT.address_bits, ctx=LTS_EXTRACTION_CONTEXT)
     byte = z3.BitVecSort(8, ctx=LTS_EXTRACTION_CONTEXT)
     return z3.Array(MEMORY_NAME, address, byte)
 
@@ -261,9 +261,9 @@ def _require_memory_shape(
 
 def source_rip_guard(source: int) -> z3.BoolRef:
     source = _u64(source, "source")
-    return canonical_register("rip") == z3.BitVecVal(
+    return canonical_register(AMD64_LAYOUT.ip_view) == z3.BitVecVal(
         source,
-        64,
+        AMD64_LAYOUT.address_bits,
         ctx=LTS_EXTRACTION_CONTEXT,
     )
 
@@ -616,7 +616,8 @@ def install_typed_summary_state(
     replacements[memory_name] = updates[MEMORY_NAME]
     state.globals["_ghot_memory_expr"] = memory
     state.globals["_ghot_typed_replacements"] = replacements
-    state.regs.rip = _claripy.BVV(continuation, 64)
+    state.registers.store(state.arch.ip_offset, _claripy.BVV(continuation, state.arch.bits),
+                          size=state.arch.bytes, endness=state.arch.register_endness)
 
 
 def _resolve_memory_reads(
@@ -708,13 +709,14 @@ def _symbolic_target_update(
     updates: dict[str, z3.ExprRef],
 ) -> tuple[z3.BitVecRef, int | None]:
     target = _resolve_memory_reads(
-        claripy_to_z3(post.regs.rip),
+        claripy_to_z3(post.registers.load(post.arch.ip_offset, size=post.arch.bytes,
+                                       endness=post.arch.register_endness)),
         post.globals.get("_ghot_memory_reads", {}),
     )
     if not z3.is_bv(target) or target.size() != 64:
         raise Amd64AdapterError("instruction target is not BV64")
-    updates["rip"] = target
-    require_mirrored_rip(target, updates["rip"])
+    updates[AMD64_LAYOUT.ip_view] = target
+    require_mirrored_rip(target, updates[AMD64_LAYOUT.ip_view])
     simplified = z3.simplify(target)
     target_value = (
         simplified.as_long() if z3.is_bv_value(simplified) else None

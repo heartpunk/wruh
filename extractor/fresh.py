@@ -177,7 +177,7 @@ def _local_edges(
                     guard=guard,
                     updates=outcome.updates,
                     target=target,
-                    mirrored_pc=outcome.updates["rip"],
+                    mirrored_pc=outcome.target,
                 ),
             )
         )
