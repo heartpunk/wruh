@@ -431,6 +431,7 @@ _SELECTOR_DOMAINS = {
     "fpround": tuple(range(4)),
     "ftop": tuple(range(8)),
 }
+_SELECTOR_MASKS = {"ftop": 7}
 
 
 class _SelectorSplitRequired(Exception):
@@ -453,6 +454,10 @@ def _selector_read_hook(state: Any) -> None:
         if offset < item.offset + item.size_bytes and item.offset < offset + size:
             expression = state.inspect.reg_read_expr
             if expression is not None and expression.symbolic:
+                if name in state.globals.get("_wruh_selector_assignments", {}) and name in _SELECTOR_MASKS:
+                    # A modular selector retains its raw counter high bits.
+                    # VEX computes its slot modulo8, simplifying the low bits.
+                    continue
                 if name in state.globals.get("_wruh_selector_assignments", {}):
                     raise Amd64AdapterError(
                         f"selector {name} became symbolic inside one instruction; exact splitting unavailable")
@@ -495,9 +500,15 @@ def fresh_instruction_state(
             raise Amd64AdapterError(f"invalid explicit selector assignment {name}={selected}")
         item = layout.register(name)
         symbol = _claripy.BVS(name, item.bits, explicit_name=True)
-        state.add_constraints(symbol == selected)
-        state.registers.store(item.offset, _claripy.BVV(selected, item.bits),
-                              size=item.size_bytes, endness=project.arch.register_endness)
+        mask = _SELECTOR_MASKS.get(name)
+        if mask is None:
+            chosen = _claripy.BVV(selected, item.bits)
+            state.add_constraints(symbol == selected)
+        else:
+            state.add_constraints((symbol & mask) == selected)
+            chosen = (symbol & ((1 << item.bits) - 1 - mask)) | selected
+        state.registers.store(item.offset, chosen, size=item.size_bytes,
+                              endness=project.arch.register_endness)
     state.globals["_wruh_selector_assignments"] = assignments
     state.globals["_wruh_capture_selectors"] = True
     state.inspect.b("reg_read", when=_angr.BP_AFTER, action=_selector_read_hook)

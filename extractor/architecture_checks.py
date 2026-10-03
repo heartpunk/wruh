@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from extractor.runtime_trace import start_runtime_trace
 start_runtime_trace()
-import z3
 from extractor import runtime
+import z3
 from extractor.amd64_state import (AMD64_LAYOUT, FLAG_NAMES, LTS_EXTRACTION_CONTEXT as CTX,
     canonical_declarations, canonical_flag, canonical_register, step_instruction_outcomes)
 from extractor.architecture import NORMALIZED_AMD64_FLAGS
@@ -58,6 +58,8 @@ def check():
     prove(out.updates["rflags_CF"] == 0)
     for flag in set(FLAG_NAMES) - {"CF"}:
         prove(out.updates.get(f"rflags_{flag}", canonical_flag(flag)) == canonical_flag(flag))
+    out = instruction("x87-counter-preserves-high-bits", "d9f7").outcomes[0]
+    prove(out.updates["ftop"] == canonical_register("ftop") + 1)
     family = instruction("direction-selector-partition", "a4")
     assert len(family.outcomes) == 2
     prove(z3.Or(*(o.guard for o in family.outcomes)) ==
