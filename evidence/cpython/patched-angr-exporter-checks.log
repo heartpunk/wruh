@@ -1,0 +1,77 @@
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-943bd1c9':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-tJrO4Bw6Fdyx4O8J4sJM7aqX7VCx4kNcpooOWx6J03A%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: f2da720f-ea9d-4c38-abfd-10dfe1416889
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Loading: 
+Loading: 1 packages loaded
+Analyzing: target //extractor:angr_smt_smoke (2 packages loaded)
+Analyzing: target //extractor:angr_smt_smoke (5 packages loaded, 5 targets configured)
+Analyzing: target //extractor:angr_smt_smoke (5 packages loaded, 5 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (80 packages loaded, 514 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (122 packages loaded, 2433 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (123 packages loaded, 2447 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (128 packages loaded, 2701 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (131 packages loaded, 4358 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (139 packages loaded, 4482 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (156 packages loaded, 5029 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (160 packages loaded, 5689 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (166 packages loaded, 5861 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (172 packages loaded, 5912 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (179 packages loaded, 6104 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (182 packages loaded, 6362 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (189 packages loaded, 7948 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (192 packages loaded, 8373 targets configured)
+
+INFO: Analyzed target //extractor:angr_smt_smoke (193 packages loaded, 8393 targets configured).
+[6 / 21] Copying files; 0s local ... (5 actions, 3 running)
+[19 / 21] Creating runfiles tree bazel-out/k8-fastbuild/bin/extractor/angr_smt_smoke.runfiles; 0s local
+INFO: Found 1 target...
+Target //extractor:angr_smt_smoke up-to-date:
+  bazel-bin/extractor/angr_smt_smoke
+INFO: Elapsed time: 24.819s, Critical Path: 1.41s
+INFO: 21 processes: 9 internal, 12 local.
+INFO: Build completed successfully, 21 total actions
+INFO: Running command line: bazel-bin/extractor/angr_smt_smoke
+ERROR    | 2026-10-03 00:07:05,260 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+true UNSAT
+false UNSAT
+bool_symbol UNSAT
+bv_symbol UNSAT
+add UNSAT
+udiv UNSAT
+urem UNSAT
+shift UNSAT
+extract UNSAT
+extend UNSAT
+ite UNSAT
+relation UNSAT
+fp_reinterpret_32 UNSAT
+fp_signed_32 UNSAT
+fp_unsigned_32 UNSAT
+fp_cast_32 UNSAT
+fp_reinterpret_64 UNSAT
+fp_signed_64 UNSAT
+fp_unsigned_64 UNSAT
+fp_cast_64 UNSAT
