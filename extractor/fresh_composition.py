@@ -296,6 +296,12 @@ def compose_fresh_paths(
             call = call_at.get(path.pc)
             if call is not None:
                 continuation = path.pc + instruction["size"]
+                encoded_target = call.get("target")
+                if encoded_target is not None:
+                    actual_target = int(target.value) if target.kind == "address" else (
+                        _target_value(target.value, declarations) if target.kind == "symbolic" else None)
+                    if actual_target != encoded_target:
+                        raise FreshCompositionError(f"call edge at {path.pc:#x} disagrees with CFG target")
                 if target.kind == "address":
                     address = int(target.value)
                     if address in instruction_at or address in primitive_by_source:

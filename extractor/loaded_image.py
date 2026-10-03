@@ -45,15 +45,23 @@ def loaded_image_data(project: angr.Project) -> dict[str, Any]:
                 'executable': bool(segment.is_executable),
                 'bytes': project.loader.memory.load(segment.min_addr, size).hex()})
         relocations = []
+        undefined_bytes = []
         for reloc in obj.relocs:
             symbol = getattr(reloc, 'symbol', None)
             resolved = getattr(reloc, 'resolvedby', None)
+            resolved_path = getattr(getattr(resolved, 'owner', None), 'binary', None)
+            real_target = bool(resolved_path and Path(resolved_path).is_file())
+            if not reloc.resolved or (resolved is not None and not real_target):
+                undefined_bytes.append({'address': reloc.rebased_addr,
+                    'size': project.arch.bytes, 'reason': 'unresolved-relocation'})
             relocations.append({'address': reloc.rebased_addr,
                 'symbol': symbol.name if symbol else None,
-                'resolved': bool(reloc.resolved),
+                'resolved': bool(reloc.resolved and (resolved is None or real_target)),
                 'target': resolved.rebased_addr if resolved else None})
         objects.append({'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'mapped_base': obj.mapped_base, 'linked_base': obj.linked_base,
-            'segments': segments, 'relocations': relocations})
+            'segments': segments, 'relocations': relocations,
+            'undefined_bytes': undefined_bytes})
     return {'schema': 'wruh-loaded-image-v1', 'objects': objects,
-        'initialization_only': True, 'unresolved_relocations_are_open': True}
+        'initialization_only': True, 'unresolved_relocations_are_open': True,
+        'undefined_bytes_override_segment_bytes': True}
