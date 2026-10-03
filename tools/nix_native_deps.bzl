@@ -68,7 +68,7 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "pkg",
     srcs = glob(["site-packages/angr/**/*.py"]),
-    data = glob(["site-packages/angr/**/*"], exclude = ["**/*.py", "**/__pycache__/**"]),
+    data = glob(["site-packages/angr/**/*", "site-packages/angr-*.dist-info/**/*"], exclude = ["**/*.py", "**/__pycache__/**"]),
     imports = ["site-packages"],
     deps = ["@wruh_pypi//{}:pkg".format(name) for name in [
         "angr_data", "archinfo", "cachetools", "capstone", "cffi", "cle",
