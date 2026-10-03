@@ -1,5 +1,7 @@
 """Compose exported fresh STSes without loading or executing a binary."""
 from __future__ import annotations
+from extractor.runtime_trace import start_runtime_trace
+start_runtime_trace()
 import argparse
 import json
 from pathlib import Path
