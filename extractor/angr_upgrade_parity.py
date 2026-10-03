@@ -16,6 +16,7 @@ def main() -> int:
     parser.add_argument('--baseline', type=Path, required=True)
     parser.add_argument('--candidate', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--state-extension', action='store_true', help='compare only baseline state projection')
     args = parser.parse_args()
     report = []
     for path in sorted(args.candidate.glob('corpus_native_model_*.json')):
@@ -26,11 +27,15 @@ def main() -> int:
         b, c = before['fresh_model'], after['fresh_model']
         assert before['elf_sha256'] == after['elf_sha256']
         assert before['cfg'] == after['cfg']
-        assert b['declarations'] == c['declarations']
+        if args.state_extension:
+            candidate_declarations = {d['name']:d for d in c['declarations']}
+            assert all(candidate_declarations[d['name']] == d for d in b['declarations'])
+        else:
+            assert b['declarations'] == c['declarations']
         assert b['occurrences'] == c['occurrences']
         assert len(b['local_edges']) == len(c['local_edges'])
         ctx = z3.Context()
-        variables = declaration_variables(tuple(Declaration.from_data(x) for x in b['declarations']), ctx)
+        variables = declaration_variables(tuple(Declaration.from_data(x) for x in c['declarations']), ctx)
         def convert(value):
             return expr_to_z3(TypedExpr.from_data(value), variables, ctx)
         results = []
@@ -40,7 +45,10 @@ def main() -> int:
             bg, cg = convert(bs['guard']), convert(cs['guard'])
             bu = {u['name']: convert(u['value']) for u in bs['simultaneous_update']}
             cu = {u['name']: convert(u['value']) for u in cs['simultaneous_update']}
-            assert bu.keys() == cu.keys() == variables.keys()
+            assert cu.keys() == variables.keys()
+            assert set(bu) <= set(cu)
+            if not args.state_extension:
+                assert bu.keys() == cu.keys()
             assert bs['target']['kind'] == cs['target']['kind']
             differences = [bu[n] != cu[n] for n in bu]
             differences.append(convert(bs['mirrored_pc']) != convert(cs['mirrored_pc']))

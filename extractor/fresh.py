@@ -23,6 +23,7 @@ from extractor.artifact import (
     OutcomeId,
     StaticOccurrenceId,
 )
+from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.binary_inventory import PinnedBinary
 from extractor.typed_z3 import step_summary_from_z3
 
@@ -38,6 +39,7 @@ class FreshFunction:
     declarations: tuple[Declaration, ...]
     occurrences: tuple[Occurrence, ...]
     local_edges: tuple[LocalEdge, ...]
+    architecture: ArchitectureLayout | None = None
 
     schema = "ghot-fresh-function-v1"
 
@@ -49,6 +51,7 @@ class FreshFunction:
             "declarations": [item.to_data() for item in self.declarations],
             "occurrences": [item.to_data() for item in self.occurrences],
             "local_edges": [item.to_data() for item in self.local_edges],
+            **({"architecture": self.architecture.to_data()} if self.architecture is not None else {}),
         }
 
     @classmethod
@@ -60,6 +63,7 @@ class FreshFunction:
             tuple(Declaration.from_data(item) for item in value["declarations"]),
             tuple(Occurrence.from_data(item) for item in value["occurrences"]),
             tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
+            ArchitectureLayout.from_data(value["architecture"]) if "architecture" in value else None,
         )
 
     def canonical_json(self) -> bytes:
@@ -236,4 +240,5 @@ def extract_fresh_function(
         declarations=declarations,
         occurrences=tuple(occurrences),
         local_edges=tuple(edges),
+        architecture=architecture_layout(pinned.project.arch),
     )

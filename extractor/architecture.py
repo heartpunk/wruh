@@ -43,6 +43,13 @@ class ArchitectureLayout:
     register_endness: str
     memory_endness: str
 
+    @classmethod
+    def from_data(cls, value: dict[str, Any]) -> ArchitectureLayout:
+        return cls(value["name"], tuple(RegisterStorage(**item) for item in value["storage"]),
+                   tuple(RegisterView(**item) for item in value["views"]),
+                   value["ip_view"], value["sp_view"], value["address_bits"],
+                   value["register_endness"], value["memory_endness"])
+
     def register(self, name: str) -> RegisterStorage:
         return next(item for item in self.storage if item.name == name)
 
