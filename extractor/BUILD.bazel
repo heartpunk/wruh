@@ -442,3 +442,16 @@ reapi_artifact_action(
 )
 
 filegroup(name = "corpus_zeroth_all", srcs = [":corpus_extract_O%s_%s" % (opt, name) for opt in ["0", "2"] for name in ["arithmetic","shifts","signed_shift","division","branch","signed_branch","loop","alias","overlap","widths","extend","call","memcmp","strcmp","strncmp"]])
+
+[
+ reapi_artifact_action(
+  name = "corpus_native_prepare_O" + optimization,
+  arguments = ["--mode=prepare-native", "--optimization=" + optimization],
+  dependencies = ["//corpus:templates.c", "//corpus:native/harness.c"],
+  dependency_arguments = ["--source={path}"] * 2,
+  output = "corpus_native_prepare_O" + optimization + ".json",
+  tool = ":corpus_probe",
+  exec_compatible_with = _LINUX_X86_64,
+  target_compatible_with = _LINUX_X86_64,
+ ) for optimization in ["0", "2"]
+]

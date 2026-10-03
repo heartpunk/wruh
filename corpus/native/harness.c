@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
        offsets 0..7. Fixed aligned storage, no user pointers. */
     uint32_t v[5];
     for (int i = 0; i < 5; ++i) {
+        for (const char *p = argv[i + 1]; *p; ++p) if (*p < '0' || *p > '9') return 65;
         char *end; unsigned long n = strtoul(argv[i + 1], &end, 10);
         if (!*argv[i + 1] || *end || argv[i + 1][0] == '-' || n > UINT32_MAX) return 65;
         v[i] = (uint32_t)n;

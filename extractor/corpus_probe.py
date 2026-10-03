@@ -77,6 +77,29 @@ def scan(args):
           'inherited_vex_registry_count':len(registry),'inherited_vex_registry':sorted(registry),'observed_vex_not_in_registry':sorted(f for f in observed if f.startswith('vex:') and f[4:] not in registry),
           'canonical_required':CANONICAL,'limitations':['VEX selection covers observed supported registry operations, not all inherited angr semantics.','Backend registry membership is availability, not proof of end-to-end WRUH support.','Aliasing input relationships untested.','No native candidate execution.','No FP/vector scope.']}
 
+def prepare_native(args):
+    """Compile the audited harness as data; never execute the resulting ELF."""
+    compiler=shutil.which('clang')
+    if compiler is None:raise RuntimeError('declared runtime clang unavailable')
+    command=[compiler, '-O'+args.optimization, '-fno-inline', '-fno-builtin',
+             '-fno-stack-protector', '-fno-vectorize', '-fno-slp-vectorize',
+             '-no-pie', *args.source]
+    with tempfile.TemporaryDirectory() as temp:
+        elf=Path(temp)/'native-harness.elf'
+        subprocess.run(command+['-o',str(elf)],check=True)
+        data=elf.read_bytes()
+        project=angr.Project(str(elf),auto_load_libs=False)
+        functions={}
+        for name in ('main','alias','overlap','division'):
+            symbol=project.loader.find_symbol(name)
+            block=project.factory.block(symbol.rebased_addr,size=symbol.size)
+            functions[name]=str(block.capstone)
+        return {'optimization':args.optimization,'command':command+['-o','<temporary>/native-harness.elf'],
+                'compiler':subprocess.check_output([compiler,'--version'],text=True),
+                'source_sha256':{p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in args.source},
+                'elf_sha256':hashlib.sha256(data).hexdigest(),'elf_base64':base64.b64encode(data).decode(),
+                'disassembly':functions,'native_executed':False}
+
 def expression_ops(fresh):
     todo=[]
     for edge in fresh.local_edges:
@@ -125,10 +148,10 @@ def extract(args):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
-    parser.add_argument('--mode',choices=['scan','extract'],required=True)
+    parser.add_argument('--mode',choices=['scan','extract','prepare-native'],required=True)
     parser.add_argument('--optimization',choices=['0','2'])
     parser.add_argument('--source',action='append',default=[])
     parser.add_argument('--scan');parser.add_argument('--root');parser.add_argument('--output',required=True)
     args=parser.parse_args()
-    result=scan(args) if args.mode=='scan' else extract(args)
+    result={'scan':scan,'extract':extract,'prepare-native':prepare_native}[args.mode](args)
     Path(args.output).write_text(json.dumps(result,sort_keys=True,indent=2)+'\n')
