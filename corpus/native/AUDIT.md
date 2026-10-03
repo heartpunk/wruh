@@ -2,8 +2,10 @@
 
 Exact source: `harness.c` plus `../templates.c`, restricted entry calls to
 `alias`, `overlap`, and `division`. Compile at O0 and O2 with the existing
-pinned Clang and no builtin/inlining/vectorization settings. Binary hashes
-and disassembly must be recorded before asking to execute; none compiled yet.
+pinned Clang and no builtin/inlining/vectorization settings. Exact binary hashes, compile commands, source hashes and reviewed disassembly
+are recorded in `build-audit.json`. Static build revision: `a4812ea0`.
+Binary artifacts are retained locally at `/tmp/wruh-native-audit-a4812ea0`.
+Neither binary was executed.
 
 Input: five unsigned decimal values, each <= UINT32_MAX. Case 0..2;
 word offsets 0..7. Eight aligned uint32_t words (32 bytes) initialized from
@@ -24,3 +26,10 @@ STS runner remains to be wired before end-to-end comparison. It must map
 entry ABI/registers, initialized stack and storage, execute local edges
 through return, and compare return + all storage bytes. This goal prepares
 and audits the native side only; it does not claim differential execution.
+
+Audit finding: O2 overlap becomes one 16-bit store; O0 retains two byte
+stores and readback. Alias retains store-then-load in both builds. Division
+retains guarded hardware div, with no fault for admitted arguments. Main
+checks input bounds before calculating pointers. libc startup/parsing/output
+remain trusted runtime dependencies; sandbox launch/runtime closure pinning
+and STS-runner wiring are subsequent work, not validated here.
