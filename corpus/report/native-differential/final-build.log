@@ -1,0 +1,64 @@
+Oct 02 17:37:38 nixos systemd[1106]: Started [systemd-run] /run/current-system/sw/bin/nix develop --command scripts/bazelw run --config=reapi //extractor:native_differential -- --output=/tmp/wruh-differential-9ff4ee02.json.
+Oct 02 17:37:43 nixos nix[2807973]: Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+Oct 02 17:37:45 nixos nix[2807973]: WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+Oct 02 17:37:45 nixos nix[2807973]: INFO: Invocation ID: 85a2fcd1-50e0-4de6-9079-22e1d7a582f0
+Oct 02 17:37:45 nixos nix[2807973]: Computing main repo mapping:
+Oct 02 17:37:46 nixos nix[2807973]: Computing main repo mapping:
+Oct 02 17:37:47 nixos nix[2807973]: Computing main repo mapping:
+Oct 02 17:37:48 nixos nix[2807973]: Computing main repo mapping:
+Oct 02 17:37:49 nixos nix[2807973]: Loading:
+Oct 02 17:37:49 nixos nix[2807973]: Loading: 1 packages loaded
+Oct 02 17:37:50 nixos nix[2807973]: Analyzing: target //extractor:native_differential (2 packages loaded)
+Oct 02 17:37:51 nixos nix[2807973]: Analyzing: target //extractor:native_differential (5 packages loaded, 5 targets configured)
+Oct 02 17:37:51 nixos nix[2807973]: Analyzing: target //extractor:native_differential (5 packages loaded, 5 targets configured)
+Oct 02 17:37:52 nixos nix[2807973]: Analyzing: target //extractor:native_differential (65 packages loaded, 111 targets configured)
+Oct 02 17:37:53 nixos nix[2807973]: Analyzing: target //extractor:native_differential (86 packages loaded, 547 targets configured)
+Oct 02 17:37:54 nixos nix[2807973]: Analyzing: target //extractor:native_differential (90 packages loaded, 1062 targets configured)
+Oct 02 17:37:55 nixos nix[2807973]: Analyzing: target //extractor:native_differential (104 packages loaded, 1147 targets configured)
+Oct 02 17:37:57 nixos nix[2807973]: Analyzing: target //extractor:native_differential (105 packages loaded, 1264 targets configured)
+Oct 02 17:37:58 nixos nix[2807973]: Analyzing: target //extractor:native_differential (110 packages loaded, 1371 targets configured)
+Oct 02 17:37:59 nixos nix[2807973]: Analyzing: target //extractor:native_differential (111 packages loaded, 1384 targets configured)
+Oct 02 17:38:00 nixos nix[2807973]: Analyzing: target //extractor:native_differential (133 packages loaded, 2876 targets configured)
+Oct 02 17:38:01 nixos nix[2807973]: Analyzing: target //extractor:native_differential (134 packages loaded, 2892 targets configured)
+Oct 02 17:38:02 nixos nix[2807973]: Analyzing: target //extractor:native_differential (135 packages loaded, 2917 targets configured)
+Oct 02 17:38:04 nixos nix[2807973]: Analyzing: target //extractor:native_differential (137 packages loaded, 3051 targets configured)
+Oct 02 17:38:05 nixos nix[2807973]: Analyzing: target //extractor:native_differential (139 packages loaded, 3163 targets configured)
+Oct 02 17:38:06 nixos nix[2807973]: Analyzing: target //extractor:native_differential (141 packages loaded, 3211 targets configured)
+Oct 02 17:38:07 nixos nix[2807973]: Analyzing: target //extractor:native_differential (144 packages loaded, 3833 targets configured)
+Oct 02 17:38:08 nixos nix[2807973]: Analyzing: target //extractor:native_differential (144 packages loaded, 3835 targets configured)
+Oct 02 17:38:10 nixos nix[2807973]: Analyzing: target //extractor:native_differential (146 packages loaded, 3918 targets configured)
+Oct 02 17:38:11 nixos nix[2807973]: Analyzing: target //extractor:native_differential (148 packages loaded, 3943 targets configured)
+Oct 02 17:38:12 nixos nix[2807973]: Analyzing: target //extractor:native_differential (150 packages loaded, 4678 targets configured)
+Oct 02 17:38:13 nixos nix[2807973]: Analyzing: target //extractor:native_differential (150 packages loaded, 5046 targets configured)
+Oct 02 17:38:14 nixos nix[2807973]: Analyzing: target //extractor:native_differential (153 packages loaded, 6626 targets configured)
+Oct 02 17:38:15 nixos nix[2807973]: Analyzing: target //extractor:native_differential (164 packages loaded, 6735 targets configured)
+Oct 02 17:38:16 nixos nix[2807973]: Analyzing: target //extractor:native_differential (165 packages loaded, 6777 targets configured)
+Oct 02 17:38:17 nixos nix[2807973]: Analyzing: target //extractor:native_differential (167 packages loaded, 6865 targets configured)
+Oct 02 17:38:19 nixos nix[2807973]: Analyzing: target //extractor:native_differential (173 packages loaded, 6922 targets configured)
+Oct 02 17:38:20 nixos nix[2807973]: Analyzing: target //extractor:native_differential (175 packages loaded, 6945 targets configured)
+Oct 02 17:38:21 nixos nix[2807973]: Analyzing: target //extractor:native_differential (177 packages loaded, 7015 targets configured)
+Oct 02 17:38:22 nixos nix[2807973]: Analyzing: target //extractor:native_differential (179 packages loaded, 7127 targets configured)
+Oct 02 17:38:23 nixos nix[2807973]: Analyzing: target //extractor:native_differential (185 packages loaded, 7548 targets configured)
+Oct 02 17:38:24 nixos nix[2807973]: Analyzing: target //extractor:native_differential (185 packages loaded, 7548 targets configured)
+Oct 02 17:38:26 nixos nix[2807973]: Analyzing: target //extractor:native_differential (189 packages loaded, 7791 targets configured)
+Oct 02 17:38:27 nixos nix[2807973]: Analyzing: target //extractor:native_differential (192 packages loaded, 7819 targets configured)
+Oct 02 17:38:28 nixos nix[2807973]: Analyzing: target //extractor:native_differential (194 packages loaded, 7847 targets configured)
+Oct 02 17:38:29 nixos nix[2807973]: INFO: Analyzed target //extractor:native_differential (196 packages loaded, 8251 targets configured).
+Oct 02 17:38:30 nixos nix[2807973]: [14 / 36] Copying files [for tool]; 0s local ... (11 actions, 1 running)
+Oct 02 17:38:31 nixos nix[2807973]: [20 / 36] Creating runfiles tree bazel-out/reapi_linux_x86_64-opt-exec/bin/extractor/corpus_probe.runfiles [for tool]; 0s local ... (6 actions, 4 running)
+Oct 02 17:38:32 nixos nix[2807973]: [26 / 36] [Prepa] runfiles for //extractor:corpus_probe
+Oct 02 17:38:33 nixos nix[2807973]: [27 / 36] Producing //extractor:corpus_native_prepare_O0; 0s remote, remote-cache ... (2 actions running)
+Oct 02 17:38:37 nixos nix[2807973]: [28 / 36] Producing //extractor:corpus_native_prepare_O2; 3s remote, remote-cache ... (2 actions, 1 running)
+Oct 02 17:38:38 nixos nix[2807973]: [29 / 36] Producing //extractor:corpus_native_model_O0_overlap; 1s remote, remote-cache ... (6 actions running)
+Oct 02 17:38:42 nixos nix[2807973]: [32 / 36] Producing //extractor:corpus_native_model_O0_overlap; 5s remote, remote-cache ... (3 actions running)
+Oct 02 17:38:43 nixos nix[2807973]: [33 / 36] Producing //extractor:corpus_native_model_O0_alias; 6s remote, remote-cache ... (2 actions running)
+Oct 02 17:38:45 nixos nix[2807973]: [35 / 36] [Prepa] runfiles for //extractor:native_differential
+Oct 02 17:38:45 nixos nix[2807973]: INFO: Found 1 target...
+Oct 02 17:38:45 nixos nix[2807973]: Target //extractor:native_differential up-to-date:
+Oct 02 17:38:45 nixos nix[2807973]:   bazel-bin/extractor/native_differential
+Oct 02 17:38:45 nixos nix[2807973]: INFO: Elapsed time: 61.838s, Critical Path: 15.17s
+Oct 02 17:38:45 nixos nix[2807973]: INFO: 36 processes: 17 internal, 11 local, 8 remote.
+Oct 02 17:38:45 nixos nix[2807973]: INFO: Build completed successfully, 36 total actions
+Oct 02 17:38:45 nixos nix[2807973]: INFO: Running command line: bazel-bin/extractor/native_differential '--binary=_main/extractor/corpus_native_prepare_O0.json' '--binary=_main/extractor/corpus_native_prepare_O2.json' '--model=_main/extractor/corpus_native_model_O0_alias.json' '--model=_main/extractor/corpus_native_model_O0_overlap.json' '--model=_main/extractor/corpus_native_model_O0_division.json' '--model=_main/extractor/corpus_native_model_O2_alias.json' '--model=_main/extractor/corpus_native_model_O2_overlap.json' '--model=_main/extractor/corpus_native_model_O2_division.json' <args omitted>
+Oct 02 17:39:41 nixos nix[2807973]: {"counts": {"MATCH": 560}, "seconds": 54.71418315498158}
+Oct 02 17:39:41 nixos systemd[1106]: wruh-differential-9ff4ee02.service: Consumed 2min 8.692s CPU time over 2min 2.724s wall clock time, 1G memory peak.

@@ -1,0 +1,81 @@
+{
+  "total": 560,
+  "counts": {
+    "MATCH": 560
+  },
+  "comparison_seconds": 54.63473663898185,
+  "by_case": [
+    {
+      "optimization": "0",
+      "function": "alias",
+      "phase": "deterministic",
+      "count": 32
+    },
+    {
+      "optimization": "0",
+      "function": "alias",
+      "phase": "hypothesis",
+      "count": 64
+    },
+    {
+      "optimization": "0",
+      "function": "overlap",
+      "phase": "deterministic",
+      "count": 24
+    },
+    {
+      "optimization": "0",
+      "function": "overlap",
+      "phase": "hypothesis",
+      "count": 64
+    },
+    {
+      "optimization": "0",
+      "function": "division",
+      "phase": "deterministic",
+      "count": 32
+    },
+    {
+      "optimization": "0",
+      "function": "division",
+      "phase": "hypothesis",
+      "count": 64
+    },
+    {
+      "optimization": "2",
+      "function": "alias",
+      "phase": "deterministic",
+      "count": 32
+    },
+    {
+      "optimization": "2",
+      "function": "alias",
+      "phase": "hypothesis",
+      "count": 64
+    },
+    {
+      "optimization": "2",
+      "function": "overlap",
+      "phase": "deterministic",
+      "count": 24
+    },
+    {
+      "optimization": "2",
+      "function": "overlap",
+      "phase": "hypothesis",
+      "count": 64
+    },
+    {
+      "optimization": "2",
+      "function": "division",
+      "phase": "deterministic",
+      "count": 32
+    },
+    {
+      "optimization": "2",
+      "function": "division",
+      "phase": "hypothesis",
+      "count": 64
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+Oct 02 17:35:18 nixos systemd[1106]: Started [systemd-run] /run/current-system/sw/bin/nix develop --command scripts/bazelw run --config=reapi //extractor:native_differential -- --output=/tmp/wruh-differential-9ff7c9aa.json.
+Oct 02 17:35:23 nixos nix[2806701]: Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+Oct 02 17:35:25 nixos nix[2806701]: WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+Oct 02 17:35:25 nixos nix[2806701]: INFO: Invocation ID: 688029fc-6b15-43f5-9f3e-a22f8e57e809
+Oct 02 17:35:25 nixos nix[2806701]: Computing main repo mapping:
+Oct 02 17:35:26 nixos nix[2806701]: Computing main repo mapping:
+Oct 02 17:35:27 nixos nix[2806701]: Computing main repo mapping:
+Oct 02 17:35:28 nixos nix[2806701]: Computing main repo mapping:
+Oct 02 17:35:29 nixos nix[2806701]: Computing main repo mapping:
+Oct 02 17:35:30 nixos nix[2806701]: Loading:
+Oct 02 17:35:30 nixos nix[2806701]: Loading: 1 packages loaded
+Oct 02 17:35:31 nixos nix[2806701]: Loading: 1 packages loaded
+Oct 02 17:35:31 nixos nix[2806701]:     currently loading: extractor
+Oct 02 17:35:31 nixos nix[2806701]: Analyzing: target //extractor:native_differential (5 packages loaded, 5 targets configured)
+Oct 02 17:35:31 nixos nix[2806701]: Analyzing: target //extractor:native_differential (5 packages loaded, 5 targets configured)
+Oct 02 17:35:32 nixos nix[2806701]: Analyzing: target //extractor:native_differential (64 packages loaded, 12 targets configured)
+Oct 02 17:35:33 nixos nix[2806701]: Analyzing: target //extractor:native_differential (80 packages loaded, 516 targets configured)
+Oct 02 17:35:34 nixos nix[2806701]: Analyzing: target //extractor:native_differential (90 packages loaded, 1062 targets configured)
+Oct 02 17:35:35 nixos nix[2806701]: Analyzing: target //extractor:native_differential (104 packages loaded, 1147 targets configured)
+Oct 02 17:35:36 nixos nix[2806701]: Analyzing: target //extractor:native_differential (104 packages loaded, 1147 targets configured)
+Oct 02 17:35:38 nixos nix[2806701]: Analyzing: target //extractor:native_differential (105 packages loaded, 1264 targets configured)
+Oct 02 17:35:39 nixos nix[2806701]: Analyzing: target //extractor:native_differential (126 packages loaded, 2819 targets configured)
+Oct 02 17:35:40 nixos nix[2806701]: Analyzing: target //extractor:native_differential (130 packages loaded, 2834 targets configured)
+Oct 02 17:35:42 nixos nix[2806701]: Analyzing: target //extractor:native_differential (134 packages loaded, 2901 targets configured)
+Oct 02 17:35:43 nixos nix[2806701]: Analyzing: target //extractor:native_differential (136 packages loaded, 3022 targets configured)
+Oct 02 17:35:45 nixos nix[2806701]: Analyzing: target //extractor:native_differential (138 packages loaded, 3121 targets configured)
+Oct 02 17:35:46 nixos nix[2806701]: Analyzing: target //extractor:native_differential (140 packages loaded, 3247 targets configured)
+Oct 02 17:35:47 nixos nix[2806701]: Analyzing: target //extractor:native_differential (143 packages loaded, 3310 targets configured)
+Oct 02 17:35:48 nixos nix[2806701]: Analyzing: target //extractor:native_differential (144 packages loaded, 3335 targets configured)
+Oct 02 17:35:49 nixos nix[2806701]: Analyzing: target //extractor:native_differential (145 packages loaded, 3940 targets configured)
+Oct 02 17:35:51 nixos nix[2806701]: Analyzing: target //extractor:native_differential (147 packages loaded, 4023 targets configured)
+Oct 02 17:35:52 nixos nix[2806701]: Analyzing: target //extractor:native_differential (149 packages loaded, 4048 targets configured)
+Oct 02 17:35:53 nixos nix[2806701]: Analyzing: target //extractor:native_differential (151 packages loaded, 5151 targets configured)
+Oct 02 17:35:54 nixos nix[2806701]: Analyzing: target //extractor:native_differential (152 packages loaded, 5158 targets configured)
+Oct 02 17:35:55 nixos nix[2806701]: Analyzing: target //extractor:native_differential (155 packages loaded, 6731 targets configured)
+Oct 02 17:35:57 nixos nix[2806701]: Analyzing: target //extractor:native_differential (168 packages loaded, 6847 targets configured)
+Oct 02 17:35:58 nixos nix[2806701]: Analyzing: target //extractor:native_differential (170 packages loaded, 7204 targets configured)
+Oct 02 17:36:00 nixos nix[2806701]: Analyzing: target //extractor:native_differential (175 packages loaded, 7317 targets configured)
+Oct 02 17:36:01 nixos nix[2806701]: Analyzing: target //extractor:native_differential (177 packages loaded, 7385 targets configured)
+Oct 02 17:36:03 nixos nix[2806701]: Analyzing: target //extractor:native_differential (179 packages loaded, 7461 targets configured)
+Oct 02 17:36:04 nixos nix[2806701]: Analyzing: target //extractor:native_differential (181 packages loaded, 7522 targets configured)
+Oct 02 17:36:05 nixos nix[2806701]: Analyzing: target //extractor:native_differential (188 packages loaded, 7557 targets configured)
+Oct 02 17:36:06 nixos nix[2806701]: Analyzing: target //extractor:native_differential (191 packages loaded, 7926 targets configured)
+Oct 02 17:36:08 nixos nix[2806701]: Analyzing: target //extractor:native_differential (193 packages loaded, 8169 targets configured)
+Oct 02 17:36:09 nixos nix[2806701]: Analyzing: target //extractor:native_differential (195 packages loaded, 8214 targets configured)
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_prepare_O0' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_prepare_O0) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_prepare_O0.json, _main/extractor/corpus_native_prepare_O0.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_prepare_O2' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_prepare_O2) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_prepare_O2.json, _main/extractor/corpus_native_prepare_O2.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_model_O0_alias' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_model_O0_alias) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_model_O0_alias.json, _main/extractor/corpus_native_model_O0_alias.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_model_O0_overlap' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_model_O0_overlap) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_model_O0_overlap.json, _main/extractor/corpus_native_model_O0_overlap.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_model_O0_division' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_model_O0_division) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_model_O0_division.json, _main/extractor/corpus_native_model_O0_division.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_model_O2_alias' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_model_O2_alias) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_model_O2_alias.json, _main/extractor/corpus_native_model_O2_alias.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_model_O2_overlap' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_model_O2_overlap) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_model_O2_overlap.json, _main/extractor/corpus_native_model_O2_overlap.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: in args attribute of py_binary rule //extractor:native_differential: label '//extractor:corpus_native_model_O2_division' in $(location) expression expands to more than one file, please use $(locations //extractor:corpus_native_model_O2_division) instead.  Files (at most 5 shown) are: [_main/extractor/corpus_native_model_O2_division.json, _main/extractor/corpus_native_model_O2_division.json.runtime-trace.json]. Since this rule was created by the macro 'py_binary', the error might have been caused by the macro implementation
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: /tmp/wruh-corpus-9ff7c9aa/extractor/BUILD.bazel:475:10: Analysis of target '//extractor:native_differential' (config: 5b0b41c) failed
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: Analysis of target '//extractor:native_differential' failed; build aborted
+Oct 02 17:36:10 nixos nix[2806701]: INFO: Elapsed time: 46.206s, Critical Path: 0.03s
+Oct 02 17:36:10 nixos nix[2806701]: INFO: 1 process: 1 internal.
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: Build did NOT complete successfully
+Oct 02 17:36:10 nixos nix[2806701]: ERROR: Build failed. Not running target
+Oct 02 17:36:10 nixos systemd[1106]: wruh-differential-9ff7c9aa.service: Main process exited, code=exited, status=1/FAILURE
+Oct 02 17:36:10 nixos systemd[1106]: wruh-differential-9ff7c9aa.service: Failed with result 'exit-code'.
+Oct 02 17:36:10 nixos systemd[1106]: wruh-differential-9ff7c9aa.service: Consumed 1min 26.656s CPU time over 51.767s wall clock time, 1G memory peak.
