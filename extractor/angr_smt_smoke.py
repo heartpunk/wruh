@@ -21,14 +21,14 @@ cases = [
 ]
 # Exercise every corrected exporter conversion at both IEEE storage widths.
 for width, ebits, sbits in [(32, 8, 24), (64, 11, 53)]:
-    sort = c.FSort.from_size(width)
+    sort = c.FSORT_FLOAT if width == 32 else c.FSORT_DOUBLE
     zsort = z3.FPSort(ebits, sbits, ctx=LTS_EXTRACTION_CONTEXT)
     bits = c.BVS(f"fp_bits_{width}", width, explicit_name=True)
     zbits = z3.BitVec(f"fp_bits_{width}", width, ctx=LTS_EXTRACTION_CONTEXT)
     other_width = 64 if width == 32 else 32
-    other = c.FPS(f"fp_source_{width}", c.FSort.from_size(other_width), explicit_name=True)
+    other = c.FPS(f"fp_source_{width}", c.FSORT_FLOAT if other_width == 32 else c.FSORT_DOUBLE, explicit_name=True)
     zother = z3.FP(f"fp_source_{width}", z3.FPSort(11, 53, ctx=LTS_EXTRACTION_CONTEXT) if other_width == 64 else z3.FPSort(8, 24, ctx=LTS_EXTRACTION_CONTEXT))
-    rm = c.RM.RM_NearestTiesEven
+    rm = c.fp.RM.RM_NearestTiesEven
     zrm = z3.RNE(ctx=LTS_EXTRACTION_CONTEXT)
     cases.extend([
         (f"fp_reinterpret_{width}", bits.raw_to_fp(), z3.fpBVToFP(zbits, zsort)),
