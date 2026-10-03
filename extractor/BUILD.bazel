@@ -552,5 +552,5 @@ py_binary(
         tool = ":cpython_probe",
         exec_compatible_with = _LINUX_X86_64,
         target_compatible_with = _LINUX_X86_64,
-    ) for root in ["PyBytes_Size", "PyObject_Call", "PyFloat_AsDouble"]
+    ) for root in ["PyBytes_Size", "PyObject_Call", "PyFloat_AsDouble", "float_add", "float_mul"]
 ]
