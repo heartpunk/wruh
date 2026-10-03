@@ -119,6 +119,22 @@ def canonical_register(name: str) -> z3.BitVecRef:
 
 
 @lru_cache(maxsize=None)
+def canonical_register_view(name: str) -> z3.BitVecRef:
+    """Read a metadata-derived alias without introducing independent state."""
+    try:
+        view = AMD64_LAYOUT.view(name)
+        backing = canonical_register(view.storage_name)
+    except (StopIteration, Amd64AdapterError) as error:
+        raise Amd64AdapterError(f"register view {name!r} has no independent canonical backing") from error
+    if view.size_bytes * 8 == backing.size():
+        return backing
+    low = view.byte_offset * 8
+    if AMD64_LAYOUT.register_endness == "Iend_BE":
+        low = backing.size() - low - view.size_bytes * 8
+    return z3.Extract(low + view.size_bytes * 8 - 1, low, backing)
+
+
+@lru_cache(maxsize=None)
 def canonical_flag(name: str) -> z3.BitVecRef:
     if name not in FLAG_NAMES:
         raise Amd64AdapterError(f"unknown canonical AMD64 flag {name!r}")

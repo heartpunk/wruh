@@ -7,7 +7,7 @@ start_runtime_trace()
 from extractor import runtime
 import z3
 from extractor.amd64_state import (AMD64_LAYOUT, FLAG_NAMES, LTS_EXTRACTION_CONTEXT as CTX,
-    canonical_declarations, canonical_flag, canonical_register, step_instruction_outcomes)
+    canonical_declarations, canonical_flag, canonical_register, canonical_register_view, step_instruction_outcomes)
 from extractor.architecture import NORMALIZED_AMD64_FLAGS
 
 
@@ -31,6 +31,10 @@ def check():
     for view in AMD64_LAYOUT.views:
         item = AMD64_LAYOUT.register(view.storage_name)
         assert 0 <= view.byte_offset and view.byte_offset + view.size_bytes <= item.size_bytes
+    prove(canonical_register_view("eax") == z3.Extract(31,0,canonical_register("rax")))
+    prove(canonical_register_view("ah") == z3.Extract(15,8,canonical_register("rax")))
+    assert canonical_register_view("pc").eq(canonical_register("rip"))
+    assert type(AMD64_LAYOUT).from_data(json.loads(json.dumps(AMD64_LAYOUT.to_data()))) == AMD64_LAYOUT
     records.append({"case": "layout", "storage": len(AMD64_LAYOUT.storage), "views": len(AMD64_LAYOUT.views)})
 
     def instruction(name, code):
