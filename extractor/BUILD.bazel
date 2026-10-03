@@ -471,3 +471,17 @@ filegroup(name = "corpus_zeroth_all", srcs = [":corpus_extract_O%s_%s" % (opt, n
 filegroup(name = "corpus_native_models", srcs = [
  ":corpus_native_model_O" + optimization + "_" + root
  for optimization in ["0", "2"] for root in ["alias", "overlap", "division"]])
+
+py_binary(
+ name = "native_differential",
+ srcs = glob(["*.py"]) + ["//corpus:native/sandbox.py"],
+ main = "native_differential.py",
+ data = [":corpus_native_prepare_O0", ":corpus_native_prepare_O2"] + [
+  ":corpus_native_model_O" + opt + "_" + root
+  for opt in ["0", "2"] for root in ["alias", "overlap", "division"]],
+ args = ["--binary=$(rlocationpath :corpus_native_prepare_O0)", "--binary=$(rlocationpath :corpus_native_prepare_O2)"] + [
+  "--model=$(rlocationpath :corpus_native_model_O" + opt + "_" + root + ")"
+  for opt in ["0", "2"] for root in ["alias", "overlap", "division"]],
+ deps = ["@ayxg//:ayxg", requirement("hypothesis"), "@rules_python//python/runfiles"],
+ target_compatible_with = _LINUX_X86_64,
+)

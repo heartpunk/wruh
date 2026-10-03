@@ -1,3 +1,4 @@
 exports_files(["templates.c", "provenance.json"] + glob(["real/*"]))
 
 exports_files(["native/harness.c"])
+exports_files(["native/sandbox.py"])
