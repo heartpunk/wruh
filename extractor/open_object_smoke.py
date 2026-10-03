@@ -5,10 +5,12 @@ from extractor.native_runtime import preload_libstdcxx
 preload_libstdcxx()
 import argparse, hashlib, json, shutil, subprocess, tempfile
 from pathlib import Path
-from extractor.loaded_image import load_object_set, loaded_image_data, relocation_write_size
+from extractor.loaded_image import load_object_set, loaded_image_data, relocation_write_size, skipped_elf_relocations
 from cle.backends.elf.relocation.amd64 import R_X86_64_PC32, R_X86_64_64, R_X86_64_COPY
 from cle.backends.relocation import Relocation
 from types import SimpleNamespace
+from elftools.elf.elffile import ELFFile
+from elftools.elf.relocation import RelocationSection
 from extractor.binary_inventory import inventory_project, exact_symbol_inventory_policy, PinnedBinary
 from extractor.binary_cfg import build_static_cfg
 from extractor.fresh import extract_fresh_function
@@ -63,7 +65,21 @@ def main():
         try: relocation_write_size(UnknownRelocation(owner,symbol,0))
         except ValueError: pass
         else: raise AssertionError('unknown write extent accepted')
-        result={'root_only_selection':'direct callee remains exact open target','relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
+        # Patch only relocation type in a frozen test copy; parse, never execute.
+        with entry.open('rb') as stream:
+            elf=ELFFile(stream)
+            section=next(sec for sec in elf.iter_sections() if isinstance(sec,RelocationSection) and sec.num_relocations())
+            entry_offset=section['sh_offset']; old_info=next(section.iter_relocations())['r_info']
+        raw=bytearray(entry.read_bytes()); raw[entry_offset+8:entry_offset+16]=((old_info&~0xffffffff)|36).to_bytes(8,'little')
+        descriptor_file=directory/'tlsdesc.elf'; descriptor_file.write_bytes(raw)
+        descriptor_owner=SimpleNamespace(binary=str(descriptor_file),mapped_base=0x400000,linked_base=0x400000,arch=SimpleNamespace(name='AMD64'))
+        skipped=skipped_elf_relocations(descriptor_owner)
+        assert len(skipped)==1 and skipped[0]['elf_type']==36 and skipped[0]['size']==16
+        raw[entry_offset+8:entry_offset+16]=((old_info&~0xffffffff)|999).to_bytes(8,'little'); descriptor_file.write_bytes(raw)
+        try: skipped_elf_relocations(descriptor_owner)
+        except ValueError: pass
+        else: raise AssertionError('unknown skipped ELF relocation accepted')
+        result={'skipped_relocation_controls':'raw TLSDESC16 retained / unknown fails explicitly','root_only_selection':'direct callee remains exact open target','relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
             'objects':[{key:obj[key] for key in ('sha256','mapped_base','linked_base','relocations','undefined_bytes')} for obj in image['objects']],
             'roots':manifest['roots'],'local_edges':{f.function_id:len(f.local_edges) for f in functions},
             'indirect_calls':cfg['roots']['indirect_root']['calls'], 'native_execution':False}
