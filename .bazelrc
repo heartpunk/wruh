@@ -2,7 +2,6 @@ common --enable_bzlmod
 common --repo_env=GIT_CONFIG_GLOBAL=/dev/null
 common --repo_env=GHOT_NIX_LIBSTDCXX_ROOT
 common --repo_env=GHOT_REAPI_WORKER_RUNTIME_ROOT
-common --repo_env=WRUH_GHOT_ROOT
 build --show_result=20
 build --incompatible_strict_action_env
 build --spawn_strategy=sandboxed

@@ -51,6 +51,3 @@ use_repo(pip, "extractor_pypi")
 
 nix_native_deps = use_extension("//tools:nix_native_deps.bzl", "nix_native_deps")
 use_repo(nix_native_deps, "nix_native_deps")
-
-ghot_inputs = use_repo_rule("//tools:ghot_inputs.bzl", "ghot_inputs_repository")
-ghot_inputs(name = "ghot_inputs")

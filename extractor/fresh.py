@@ -51,6 +51,17 @@ class FreshFunction:
             "local_edges": [item.to_data() for item in self.local_edges],
         }
 
+    @classmethod
+    def from_data(cls, value: dict[str, Any]) -> FreshFunction:
+        if value.get("schema") != cls.schema:
+            raise FreshExtractionError("unknown fresh function schema")
+        return cls(
+            value["function_id"], value["entry"],
+            tuple(Declaration.from_data(item) for item in value["declarations"]),
+            tuple(Occurrence.from_data(item) for item in value["occurrences"]),
+            tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
+        )
+
     def canonical_json(self) -> bytes:
         return json.dumps(
             self.to_data(),

@@ -1,5 +1,4 @@
 exports_files([
-    "ghot_inputs.bzl",
     "nix_native_deps.bzl",
     "reapi_artifact_action.bzl",
 ])

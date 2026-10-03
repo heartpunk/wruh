@@ -1,0 +1,21 @@
+{
+  "baseline": "94713a104c14328e56b4913eff3c7810105a61ca",
+  "tested_snapshot": "44fe17fa",
+  "host": "nixos",
+  "command": "nix develop --no-write-lock-file --command scripts/bazelw build --config=reapi //extractor:extract //extractor:compose //extractor:corpus_zeroth_all //extractor:corpus_native_models",
+  "results": {
+    "identical_PASS_models": 29,
+    "unchanged_NOT_SELECTED": 7
+  },
+  "compared_fields": [
+    "status",
+    "fresh_model",
+    "cfg",
+    "canonical_ops",
+    "local_edges",
+    "occurrences",
+    "elf_sha256"
+  ],
+  "scope": "Extraction corpus parity; serialized composition and checker parity still pending.",
+  "later_source_delta": "Unused z3 import removed from extract_cli.py; corpus extraction source unchanged. Final workflow validation remains required."
+}

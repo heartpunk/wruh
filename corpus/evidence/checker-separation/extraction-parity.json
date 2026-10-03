@@ -1,0 +1,182 @@
+[
+  {
+    "file": "corpus_extract_O0_alias.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_arithmetic.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_branch.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_call.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_division.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_extend.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_loop.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_memcmp.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_overlap.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_shifts.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_signed_branch.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_signed_shift.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_strcmp.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_strncmp.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O0_widths.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_alias.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_arithmetic.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_branch.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_call.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_division.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_extend.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_loop.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_memcmp.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_overlap.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_shifts.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_signed_branch.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_signed_shift.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_strcmp.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_strncmp.json",
+    "status": "NOT_SELECTED",
+    "differences": []
+  },
+  {
+    "file": "corpus_extract_O2_widths.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_native_model_O0_alias.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_native_model_O0_division.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_native_model_O0_overlap.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_native_model_O2_alias.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_native_model_O2_division.json",
+    "status": "PASS",
+    "differences": []
+  },
+  {
+    "file": "corpus_native_model_O2_overlap.json",
+    "status": "PASS",
+    "differences": []
+  }
+]
