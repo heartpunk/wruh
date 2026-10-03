@@ -4,6 +4,7 @@ from extractor.runtime_trace import start_runtime_trace
 start_runtime_trace()
 import argparse
 import json
+from ayxg.codec import dumps, loads
 from pathlib import Path
 from extractor.native_runtime import preload_libstdcxx
 _LIBSTDCXX = preload_libstdcxx()
@@ -34,7 +35,7 @@ def main() -> int:
     parser.add_argument("--max-steps", type=int, default=4096)
     parser.add_argument("--max-paths", type=int, default=4096)
     args = parser.parse_args()
-    args.output.write_text(json.dumps(compose(json.loads(args.input.read_text()),
+    args.output.write_text(dumps(compose(loads(args.input.read_text()),
         max_steps=args.max_steps, max_paths=args.max_paths), indent=2, sort_keys=True) + "\n")
     return 0
 

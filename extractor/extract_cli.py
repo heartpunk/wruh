@@ -10,6 +10,7 @@ start_runtime_trace()
 import argparse
 import importlib.util
 import json
+from ayxg.codec import dumps, loads
 from pathlib import Path
 import sys
 from typing import Any
@@ -90,7 +91,7 @@ def main() -> int:
     parser.add_argument("--root", required=True)
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
-    arguments.output.write_text(json.dumps(_run(arguments), indent=2, sort_keys=True) + "\n")
+    arguments.output.write_text(dumps(_run(arguments), indent=2, sort_keys=True) + "\n")
     return 0
 
 if __name__ == "__main__":
