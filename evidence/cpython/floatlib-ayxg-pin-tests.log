@@ -1,0 +1,38 @@
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-4fa1769e':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-3Ro8GoJVh7MbfLPZa0mWhQIUCqG4ZWJ/5BR2f5gjKPc%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: 98cb4f87-7868-49cf-afcd-5d3c2822cf9d
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Loading: 
+Loading: 1 packages loaded
+Analyzing: 2 targets (5 packages loaded, 5 targets configured)
+Analyzing: 2 targets (5 packages loaded, 5 targets configured)
+
+Analyzing: 2 targets (80 packages loaded, 515 targets configured)
+
+Analyzing: 2 targets (96 packages loaded, 1103 targets configured)
+
+Analyzing: 2 targets (103 packages loaded, 1153 targets configured)
+
+INFO: Analyzed 2 targets (106 packages loaded, 1208 targets configured).
+[18 / 20] Testing @@ayxg+//:z3_test; 0s remote, remote-cache ... (2 actions running)
+[19 / 20] 1 / 2 tests; Testing @@ayxg+//:fp_test; 1s remote, remote-cache
+INFO: Found 2 test targets...
+Target @@ayxg+//:fp_test up-to-date:
+  bazel-bin/external/ayxg+/fp_test
+Target @@ayxg+//:z3_test up-to-date:
+  bazel-bin/external/ayxg+/z3_test
+INFO: Elapsed time: 12.744s, Critical Path: 2.34s
+INFO: 20 processes: 17 internal, 1 local, 4 remote.
+INFO: Build completed successfully, 20 total actions
+@ayxg//:fp_test                                                          PASSED in 1.2s
+@ayxg//:z3_test                                                          PASSED in 0.5s
+
+Executed 2 out of 2 tests: 2 tests pass.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.
