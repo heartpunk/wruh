@@ -173,7 +173,11 @@ def claripy_to_z3(ast: Any) -> z3.ExprRef:
               _claripy.BVS(result_name, ast.size(), explicit_name=True))
     transport = _claripy.Solver()
     transport.add(result == ast)
-    formula = z3.parse_smt2_string(transport.to_smt2(), ctx=LTS_EXTRACTION_CONTEXT)
+    smt = transport.to_smt2()
+    try:
+        formula = z3.parse_smt2_string(smt, ctx=LTS_EXTRACTION_CONTEXT)
+    except z3.Z3Exception as error:
+        raise Amd64AdapterError(f"public Angr SMT export failed to parse: {error}\n{smt}") from error
     if len(formula) != 1 or not z3.is_eq(formula[0]):
         raise Amd64AdapterError("Angr SMT export did not retain the result equality")
     lhs, rhs = formula[0].children()
