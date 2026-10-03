@@ -1,0 +1,149 @@
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-943bd1c9':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-tJrO4Bw6Fdyx4O8J4sJM7aqX7VCx4kNcpooOWx6J03A%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: 79485dfa-c6fa-4e8e-9bde-df8bcb6a9667
+Computing main repo mapping: 
+Loading: 
+Loading: 1 packages loaded
+Analyzing: 9 targets (5 packages loaded, 5 targets configured)
+Analyzing: 9 targets (5 packages loaded, 5 targets configured)
+
+Analyzing: 9 targets (84 packages loaded, 526 targets configured)
+
+Analyzing: 9 targets (157 packages loaded, 3086 targets configured)
+
+Analyzing: 9 targets (189 packages loaded, 7857 targets configured)
+
+INFO: Analyzed 9 targets (196 packages loaded, 7921 targets configured).
+[33 / 53] [Prepa] Creating source manifest for //extractor:architecture_checks [for tool] ... (4 actions, 0 running)
+[43 / 69] Creating runfiles tree bazel-out/reapi_linux_x86_64-opt-exec/bin/extractor/open_transfers_smoke.runfiles [for tool]; 0s local ... (5 actions running)
+[53 / 69] Producing //extractor:cpython_extract_PyObject_Call; 0s remote, remote-cache ... (10 actions, 0 running)
+[53 / 69] Producing //extractor:architecture_state_check; 0s remote, remote-cache ... (10 actions running)
+INFO: From Producing //extractor:corpus_native_prepare_O2:
+ERROR    | 2026-10-03 00:08:12,206 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[54 / 69] Producing //extractor:architecture_state_check; 4s remote, remote-cache ... (10 actions, 9 running)
+INFO: From Producing //extractor:architecture_state_check:
+ERROR    | 2026-10-03 00:08:12,230 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[55 / 69] Producing //extractor:cpython_extract_float_mul; 6s remote, remote-cache ... (11 actions running)
+INFO: From Producing //extractor:open_transfers_check:
+ERROR    | 2026-10-03 07:08:14,509 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+{"self_call": "admitted and terminates after state update", "tail_transfer": "no invented return frame", "direct_external": "exact target/poststate retained", "partition": "complete and disjoint UNSAT checks", "admission": "3 open / 3 strict rejects", "no_candidate": "exact symbolic target preserved"}
+[56 / 69] Producing //extractor:cpython_extract_float_mul; 9s remote, remote-cache ... (10 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_overlap:
+ERROR    | 2026-10-03 00:08:16,762 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[57 / 69] Producing //extractor:cpython_extract_float_mul; 10s remote, remote-cache ... (9 actions running)
+INFO: From Producing //extractor:open_object_check:
+ERROR    | 2026-10-03 07:08:14,022 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[58 / 69] Producing //extractor:cpython_extract_float_mul; 12s remote, remote-cache ... (8 actions running)
+INFO: From Producing //extractor:corpus_native_prepare_O0:
+ERROR    | 2026-10-03 00:08:15,904 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[59 / 69] Producing //extractor:cpython_extract_float_mul; 13s remote, remote-cache ... (10 actions running)
+INFO: From Producing //extractor:corpus_native_model_O0_alias:
+ERROR    | 2026-10-03 00:08:24,639 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[60 / 69] Producing //extractor:cpython_extract_float_mul; 18s remote, remote-cache ... (9 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_alias:
+ERROR    | 2026-10-03 00:08:20,704 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[61 / 69] Producing //extractor:cpython_extract_float_mul; 20s remote, remote-cache ... (8 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_division:
+ERROR    | 2026-10-03 00:08:20,693 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[62 / 69] Producing //extractor:cpython_extract_float_mul; 22s remote, remote-cache ... (7 actions running)
+INFO: From Producing //extractor:corpus_native_model_O0_division:
+ERROR    | 2026-10-03 07:08:26,513 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[63 / 69] Producing //extractor:cpython_extract_float_mul; 25s remote, remote-cache ... (6 actions running)
+INFO: From Producing //extractor:corpus_native_model_O0_overlap:
+ERROR    | 2026-10-03 00:08:28,281 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[64 / 69] Producing //extractor:cpython_extract_float_mul; 27s remote, remote-cache ... (5 actions running)
+[64 / 69] Producing //extractor:cpython_extract_float_mul; 38s remote, remote-cache ... (5 actions running)
+INFO: From Producing //extractor:cpython_extract_PyBytes_Size:
+ERROR    | 2026-10-03 00:08:15,924 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:08:26,757 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+[65 / 69] Producing //extractor:cpython_extract_float_mul; 40s remote, remote-cache ... (4 actions running)
+[65 / 69] Producing //extractor:cpython_extract_float_mul; 45s remote, remote-cache ... (4 actions running)
+INFO: From Producing //extractor:cpython_extract_PyObject_Call:
+ERROR    | 2026-10-03 00:08:15,832 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:08:26,741 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+[66 / 69] Producing //extractor:cpython_extract_float_mul; 46s remote, remote-cache ... (3 actions running)
+INFO: From Producing //extractor:cpython_extract_float_mul:
+ERROR    | 2026-10-03 00:08:15,927 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:08:27,002 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+[67 / 69] Producing //extractor:cpython_extract_float_add; Downloading extractor/cpython_extract_float_add.json, 26.9 MiB / 29.6 MiB; 53s remote, remote-cache ... (2 actions running)
+INFO: From Producing //extractor:cpython_extract_float_add:
+ERROR    | 2026-10-03 00:08:15,850 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:08:26,942 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+[68 / 69] Producing //extractor:cpython_extract_PyFloat_AsDouble; 54s remote, remote-cache
+INFO: From Producing //extractor:cpython_extract_PyFloat_AsDouble:
+ERROR    | 2026-10-03 00:08:15,972 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:08:26,713 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+[68 / 69] Producing //extractor:cpython_extract_PyFloat_AsDouble; 58s remote, remote-cache
+INFO: Found 9 targets...
+Target //extractor:cpython_extract_PyBytes_Size up-to-date:
+  bazel-bin/extractor/cpython_extract_PyBytes_Size.json
+  bazel-bin/extractor/cpython_extract_PyBytes_Size.json.runtime-trace.json
+Target //extractor:open_transfers_check up-to-date:
+  bazel-bin/extractor/open_transfers_check.json
+  bazel-bin/extractor/open_transfers_check.json.runtime-trace.json
+Target //extractor:corpus_native_models up-to-date:
+  bazel-bin/extractor/corpus_native_model_O0_alias.json
+  bazel-bin/extractor/corpus_native_model_O0_alias.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O0_overlap.json
+  bazel-bin/extractor/corpus_native_model_O0_overlap.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O0_division.json
+  bazel-bin/extractor/corpus_native_model_O0_division.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O2_alias.json
+  bazel-bin/extractor/corpus_native_model_O2_alias.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O2_overlap.json
+  bazel-bin/extractor/corpus_native_model_O2_overlap.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O2_division.json
+  bazel-bin/extractor/corpus_native_model_O2_division.json.runtime-trace.json
+Target //extractor:cpython_extract_PyObject_Call up-to-date:
+  bazel-bin/extractor/cpython_extract_PyObject_Call.json
+  bazel-bin/extractor/cpython_extract_PyObject_Call.json.runtime-trace.json
+Target //extractor:open_object_check up-to-date:
+  bazel-bin/extractor/open_object_check.json
+  bazel-bin/extractor/open_object_check.json.runtime-trace.json
+Target //extractor:cpython_extract_float_add up-to-date:
+  bazel-bin/extractor/cpython_extract_float_add.json
+  bazel-bin/extractor/cpython_extract_float_add.json.runtime-trace.json
+Target //extractor:architecture_state_check up-to-date:
+  bazel-bin/extractor/architecture_state_check.json
+  bazel-bin/extractor/architecture_state_check.json.runtime-trace.json
+Target //extractor:cpython_extract_PyFloat_AsDouble up-to-date:
+  bazel-bin/extractor/cpython_extract_PyFloat_AsDouble.json
+  bazel-bin/extractor/cpython_extract_PyFloat_AsDouble.json.runtime-trace.json
+Target //extractor:cpython_extract_float_mul up-to-date:
+  bazel-bin/extractor/cpython_extract_float_mul.json
+  bazel-bin/extractor/cpython_extract_float_mul.json.runtime-trace.json
+INFO: Elapsed time: 68.813s, Critical Path: 61.18s
+INFO: 69 processes: 41 internal, 12 local, 16 remote.
+INFO: Build completed successfully, 69 total actions
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-943bd1c9':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-tJrO4Bw6Fdyx4O8J4sJM7aqX7VCx4kNcpooOWx6J03A%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: a07244ed-3329-4058-8136-edc8baa27b09
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //extractor:angr_upgrade_parity (0 packages loaded, 0 targets configured)
+Analyzing: target //extractor:angr_upgrade_parity (0 packages loaded, 0 targets configured)
+
+Analyzing: target //extractor:angr_upgrade_parity (0 packages loaded, 516 targets configured)
+
+INFO: Analyzed target //extractor:angr_upgrade_parity (1 packages loaded, 547 targets configured).
+INFO: Found 1 target...
+Target //extractor:angr_upgrade_parity up-to-date:
+  bazel-bin/extractor/angr_upgrade_parity
+INFO: Elapsed time: 1.722s, Critical Path: 0.01s
+INFO: 9 processes: 1 action cache hit, 9 internal.
+INFO: Build completed successfully, 9 total actions
+INFO: Running command line: bazel-bin/extractor/angr_upgrade_parity <args omitted>
+corpus_native_model_O0_alias.json 24 UNSAT
+corpus_native_model_O0_division.json 56 UNSAT
+corpus_native_model_O0_overlap.json 42 UNSAT
+corpus_native_model_O2_alias.json 12 UNSAT
+corpus_native_model_O2_division.json 50 UNSAT
+corpus_native_model_O2_overlap.json 12 UNSAT
