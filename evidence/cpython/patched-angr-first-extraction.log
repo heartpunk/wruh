@@ -1,0 +1,167 @@
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-584d4344':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-3Ro8GoJVh7MbfLPZa0mWhQIUCqG4ZWJ/5BR2f5gjKPc%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+building '/nix/store/v0dk7kvnzmfhfrdn2l4a9z578gnxnnxw-angr-10.0.1-vendor.drv'...
+building '/nix/store/0bk4kisr916f1ql46scz2g6rxhrhqshm-python3.12-grpcio-1.80.0.drv'...
+building '/nix/store/yn33n2d195lx10pb8h798w7af87bbakp-python3.12-grpcio-tools-1.80.0.drv'...
+building '/nix/store/iplk2krc2md21jnx3f4n2m8j92c5vkdm-python3.12-angr-10.0.1.drv'...
+building '/nix/store/8xkplpn2kspr9zpz57a7455nx5qvnjyq-python3-3.12.13-env.drv'...
+building '/nix/store/fkf1wk3zzwrvk2bil3mpg5k23p4p7hxk-nix-shell-env.drv'...
+Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: b4f137e1-a422-4a6c-8dd9-212bf38b5c4b
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Loading: 
+Loading: 1 packages loaded
+Analyzing: 6 targets (5 packages loaded, 5 targets configured)
+Analyzing: 6 targets (5 packages loaded, 5 targets configured)
+
+Analyzing: 6 targets (84 packages loaded, 526 targets configured)
+
+Analyzing: 6 targets (125 packages loaded, 1950 targets configured)
+
+Analyzing: 6 targets (126 packages loaded, 1959 targets configured)
+
+Analyzing: 6 targets (129 packages loaded, 2115 targets configured)
+
+Analyzing: 6 targets (138 packages loaded, 2307 targets configured)
+
+Analyzing: 6 targets (141 packages loaded, 2887 targets configured)
+
+Analyzing: 6 targets (145 packages loaded, 2927 targets configured)
+
+Analyzing: 6 targets (147 packages loaded, 5126 targets configured)
+
+Analyzing: 6 targets (156 packages loaded, 5323 targets configured)
+
+Analyzing: 6 targets (170 packages loaded, 5412 targets configured)
+
+Analyzing: 6 targets (173 packages loaded, 5515 targets configured)
+
+Analyzing: 6 targets (179 packages loaded, 6780 targets configured)
+
+Analyzing: 6 targets (184 packages loaded, 7171 targets configured)
+
+Analyzing: 6 targets (191 packages loaded, 7261 targets configured)
+
+Analyzing: 6 targets (195 packages loaded, 7871 targets configured)
+
+INFO: Analyzed 6 targets (196 packages loaded, 7918 targets configured).
+[34 / 64] Copying files [for tool]; 0s local ... (8 actions, 6 running)
+[43 / 66] Creating runfiles tree bazel-out/reapi_linux_x86_64-opt-exec/bin/extractor/cpython_probe.runfiles [for tool]; 0s local ... (5 actions running)
+[53 / 66] Producing //extractor:architecture_state_check; 0s remote, remote-cache ... (7 actions, 0 running)
+[53 / 66] Producing //extractor:architecture_state_check; 0s remote, remote-cache ... (7 actions running)
+INFO: From Producing //extractor:architecture_state_check:
+ERROR    | 2026-10-03 00:00:37,420 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[54 / 66] Producing //extractor:open_transfers_check; 6s remote, remote-cache ... (6 actions running)
+INFO: From Producing //extractor:open_transfers_check:
+ERROR    | 2026-10-03 07:00:39,705 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+{"self_call": "admitted and terminates after state update", "tail_transfer": "no invented return frame", "direct_external": "exact target/poststate retained", "partition": "complete and disjoint UNSAT checks", "admission": "3 open / 3 strict rejects", "no_candidate": "exact symbolic target preserved"}
+INFO: From Producing //extractor:corpus_native_prepare_O2:
+ERROR    | 2026-10-03 07:00:39,492 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[56 / 66] Producing //extractor:corpus_native_prepare_O0; 9s remote, remote-cache ... (7 actions, 4 running)
+INFO: From Producing //extractor:corpus_native_prepare_O0:
+ERROR    | 2026-10-03 00:00:39,285 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[57 / 66] Producing //extractor:cpython_extract_float_add; 11s remote, remote-cache ... (9 actions running)
+INFO: From Producing //extractor:open_object_check:
+ERROR    | 2026-10-03 00:00:39,259 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[58 / 66] Producing //extractor:cpython_extract_float_add; 14s remote, remote-cache ... (8 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_overlap:
+ERROR    | 2026-10-03 00:00:46,613 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[59 / 66] Producing //extractor:cpython_extract_float_add; 16s remote, remote-cache ... (7 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_alias:
+ERROR    | 2026-10-03 07:00:48,428 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[60 / 66] Producing //extractor:cpython_extract_float_add; 20s remote, remote-cache ... (6 actions running)
+INFO: From Producing //extractor:corpus_native_model_O0_alias:
+ERROR    | 2026-10-03 07:00:48,549 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[61 / 66] Producing //extractor:cpython_extract_float_add; 22s remote, remote-cache ... (5 actions running)
+INFO: From Producing //extractor:cpython_extract_float_mul:
+ERROR    | 2026-10-03 00:00:37,429 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:00:41,378 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+INFO: From Producing //extractor:corpus_native_model_O2_division:
+ERROR    | 2026-10-03 00:00:49,220 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+INFO: From Producing //extractor:corpus_native_model_O0_overlap:
+ERROR    | 2026-10-03 00:00:49,500 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[64 / 66] Producing //extractor:cpython_extract_float_add; 24s remote, remote-cache ... (2 actions running)
+INFO: From Producing //extractor:corpus_native_model_O0_division:
+ERROR    | 2026-10-03 00:00:49,477 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[65 / 66] Producing //extractor:cpython_extract_float_add; 25s remote, remote-cache
+[65 / 66] Producing //extractor:cpython_extract_float_add; 36s remote, remote-cache
+INFO: From Producing //extractor:cpython_extract_float_add:
+ERROR    | 2026-10-03 00:00:39,195 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+WARNING  | 2026-10-03 00:00:48,225 | cle.backends.elf.relocation | Unknown reloc 36 on AMD64
+[65 / 66] Producing //extractor:cpython_extract_float_add; 43s remote, remote-cache
+INFO: Found 6 targets...
+Target //extractor:open_transfers_check up-to-date:
+  bazel-bin/extractor/open_transfers_check.json
+  bazel-bin/extractor/open_transfers_check.json.runtime-trace.json
+Target //extractor:cpython_extract_float_add up-to-date:
+  bazel-bin/extractor/cpython_extract_float_add.json
+  bazel-bin/extractor/cpython_extract_float_add.json.runtime-trace.json
+Target //extractor:open_object_check up-to-date:
+  bazel-bin/extractor/open_object_check.json
+  bazel-bin/extractor/open_object_check.json.runtime-trace.json
+Target //extractor:cpython_extract_float_mul up-to-date:
+  bazel-bin/extractor/cpython_extract_float_mul.json
+  bazel-bin/extractor/cpython_extract_float_mul.json.runtime-trace.json
+Target //extractor:architecture_state_check up-to-date:
+  bazel-bin/extractor/architecture_state_check.json
+  bazel-bin/extractor/architecture_state_check.json.runtime-trace.json
+Target //extractor:corpus_native_models up-to-date:
+  bazel-bin/extractor/corpus_native_model_O0_alias.json
+  bazel-bin/extractor/corpus_native_model_O0_alias.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O0_overlap.json
+  bazel-bin/extractor/corpus_native_model_O0_overlap.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O0_division.json
+  bazel-bin/extractor/corpus_native_model_O0_division.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O2_alias.json
+  bazel-bin/extractor/corpus_native_model_O2_alias.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O2_overlap.json
+  bazel-bin/extractor/corpus_native_model_O2_overlap.json.runtime-trace.json
+  bazel-bin/extractor/corpus_native_model_O2_division.json
+  bazel-bin/extractor/corpus_native_model_O2_division.json.runtime-trace.json
+INFO: Elapsed time: 70.990s, Critical Path: 46.46s
+INFO: 66 processes: 41 internal, 12 local, 13 remote.
+INFO: Build completed successfully, 66 total actions
+warning: not writing modified lock file of flake 'path:/tmp/wruh-cpython-584d4344':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-3Ro8GoJVh7MbfLPZa0mWhQIUCqG4ZWJ/5BR2f5gjKPc%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: e6982c06-a035-4561-ad60-aeeebfc98ed3
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //extractor:angr_smt_smoke (0 packages loaded, 0 targets configured)
+Analyzing: target //extractor:angr_smt_smoke (0 packages loaded, 0 targets configured)
+
+Analyzing: target //extractor:angr_smt_smoke (0 packages loaded, 630 targets configured)
+
+INFO: Analyzed target //extractor:angr_smt_smoke (1 packages loaded, 661 targets configured).
+INFO: Found 1 target...
+Target //extractor:angr_smt_smoke up-to-date:
+  bazel-bin/extractor/angr_smt_smoke
+INFO: Elapsed time: 3.088s, Critical Path: 0.63s
+INFO: 21 processes: 9 internal, 12 local.
+INFO: Build completed successfully, 21 total actions
+INFO: Running command line: bazel-bin/extractor/angr_smt_smoke
+ERROR    | 2026-10-03 00:01:27,883 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+Traceback (most recent call last):
+  File "/srv/build-scratch/bazel-output-user-root/424df7fc19e8eff899a38ea35163c869/execroot/_main/bazel-out/k8-fastbuild/bin/extractor/angr_smt_smoke.runfiles/_main/extractor/_angr_smt_smoke_stage2_bootstrap.py", line 499, in <module>
+    main()
+  File "/srv/build-scratch/bazel-output-user-root/424df7fc19e8eff899a38ea35163c869/execroot/_main/bazel-out/k8-fastbuild/bin/extractor/angr_smt_smoke.runfiles/_main/extractor/_angr_smt_smoke_stage2_bootstrap.py", line 493, in main
+    _run_py_path(main_filename, args=sys.argv[1:])
+  File "/srv/build-scratch/bazel-output-user-root/424df7fc19e8eff899a38ea35163c869/execroot/_main/bazel-out/k8-fastbuild/bin/extractor/angr_smt_smoke.runfiles/_main/extractor/_angr_smt_smoke_stage2_bootstrap.py", line 287, in _run_py_path
+    runpy.run_path(main_filename, run_name="__main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "/srv/build-scratch/bazel-output-user-root/424df7fc19e8eff899a38ea35163c869/execroot/_main/bazel-out/k8-fastbuild/bin/extractor/angr_smt_smoke.runfiles/_main/extractor/angr_smt_smoke.py", line 24, in <module>
+    sort = c.FSort.from_size(width)
+           ^^^^^^^
+AttributeError: module 'angr.rustylib.claripy' has no attribute 'FSort'
