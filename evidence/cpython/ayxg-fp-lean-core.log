@@ -1,0 +1,205 @@
+TYPECHECK Ayxg.QfAbv.FpTypes
+TYPECHECK Ayxg.QfAbv.Ast
+TYPECHECK Ayxg.QfAbv.FpEval
+TYPECHECK Ayxg.QfAbv.Eval
+TYPECHECK Ayxg.QfAbv.Subst
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:143:102: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:144:100: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:145:102: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:149:141: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:150:152: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:152:105: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:153:154: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:154:156: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:155:147: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:169:90: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:173:97: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:174:101: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:175:101: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:143:102: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:144:100: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:145:102: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:149:141: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:150:152: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:152:105: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:153:154: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:154:156: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:155:147: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:169:90: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:173:97: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:174:101: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:175:101: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:176:95: warning: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:351:87: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:352:85: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:353:87: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:357:112: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:358:123: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:360:90: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:361:125: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:362:127: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:363:118: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:375:37: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:378:82: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:379:86: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:380:86: warning: Unused tactic linter: `rfl` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:351:87: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:352:85: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:353:87: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:357:112: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:358:123: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:360:90: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:361:125: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:362:127: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:363:118: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:375:37: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:378:82: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:379:86: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:380:86: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Subst.lean:381:80: warning: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+TYPECHECK Ayxg.QfAbv.Update
+/tmp/ayxg-fp-0d279809/Ayxg/QfAbv/Update.lean:51:8: warning: automatically included section variable(s) unused in theorem `_private.Ayxg.QfAbv.Update.0.Ayxg.QfAbv.StateUpdate.env_eq_of_lookup_eq`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+TYPECHECK Ayxg.QfAbv.SymbolicLabel
+TYPECHECK Ayxg.LTS.QfAbv.SymbolicTransition
+/tmp/ayxg-fp-0d279809/Ayxg/LTS/QfAbv/SymbolicTransition.lean:85:8: warning: automatically included section variable(s) unused in theorem `Ayxg.LTS.QfAbv.SymbolicTransition.edgeSemantics_source`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+/tmp/ayxg-fp-0d279809/Ayxg/LTS/QfAbv/SymbolicTransition.lean:89:8: warning: automatically included section variable(s) unused in theorem `Ayxg.LTS.QfAbv.SymbolicTransition.edgeSemantics_symbolicLabel`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+/tmp/ayxg-fp-0d279809/Ayxg/LTS/QfAbv/SymbolicTransition.lean:93:8: warning: automatically included section variable(s) unused in theorem `Ayxg.LTS.QfAbv.SymbolicTransition.edgeSemantics_nextControl`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+TYPECHECK Ayxg.LTS
+TYPECHECK Ayxg.LTS.QfAbv.SymbolicTransitionSystem
+/tmp/ayxg-fp-0d279809/Ayxg/LTS/QfAbv/SymbolicTransitionSystem.lean:133:0: warning: automatically included section variable(s) unused in theorem `Ayxg.LTS.QfAbv.SymbolicTransitionSystem.transAt_mem_src`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+TYPECHECK Ayxg.STS
+TYPECHECK Ayxg.QfAbv.STS
+PASS 12 AYXG Lean modules
