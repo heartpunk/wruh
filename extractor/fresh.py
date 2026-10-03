@@ -143,16 +143,18 @@ def _local_edges(
     result = []
     for outcome in family.outcomes:
         guard = z3.And(family.source_guard, outcome.guard)
-        target: int | z3.BitVecRef = (
+        target: int | z3.BitVecRef | str = (
             outcome.target_value
             if outcome.target_value is not None
             else outcome.target
         )
+        if outcome.jumpkind == "Ijk_SigFPE_IntDiv":
+            target = "error"
         result.append(
             LocalEdge(
                 id=EdgeId(
                     occurrence_id,
-                    OutcomeId(outcome.identity.outcome_id),
+                    OutcomeId(outcome.outcome_id),
                 ),
                 source=family.source,
                 summary=step_summary_from_z3(

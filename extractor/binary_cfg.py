@@ -348,7 +348,7 @@ def _walk_function(
             if not isinstance(statement, pyvex.stmt.Exit):
                 continue
             if statement.jumpkind == "Ijk_SigFPE_IntDiv":
-                continue  # Diagnostic CFG classification; STS fault handling unresolved.
+                continue  # Fault successors are terminal STS errors, not CFG nodes.
             target = _constant_target(statement.dst)
             if target is None:
                 raise InventoryError(

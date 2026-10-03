@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-import logging
 from typing import Any, Mapping
 
 from extractor import runtime
@@ -53,22 +52,6 @@ _claripy = runtime.claripy
 from angr.engines.vex.claripy import ccall as _angr_ccall  # noqa: E402
 
 
-class _ExpectedSymbolicExitFilter(logging.Filter):
-    """Hide only Angr's expected diagnostic for our symbolic return edge."""
-
-    _PREFIX = (
-        "Exit state has over 256 possible solutions. "
-        "Likely unconstrained; skipping."
-    )
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return not record.getMessage().startswith(self._PREFIX)
-
-
-logging.getLogger("angr.engines.successors").addFilter(
-    _ExpectedSymbolicExitFilter()
-)
-
 _AMD64_OP_COPY: int = _angr_ccall.data["AMD64"]["OpTypes"][
     "G_CC_OP_COPY"
 ]
@@ -90,14 +73,6 @@ class CanonicalDeclaration:
     index_width: int | None = None
 
 
-@dataclass(frozen=True)
-class RegisterInstructionStep:
-    source: int
-    target: int
-    source_guard: z3.BoolRef
-    updates: Mapping[str, z3.ExprRef]
-
-
 @dataclass(frozen=True, eq=False)
 class MemoryWrite:
     address: z3.BitVecRef
@@ -106,25 +81,8 @@ class MemoryWrite:
 
 
 @dataclass(frozen=True)
-class MemoryInstructionStep:
-    source: int
-    target: int
-    source_guard: z3.BoolRef
-    updates: Mapping[str, z3.ExprRef]
-    read_count: int
-    writes: tuple[MemoryWrite, ...]
-
-
-@dataclass(frozen=True)
-class StaticOutcomeIdentity:
-    outcome_id: int
-    kind: str
-    vex_exit_statement_index: int | None
-
-
-@dataclass(frozen=True)
 class InstructionOutcome:
-    identity: StaticOutcomeIdentity
+    outcome_id: int
     guard: z3.BoolRef
     updates: Mapping[str, z3.ExprRef]
     target: z3.BitVecRef
@@ -463,6 +421,8 @@ def fresh_instruction_state(project: Any, source: int) -> Any:
             f"unexpected architecture: {project.arch.name}/{project.arch.bits}"
         )
     state = project.factory.blank_state(addr=source)
+    state.options.add(_angr.options.NO_IP_CONCRETIZATION)
+    state.options.add(_angr.options.PRODUCE_ZERODIV_SUCCESSORS)
     state.options.add(_angr.options.TRACK_MEMORY_ACTIONS)
     state.options.add(_angr.options.TRACK_REGISTER_ACTIONS)
     state.options.add(_angr.options.SYMBOLIC_WRITE_ADDRESSES)
@@ -623,29 +583,6 @@ def _post_flag_updates(
     return updates
 
 
-def _single_successor(
-    project: Any,
-    source: int,
-) -> Any:
-    source = _u64(source, "source")
-    block = project.factory.block(source, num_inst=1)
-    instructions = list(block.capstone.insns)
-    if block.vex.instructions != 1 or len(instructions) != 1:
-        raise Amd64AdapterError(
-            f"expected one decoded instruction at {source:#x}"
-        )
-
-    state = fresh_instruction_state(project, source)
-    successors = list(
-        project.factory.successors(state, num_inst=1).all_successors
-    )
-    if len(successors) != 1:
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} has {len(successors)} successors"
-        )
-    return successors[0]
-
-
 def _post_updates(post: Any, source: int) -> dict[str, z3.ExprRef]:
     reads = post.globals.get("_ghot_memory_reads", {})
     updates: dict[str, z3.ExprRef] = {}
@@ -691,209 +628,42 @@ def _symbolic_target_update(
     return target, target_value
 
 
-def _concrete_target_update(
-    post: Any,
-    source: int,
-    updates: dict[str, z3.ExprRef],
-) -> int:
-    post_rip_ast = post.regs.rip
-    if post_rip_ast.op != "BVV":
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} has symbolic post-rip"
-        )
-    target = _u64(int(post_rip_ast.args[0]), "target")
-    post_rip = claripy_to_z3(post_rip_ast)
-    target_expr = z3.BitVecVal(
-        target,
-        64,
-        ctx=LTS_EXTRACTION_CONTEXT,
-    )
-    require_mirrored_rip(target_expr, post_rip)
-    updates["rip"] = post_rip
-    return target
-
-
-def step_register_instruction(
-    project: Any,
-    source: int,
-) -> RegisterInstructionStep:
-    """Execute one exact non-memory-writing instruction."""
-
-    source = _u64(source, "source")
-    post = _single_successor(project, source)
-    memory_writes = [
-        action
-        for action in post.history.recent_actions
-        if action.type == "mem" and action.action == "write"
-    ]
-    if memory_writes:
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} is not register-only"
-        )
-
-    updates = _post_updates(post, source)
-    target = _concrete_target_update(post, source, updates)
-
-    return RegisterInstructionStep(
-        source=source,
-        target=target,
-        source_guard=source_rip_guard(source),
-        updates=updates,
-    )
-
-
-def step_memory_instruction(
-    project: Any,
-    source: int,
-) -> MemoryInstructionStep:
-    """Execute one exact memory-reading or memory-writing instruction."""
-
-    source = _u64(source, "source")
-    post = _single_successor(project, source)
-    reads = post.globals.get("_ghot_memory_reads", {})
-    raw_writes = tuple(post.globals.get("_ghot_memory_writes", ()))
-    if not reads and not raw_writes:
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} has no memory effect"
-        )
-    updates = _post_updates(post, source)
-    writes = _resolved_writes(post)
-    if writes:
-        updates[MEMORY_NAME] = _resolve_memory_reads(
-            post.globals["_ghot_memory_expr"],
-            reads,
-        )
-    target = _concrete_target_update(post, source, updates)
-    return MemoryInstructionStep(
-        source=source,
-        target=target,
-        source_guard=source_rip_guard(source),
-        updates=updates,
-        read_count=len(reads),
-        writes=writes,
-    )
-
-
 def step_instruction_outcomes(
     project: Any,
     source: int,
 ) -> InstructionOutcomeFamily:
-    """Capture every structural VEX exit/default outcome of one instruction."""
-
+    """Translate the complete successor relation of one real instruction."""
     source = _u64(source, "source")
     block = project.factory.block(source, num_inst=1)
-    instructions = list(block.capstone.insns)
-    if block.vex.instructions != 1 or len(instructions) != 1:
-        raise Amd64AdapterError(
-            f"expected one decoded instruction at {source:#x}"
-        )
-    exit_indices = tuple(
-        index
-        for index, statement in enumerate(block.vex.statements)
-        if statement.__class__.__name__ == "Exit"
-    )
+    if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
+        raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
     state = fresh_instruction_state(project, source)
-    successors = list(
-        project.factory.successors(state, num_inst=1).all_successors
-    )
+    successors = project.factory.successors(state, num_inst=1).all_successors
     if not successors:
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} has no outcomes"
-        )
-
-    outcomes: list[InstructionOutcome] = []
-    exit_guards: list[z3.BoolRef] = []
-    saw_default = False
-    for post in successors:
-        statement_index = int(post.scratch.exit_stmt_idx)
-        if statement_index >= 0:
-            if statement_index not in exit_indices:
-                raise Amd64AdapterError(
-                    f"instruction at {source:#x} has unknown VEX exit "
-                    f"statement {statement_index}"
-                )
-            identity = StaticOutcomeIdentity(
-                outcome_id=exit_indices.index(statement_index),
-                kind="exit",
-                vex_exit_statement_index=statement_index,
-            )
-            raw_guard = post.history.jump_guard
-            if raw_guard is None:
-                raise Amd64AdapterError(
-                    f"instruction at {source:#x} exit has no guard"
-                )
-            guard = _resolve_memory_reads(
-                claripy_to_z3(raw_guard),
-                post.globals.get("_ghot_memory_reads", {}),
-            )
-            exit_guards.append(guard)
-        else:
-            if saw_default:
-                raise Amd64AdapterError(
-                    f"instruction at {source:#x} has duplicate default outcome"
-                )
-            saw_default = True
-            identity = StaticOutcomeIdentity(
-                outcome_id=len(exit_indices),
-                kind="default",
-                vex_exit_statement_index=None,
-            )
-            guard = z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT)
-
+        raise Amd64AdapterError(f"instruction at {source:#x} has no outcomes")
+    outcomes = []
+    for outcome_id, post in enumerate(successors):
+        reads = post.globals.get("_ghot_memory_reads", {})
+        constraints = [
+            _resolve_memory_reads(claripy_to_z3(c), reads)
+            for c in post.solver.constraints
+        ]
+        guard = (z3.And(*constraints) if constraints else
+                 z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT))
         updates = _post_updates(post, source)
         writes = _resolved_writes(post)
         if writes:
             updates[MEMORY_NAME] = _resolve_memory_reads(
-                post.globals["_ghot_memory_expr"],
-                post.globals.get("_ghot_memory_reads", {}),
+                post.globals["_ghot_memory_expr"], reads,
             )
         target, target_value = _symbolic_target_update(post, updates)
-        outcomes.append(
-            InstructionOutcome(
-                identity=identity,
-                guard=guard,
-                updates=updates,
-                target=target,
-                target_value=target_value,
-                jumpkind=block.vex.jumpkind,
-                writes=writes,
-            )
-        )
-
-    if not saw_default:
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} has no default outcome"
-        )
-    default_guard = (
-        z3.And(*(z3.Not(guard) for guard in exit_guards))
-        if exit_guards
-        else z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT)
-    )
-    outcomes = [
-        (
-            InstructionOutcome(
-                identity=outcome.identity,
-                guard=default_guard,
-                updates=outcome.updates,
-                target=outcome.target,
-                target_value=outcome.target_value,
-                jumpkind=outcome.jumpkind,
-                writes=outcome.writes,
-            )
-            if outcome.identity.kind == "default"
-            else outcome
-        )
-        for outcome in outcomes
-    ]
-    outcomes.sort(key=lambda outcome: outcome.identity.outcome_id)
-    expected_ids = tuple(range(len(exit_indices) + 1))
-    actual_ids = tuple(outcome.identity.outcome_id for outcome in outcomes)
-    if actual_ids != expected_ids:
-        raise Amd64AdapterError(
-            f"instruction at {source:#x} outcome identities are incomplete"
-        )
-    return InstructionOutcomeFamily(
-        source=source,
-        source_guard=source_rip_guard(source),
-        outcomes=tuple(outcomes),
-    )
+        outcomes.append(InstructionOutcome(
+            outcome_id=outcome_id,
+            guard=guard,
+            updates=updates,
+            target=target,
+            target_value=target_value,
+            jumpkind=post.history.jumpkind,
+            writes=writes,
+        ))
+    return InstructionOutcomeFamily(source, source_rip_guard(source), tuple(outcomes))
