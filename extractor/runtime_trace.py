@@ -5,12 +5,14 @@ from __future__ import annotations
 import atexit
 from collections import Counter
 import cProfile
+import hashlib
 import importlib.machinery
 import json
 import os
 from pathlib import Path
 import pstats
 import sys
+import sysconfig
 import time
 from typing import Any
 
@@ -50,6 +52,24 @@ def _mapped_files() -> tuple[list[str], list[str]]:
         }
     )
     return files, lines
+
+
+def _file_identity(path: str) -> dict[str, Any]:
+    """Identify exact runtime files, retaining unavailable-file diagnostics."""
+    resolved = Path(path).resolve()
+    record: dict[str, Any] = {"path": path, "resolved_path": str(resolved)}
+    try:
+        digest = hashlib.sha256()
+        with resolved.open("rb") as stream:
+            magic = stream.read(4)
+            digest.update(magic)
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        record.update(sha256=digest.hexdigest(), size_bytes=resolved.stat().st_size,
+                      elf=magic == b"\x7fELF")
+    except OSError as error:
+        record["unavailable"] = str(error)
+    return record
 
 
 def _module_inventory() -> list[dict[str, Any]]:
@@ -140,6 +160,11 @@ def start_runtime_trace() -> None:
             "pid": os.getpid(),
             "argv": sys.argv,
             "executable": sys.executable,
+            "python_version": sys.version,
+            "python_build": {name: sysconfig.get_config_var(name) for name in
+                             ("SOABI", "CONFIG_ARGS", "Py_DEBUG", "LIBDIR", "LDLIBRARY")},
+            "runtime_files": [_file_identity(path) for path in
+                              sorted(set(mapped_files) | {sys.executable})],
             "platform": sys.platform,
             "started_unix_seconds": started_wall,
             "elapsed_seconds": time.monotonic() - started_monotonic,
