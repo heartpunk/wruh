@@ -72,6 +72,8 @@ def main() -> int:
         report.append(row)
         args.output.write_text(json.dumps(report, indent=2) + '\n')
         print(path.name, len(results), 'UNSAT' if row['all_unsat'] else 'INCOMPLETE_OR_MISMATCH', flush=True)
+    if not report:
+        raise RuntimeError("no candidate corpus models found; comparison evidence is empty")
     return 0 if all(row['all_unsat'] for row in report) else 1
 
 if __name__ == '__main__':
