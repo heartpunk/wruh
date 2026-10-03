@@ -1,0 +1,2744 @@
+{
+  "status": "PASS",
+  "architecture": {
+    "name": "AMD64",
+    "storage": [
+      {
+        "name": "rax",
+        "offset": 16,
+        "size_bytes": 8
+      },
+      {
+        "name": "rcx",
+        "offset": 24,
+        "size_bytes": 8
+      },
+      {
+        "name": "rdx",
+        "offset": 32,
+        "size_bytes": 8
+      },
+      {
+        "name": "rbx",
+        "offset": 40,
+        "size_bytes": 8
+      },
+      {
+        "name": "rsp",
+        "offset": 48,
+        "size_bytes": 8
+      },
+      {
+        "name": "rbp",
+        "offset": 56,
+        "size_bytes": 8
+      },
+      {
+        "name": "rsi",
+        "offset": 64,
+        "size_bytes": 8
+      },
+      {
+        "name": "rdi",
+        "offset": 72,
+        "size_bytes": 8
+      },
+      {
+        "name": "r8",
+        "offset": 80,
+        "size_bytes": 8
+      },
+      {
+        "name": "r9",
+        "offset": 88,
+        "size_bytes": 8
+      },
+      {
+        "name": "r10",
+        "offset": 96,
+        "size_bytes": 8
+      },
+      {
+        "name": "r11",
+        "offset": 104,
+        "size_bytes": 8
+      },
+      {
+        "name": "r12",
+        "offset": 112,
+        "size_bytes": 8
+      },
+      {
+        "name": "r13",
+        "offset": 120,
+        "size_bytes": 8
+      },
+      {
+        "name": "r14",
+        "offset": 128,
+        "size_bytes": 8
+      },
+      {
+        "name": "r15",
+        "offset": 136,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_op",
+        "offset": 144,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_dep1",
+        "offset": 152,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_dep2",
+        "offset": 160,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_ndep",
+        "offset": 168,
+        "size_bytes": 8
+      },
+      {
+        "name": "d",
+        "offset": 176,
+        "size_bytes": 8
+      },
+      {
+        "name": "rip",
+        "offset": 184,
+        "size_bytes": 8
+      },
+      {
+        "name": "ac",
+        "offset": 192,
+        "size_bytes": 8
+      },
+      {
+        "name": "id",
+        "offset": 200,
+        "size_bytes": 8
+      },
+      {
+        "name": "fs",
+        "offset": 208,
+        "size_bytes": 8
+      },
+      {
+        "name": "sseround",
+        "offset": 216,
+        "size_bytes": 8
+      },
+      {
+        "name": "zmm0",
+        "offset": 224,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm1",
+        "offset": 288,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm2",
+        "offset": 352,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm3",
+        "offset": 416,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm4",
+        "offset": 480,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm5",
+        "offset": 544,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm6",
+        "offset": 608,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm7",
+        "offset": 672,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm8",
+        "offset": 736,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm9",
+        "offset": 800,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm10",
+        "offset": 864,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm11",
+        "offset": 928,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm12",
+        "offset": 992,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm13",
+        "offset": 1056,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm14",
+        "offset": 1120,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm15",
+        "offset": 1184,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm16",
+        "offset": 1248,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm17",
+        "offset": 1312,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm18",
+        "offset": 1376,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm19",
+        "offset": 1440,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm20",
+        "offset": 1504,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm21",
+        "offset": 1568,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm22",
+        "offset": 1632,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm23",
+        "offset": 1696,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm24",
+        "offset": 1760,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm25",
+        "offset": 1824,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm26",
+        "offset": 1888,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm27",
+        "offset": 1952,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm28",
+        "offset": 2016,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm29",
+        "offset": 2080,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm30",
+        "offset": 2144,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm31",
+        "offset": 2208,
+        "size_bytes": 64
+      },
+      {
+        "name": "k0",
+        "offset": 2336,
+        "size_bytes": 8
+      },
+      {
+        "name": "k1",
+        "offset": 2344,
+        "size_bytes": 8
+      },
+      {
+        "name": "k2",
+        "offset": 2352,
+        "size_bytes": 8
+      },
+      {
+        "name": "k3",
+        "offset": 2360,
+        "size_bytes": 8
+      },
+      {
+        "name": "k4",
+        "offset": 2368,
+        "size_bytes": 8
+      },
+      {
+        "name": "k5",
+        "offset": 2376,
+        "size_bytes": 8
+      },
+      {
+        "name": "k6",
+        "offset": 2384,
+        "size_bytes": 8
+      },
+      {
+        "name": "k7",
+        "offset": 2392,
+        "size_bytes": 8
+      },
+      {
+        "name": "ftop",
+        "offset": 2400,
+        "size_bytes": 4
+      },
+      {
+        "name": "fpreg",
+        "offset": 2408,
+        "size_bytes": 64
+      },
+      {
+        "name": "fptag",
+        "offset": 2472,
+        "size_bytes": 8
+      },
+      {
+        "name": "fpround",
+        "offset": 2480,
+        "size_bytes": 8
+      },
+      {
+        "name": "fc3210",
+        "offset": 2488,
+        "size_bytes": 8
+      },
+      {
+        "name": "emnote",
+        "offset": 2496,
+        "size_bytes": 4
+      },
+      {
+        "name": "cmstart",
+        "offset": 2504,
+        "size_bytes": 8
+      },
+      {
+        "name": "cmlen",
+        "offset": 2512,
+        "size_bytes": 8
+      },
+      {
+        "name": "nraddr",
+        "offset": 2520,
+        "size_bytes": 8
+      },
+      {
+        "name": "gs",
+        "offset": 2536,
+        "size_bytes": 8
+      },
+      {
+        "name": "ip_at_syscall",
+        "offset": 2544,
+        "size_bytes": 8
+      },
+      {
+        "name": "cs_seg",
+        "offset": 2560,
+        "size_bytes": 2
+      },
+      {
+        "name": "ds_seg",
+        "offset": 2562,
+        "size_bytes": 2
+      },
+      {
+        "name": "es_seg",
+        "offset": 2564,
+        "size_bytes": 2
+      },
+      {
+        "name": "fs_seg",
+        "offset": 2566,
+        "size_bytes": 2
+      },
+      {
+        "name": "gs_seg",
+        "offset": 2568,
+        "size_bytes": 2
+      },
+      {
+        "name": "ss_seg",
+        "offset": 2570,
+        "size_bytes": 2
+      },
+      {
+        "name": "cr0",
+        "offset": 2576,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr2",
+        "offset": 2592,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr3",
+        "offset": 2600,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr4",
+        "offset": 2608,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr8",
+        "offset": 2640,
+        "size_bytes": 8
+      }
+    ],
+    "views": [
+      {
+        "name": "_bp",
+        "storage_name": "rbp",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "ac",
+        "storage_name": "ac",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "acflag",
+        "storage_name": "ac",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "ah",
+        "storage_name": "rax",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "al",
+        "storage_name": "rax",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "ax",
+        "storage_name": "rax",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "bh",
+        "storage_name": "rbx",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "bl",
+        "storage_name": "rbx",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "bp",
+        "storage_name": "rbp",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "bph",
+        "storage_name": "rbp",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "bpl",
+        "storage_name": "rbp",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "bx",
+        "storage_name": "rbx",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "cc_dep1",
+        "storage_name": "cc_dep1",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_dep2",
+        "storage_name": "cc_dep2",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_ndep",
+        "storage_name": "cc_ndep",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cc_op",
+        "storage_name": "cc_op",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "ch",
+        "storage_name": "rcx",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "cl",
+        "storage_name": "rcx",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "cmlen",
+        "storage_name": "cmlen",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cmstart",
+        "storage_name": "cmstart",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr0",
+        "storage_name": "cr0",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr2",
+        "storage_name": "cr2",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr3",
+        "storage_name": "cr3",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr4",
+        "storage_name": "cr4",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cr8",
+        "storage_name": "cr8",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "cs_seg",
+        "storage_name": "cs_seg",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "cx",
+        "storage_name": "rcx",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "d",
+        "storage_name": "d",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "dflag",
+        "storage_name": "d",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "dh",
+        "storage_name": "rdx",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "di",
+        "storage_name": "rdi",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "dih",
+        "storage_name": "rdi",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "dil",
+        "storage_name": "rdi",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "dl",
+        "storage_name": "rdx",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "ds_seg",
+        "storage_name": "ds_seg",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "dx",
+        "storage_name": "rdx",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "eax",
+        "storage_name": "rax",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "ebp",
+        "storage_name": "rbp",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "ebx",
+        "storage_name": "rbx",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "ecx",
+        "storage_name": "rcx",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "edi",
+        "storage_name": "rdi",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "edx",
+        "storage_name": "rdx",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "emnote",
+        "storage_name": "emnote",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "es_seg",
+        "storage_name": "es_seg",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "esi",
+        "storage_name": "rsi",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "esp",
+        "storage_name": "rsp",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "fc3210",
+        "storage_name": "fc3210",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "fpreg",
+        "storage_name": "fpreg",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "fpround",
+        "storage_name": "fpround",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "fptag",
+        "storage_name": "fptag",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "fpu_regs",
+        "storage_name": "fpreg",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "fpu_tags",
+        "storage_name": "fptag",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "fs",
+        "storage_name": "fs",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "fs_const",
+        "storage_name": "fs",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "fs_seg",
+        "storage_name": "fs_seg",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "ftop",
+        "storage_name": "ftop",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "gs",
+        "storage_name": "gs",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "gs_const",
+        "storage_name": "gs",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "gs_seg",
+        "storage_name": "gs_seg",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "id",
+        "storage_name": "id",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "idflag",
+        "storage_name": "id",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "ip",
+        "storage_name": "rip",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "ip_at_syscall",
+        "storage_name": "ip_at_syscall",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k0",
+        "storage_name": "k0",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k1",
+        "storage_name": "k1",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k2",
+        "storage_name": "k2",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k3",
+        "storage_name": "k3",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k4",
+        "storage_name": "k4",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k5",
+        "storage_name": "k5",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k6",
+        "storage_name": "k6",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "k7",
+        "storage_name": "k7",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm0",
+        "storage_name": "fpreg",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm1",
+        "storage_name": "fpreg",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm2",
+        "storage_name": "fpreg",
+        "byte_offset": 16,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm3",
+        "storage_name": "fpreg",
+        "byte_offset": 24,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm4",
+        "storage_name": "fpreg",
+        "byte_offset": 32,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm5",
+        "storage_name": "fpreg",
+        "byte_offset": 40,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm6",
+        "storage_name": "fpreg",
+        "byte_offset": 48,
+        "size_bytes": 8
+      },
+      {
+        "name": "mm7",
+        "storage_name": "fpreg",
+        "byte_offset": 56,
+        "size_bytes": 8
+      },
+      {
+        "name": "nraddr",
+        "storage_name": "nraddr",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "pc",
+        "storage_name": "rip",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r10",
+        "storage_name": "r10",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r10b",
+        "storage_name": "r10",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r10d",
+        "storage_name": "r10",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r10w",
+        "storage_name": "r10",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r11",
+        "storage_name": "r11",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r11b",
+        "storage_name": "r11",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r11d",
+        "storage_name": "r11",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r11w",
+        "storage_name": "r11",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r12",
+        "storage_name": "r12",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r12b",
+        "storage_name": "r12",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r12d",
+        "storage_name": "r12",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r12w",
+        "storage_name": "r12",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r13",
+        "storage_name": "r13",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r13b",
+        "storage_name": "r13",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r13d",
+        "storage_name": "r13",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r13w",
+        "storage_name": "r13",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r14",
+        "storage_name": "r14",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r14b",
+        "storage_name": "r14",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r14d",
+        "storage_name": "r14",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r14w",
+        "storage_name": "r14",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r15",
+        "storage_name": "r15",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r15b",
+        "storage_name": "r15",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r15d",
+        "storage_name": "r15",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r15w",
+        "storage_name": "r15",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r8",
+        "storage_name": "r8",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r8b",
+        "storage_name": "r8",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r8d",
+        "storage_name": "r8",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r8w",
+        "storage_name": "r8",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "r9",
+        "storage_name": "r9",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "r9b",
+        "storage_name": "r9",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "r9d",
+        "storage_name": "r9",
+        "byte_offset": 0,
+        "size_bytes": 4
+      },
+      {
+        "name": "r9w",
+        "storage_name": "r9",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "rax",
+        "storage_name": "rax",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rbp",
+        "storage_name": "rbp",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rbx",
+        "storage_name": "rbx",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rcx",
+        "storage_name": "rcx",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rdi",
+        "storage_name": "rdi",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rdx",
+        "storage_name": "rdx",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rip",
+        "storage_name": "rip",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rsi",
+        "storage_name": "rsi",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "rsp",
+        "storage_name": "rsp",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "si",
+        "storage_name": "rsi",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "sih",
+        "storage_name": "rsi",
+        "byte_offset": 1,
+        "size_bytes": 1
+      },
+      {
+        "name": "sil",
+        "storage_name": "rsi",
+        "byte_offset": 0,
+        "size_bytes": 1
+      },
+      {
+        "name": "sp",
+        "storage_name": "rsp",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "ss_seg",
+        "storage_name": "ss_seg",
+        "byte_offset": 0,
+        "size_bytes": 2
+      },
+      {
+        "name": "sseround",
+        "storage_name": "sseround",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm0",
+        "storage_name": "zmm0",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm0hq",
+        "storage_name": "zmm0",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm0lq",
+        "storage_name": "zmm0",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm1",
+        "storage_name": "zmm1",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm10",
+        "storage_name": "zmm10",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm10hq",
+        "storage_name": "zmm10",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm10lq",
+        "storage_name": "zmm10",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm11",
+        "storage_name": "zmm11",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm11hq",
+        "storage_name": "zmm11",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm11lq",
+        "storage_name": "zmm11",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm12",
+        "storage_name": "zmm12",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm12hq",
+        "storage_name": "zmm12",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm12lq",
+        "storage_name": "zmm12",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm13",
+        "storage_name": "zmm13",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm13hq",
+        "storage_name": "zmm13",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm13lq",
+        "storage_name": "zmm13",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm14",
+        "storage_name": "zmm14",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm14hq",
+        "storage_name": "zmm14",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm14lq",
+        "storage_name": "zmm14",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm15",
+        "storage_name": "zmm15",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm15hq",
+        "storage_name": "zmm15",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm15lq",
+        "storage_name": "zmm15",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm16",
+        "storage_name": "zmm16",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm16hq",
+        "storage_name": "zmm16",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm16lq",
+        "storage_name": "zmm16",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm17",
+        "storage_name": "zmm17",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm17hq",
+        "storage_name": "zmm17",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm17lq",
+        "storage_name": "zmm17",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm18",
+        "storage_name": "zmm18",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm18hq",
+        "storage_name": "zmm18",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm18lq",
+        "storage_name": "zmm18",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm19",
+        "storage_name": "zmm19",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm19hq",
+        "storage_name": "zmm19",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm19lq",
+        "storage_name": "zmm19",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm1hq",
+        "storage_name": "zmm1",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm1lq",
+        "storage_name": "zmm1",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm2",
+        "storage_name": "zmm2",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm20",
+        "storage_name": "zmm20",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm20hq",
+        "storage_name": "zmm20",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm20lq",
+        "storage_name": "zmm20",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm21",
+        "storage_name": "zmm21",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm21hq",
+        "storage_name": "zmm21",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm21lq",
+        "storage_name": "zmm21",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm22",
+        "storage_name": "zmm22",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm22hq",
+        "storage_name": "zmm22",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm22lq",
+        "storage_name": "zmm22",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm23",
+        "storage_name": "zmm23",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm23hq",
+        "storage_name": "zmm23",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm23lq",
+        "storage_name": "zmm23",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm24",
+        "storage_name": "zmm24",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm24hq",
+        "storage_name": "zmm24",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm24lq",
+        "storage_name": "zmm24",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm25",
+        "storage_name": "zmm25",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm25hq",
+        "storage_name": "zmm25",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm25lq",
+        "storage_name": "zmm25",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm26",
+        "storage_name": "zmm26",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm26hq",
+        "storage_name": "zmm26",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm26lq",
+        "storage_name": "zmm26",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm27",
+        "storage_name": "zmm27",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm27hq",
+        "storage_name": "zmm27",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm27lq",
+        "storage_name": "zmm27",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm28",
+        "storage_name": "zmm28",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm28hq",
+        "storage_name": "zmm28",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm28lq",
+        "storage_name": "zmm28",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm29",
+        "storage_name": "zmm29",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm29hq",
+        "storage_name": "zmm29",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm29lq",
+        "storage_name": "zmm29",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm2hq",
+        "storage_name": "zmm2",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm2lq",
+        "storage_name": "zmm2",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm3",
+        "storage_name": "zmm3",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm30",
+        "storage_name": "zmm30",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm30hq",
+        "storage_name": "zmm30",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm30lq",
+        "storage_name": "zmm30",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm31",
+        "storage_name": "zmm31",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm31hq",
+        "storage_name": "zmm31",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm31lq",
+        "storage_name": "zmm31",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm3hq",
+        "storage_name": "zmm3",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm3lq",
+        "storage_name": "zmm3",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm4",
+        "storage_name": "zmm4",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm4hq",
+        "storage_name": "zmm4",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm4lq",
+        "storage_name": "zmm4",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm5",
+        "storage_name": "zmm5",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm5hq",
+        "storage_name": "zmm5",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm5lq",
+        "storage_name": "zmm5",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm6",
+        "storage_name": "zmm6",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm6hq",
+        "storage_name": "zmm6",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm6lq",
+        "storage_name": "zmm6",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm7",
+        "storage_name": "zmm7",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm7hq",
+        "storage_name": "zmm7",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm7lq",
+        "storage_name": "zmm7",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm8",
+        "storage_name": "zmm8",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm8hq",
+        "storage_name": "zmm8",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm8lq",
+        "storage_name": "zmm8",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm9",
+        "storage_name": "zmm9",
+        "byte_offset": 0,
+        "size_bytes": 16
+      },
+      {
+        "name": "xmm9hq",
+        "storage_name": "zmm9",
+        "byte_offset": 8,
+        "size_bytes": 8
+      },
+      {
+        "name": "xmm9lq",
+        "storage_name": "zmm9",
+        "byte_offset": 0,
+        "size_bytes": 8
+      },
+      {
+        "name": "ymm0",
+        "storage_name": "zmm0",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm0hx",
+        "storage_name": "zmm0",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm1",
+        "storage_name": "zmm1",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm10",
+        "storage_name": "zmm10",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm10hx",
+        "storage_name": "zmm10",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm11",
+        "storage_name": "zmm11",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm11hx",
+        "storage_name": "zmm11",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm12",
+        "storage_name": "zmm12",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm12hx",
+        "storage_name": "zmm12",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm13",
+        "storage_name": "zmm13",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm13hx",
+        "storage_name": "zmm13",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm14",
+        "storage_name": "zmm14",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm14hx",
+        "storage_name": "zmm14",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm15",
+        "storage_name": "zmm15",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm15hx",
+        "storage_name": "zmm15",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm16",
+        "storage_name": "zmm16",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm16hx",
+        "storage_name": "zmm16",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm17",
+        "storage_name": "zmm17",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm17hx",
+        "storage_name": "zmm17",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm18",
+        "storage_name": "zmm18",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm18hx",
+        "storage_name": "zmm18",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm19",
+        "storage_name": "zmm19",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm19hx",
+        "storage_name": "zmm19",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm1hx",
+        "storage_name": "zmm1",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm2",
+        "storage_name": "zmm2",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm20",
+        "storage_name": "zmm20",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm20hx",
+        "storage_name": "zmm20",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm21",
+        "storage_name": "zmm21",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm21hx",
+        "storage_name": "zmm21",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm22",
+        "storage_name": "zmm22",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm22hx",
+        "storage_name": "zmm22",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm23",
+        "storage_name": "zmm23",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm23hx",
+        "storage_name": "zmm23",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm24",
+        "storage_name": "zmm24",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm24hx",
+        "storage_name": "zmm24",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm25",
+        "storage_name": "zmm25",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm25hx",
+        "storage_name": "zmm25",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm26",
+        "storage_name": "zmm26",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm26hx",
+        "storage_name": "zmm26",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm27",
+        "storage_name": "zmm27",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm27hx",
+        "storage_name": "zmm27",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm28",
+        "storage_name": "zmm28",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm28hx",
+        "storage_name": "zmm28",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm29",
+        "storage_name": "zmm29",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm29hx",
+        "storage_name": "zmm29",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm2hx",
+        "storage_name": "zmm2",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm3",
+        "storage_name": "zmm3",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm30",
+        "storage_name": "zmm30",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm30hx",
+        "storage_name": "zmm30",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm31",
+        "storage_name": "zmm31",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm31hx",
+        "storage_name": "zmm31",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm3hx",
+        "storage_name": "zmm3",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm4",
+        "storage_name": "zmm4",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm4hx",
+        "storage_name": "zmm4",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm5",
+        "storage_name": "zmm5",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm5hx",
+        "storage_name": "zmm5",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm6",
+        "storage_name": "zmm6",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm6hx",
+        "storage_name": "zmm6",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm7",
+        "storage_name": "zmm7",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm7hx",
+        "storage_name": "zmm7",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm8",
+        "storage_name": "zmm8",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm8hx",
+        "storage_name": "zmm8",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "ymm9",
+        "storage_name": "zmm9",
+        "byte_offset": 0,
+        "size_bytes": 32
+      },
+      {
+        "name": "ymm9hx",
+        "storage_name": "zmm9",
+        "byte_offset": 16,
+        "size_bytes": 16
+      },
+      {
+        "name": "zmm0",
+        "storage_name": "zmm0",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm0hy",
+        "storage_name": "zmm0",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm1",
+        "storage_name": "zmm1",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm10",
+        "storage_name": "zmm10",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm10hy",
+        "storage_name": "zmm10",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm11",
+        "storage_name": "zmm11",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm11hy",
+        "storage_name": "zmm11",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm12",
+        "storage_name": "zmm12",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm12hy",
+        "storage_name": "zmm12",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm13",
+        "storage_name": "zmm13",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm13hy",
+        "storage_name": "zmm13",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm14",
+        "storage_name": "zmm14",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm14hy",
+        "storage_name": "zmm14",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm15",
+        "storage_name": "zmm15",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm15hy",
+        "storage_name": "zmm15",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm16",
+        "storage_name": "zmm16",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm16hy",
+        "storage_name": "zmm16",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm17",
+        "storage_name": "zmm17",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm17hy",
+        "storage_name": "zmm17",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm18",
+        "storage_name": "zmm18",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm18hy",
+        "storage_name": "zmm18",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm19",
+        "storage_name": "zmm19",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm19hy",
+        "storage_name": "zmm19",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm1hy",
+        "storage_name": "zmm1",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm2",
+        "storage_name": "zmm2",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm20",
+        "storage_name": "zmm20",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm20hy",
+        "storage_name": "zmm20",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm21",
+        "storage_name": "zmm21",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm21hy",
+        "storage_name": "zmm21",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm22",
+        "storage_name": "zmm22",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm22hy",
+        "storage_name": "zmm22",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm23",
+        "storage_name": "zmm23",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm23hy",
+        "storage_name": "zmm23",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm24",
+        "storage_name": "zmm24",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm24hy",
+        "storage_name": "zmm24",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm25",
+        "storage_name": "zmm25",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm25hy",
+        "storage_name": "zmm25",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm26",
+        "storage_name": "zmm26",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm26hy",
+        "storage_name": "zmm26",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm27",
+        "storage_name": "zmm27",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm27hy",
+        "storage_name": "zmm27",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm28",
+        "storage_name": "zmm28",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm28hy",
+        "storage_name": "zmm28",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm29",
+        "storage_name": "zmm29",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm29hy",
+        "storage_name": "zmm29",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm2hy",
+        "storage_name": "zmm2",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm3",
+        "storage_name": "zmm3",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm30",
+        "storage_name": "zmm30",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm30hy",
+        "storage_name": "zmm30",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm31",
+        "storage_name": "zmm31",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm31hy",
+        "storage_name": "zmm31",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm3hy",
+        "storage_name": "zmm3",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm4",
+        "storage_name": "zmm4",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm4hy",
+        "storage_name": "zmm4",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm5",
+        "storage_name": "zmm5",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm5hy",
+        "storage_name": "zmm5",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm6",
+        "storage_name": "zmm6",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm6hy",
+        "storage_name": "zmm6",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm7",
+        "storage_name": "zmm7",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm7hy",
+        "storage_name": "zmm7",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm8",
+        "storage_name": "zmm8",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm8hy",
+        "storage_name": "zmm8",
+        "byte_offset": 32,
+        "size_bytes": 32
+      },
+      {
+        "name": "zmm9",
+        "storage_name": "zmm9",
+        "byte_offset": 0,
+        "size_bytes": 64
+      },
+      {
+        "name": "zmm9hy",
+        "storage_name": "zmm9",
+        "byte_offset": 32,
+        "size_bytes": 32
+      }
+    ],
+    "ip_view": "rip",
+    "sp_view": "rsp",
+    "address_bits": 64,
+    "register_endness": "Iend_LE",
+    "memory_endness": "Iend_LE"
+  },
+  "records": [
+    {
+      "case": "layout",
+      "storage": 88,
+      "views": 352
+    },
+    {
+      "case": "eax-zero-extension",
+      "outcomes": 1,
+      "updated": [
+        [
+          "rax",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "ah-preserves-other-bits",
+      "outcomes": 1,
+      "updated": [
+        [
+          "rax",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "vector-alias-pxor",
+      "outcomes": 1,
+      "updated": [
+        [
+          "rip",
+          "zmm0"
+        ]
+      ]
+    },
+    {
+      "case": "fs-parametric-load",
+      "outcomes": 1,
+      "updated": [
+        [
+          "rax",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "gs-parametric-load",
+      "outcomes": 1,
+      "updated": [
+        [
+          "rax",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "flag-normalization",
+      "outcomes": 1,
+      "updated": [
+        [
+          "rflags_CF",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "x87-counter-preserves-high-bits",
+      "outcomes": 8,
+      "updated": [
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ],
+        [
+          "ftop",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "sse-rounding-selector-store",
+      "outcomes": 4,
+      "updated": [
+        [
+          "mem",
+          "rip",
+          "sseround"
+        ],
+        [
+          "mem",
+          "rip",
+          "sseround"
+        ],
+        [
+          "mem",
+          "rip",
+          "sseround"
+        ],
+        [
+          "mem",
+          "rip",
+          "sseround"
+        ]
+      ]
+    },
+    {
+      "case": "x87-rounding-selector-store",
+      "outcomes": 4,
+      "updated": [
+        [
+          "fpround",
+          "mem",
+          "rip"
+        ],
+        [
+          "fpround",
+          "mem",
+          "rip"
+        ],
+        [
+          "fpround",
+          "mem",
+          "rip"
+        ],
+        [
+          "fpround",
+          "mem",
+          "rip"
+        ]
+      ]
+    },
+    {
+      "case": "direction-selector-partition",
+      "outcomes": 2,
+      "updated": [
+        [
+          "d",
+          "mem",
+          "rdi",
+          "rip",
+          "rsi"
+        ],
+        [
+          "d",
+          "mem",
+          "rdi",
+          "rip",
+          "rsi"
+        ]
+      ]
+    }
+  ]
+}

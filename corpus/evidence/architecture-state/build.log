@@ -1,0 +1,79 @@
+warning: not writing modified lock file of flake 'path:/tmp/wruh-architecture-0d8b8d6a':
+• Updated input 'angr-nix':
+    'path:./.dependencies/angr-nix?lastModified=1&narHash=sha256-3Ro8GoJVh7MbfLPZa0mWhQIUCqG4ZWJ/5BR2f5gjKPc%3D' (1970-01-01)
+  → 'path:./.dependencies/angr-nix'
+Starting local Bazel server (9.1.1- (@non-git)) and connecting to it...
+WARNING: Option 'build_python_zip' is deprecated: The '--no' prefix is no longer supported for this flag. Please use --build_python_zip=false instead.
+INFO: Invocation ID: d5e66ff9-6142-4d37-8d7e-c6d940d7c4b6
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Computing main repo mapping: 
+Loading: 
+Loading: 1 packages loaded
+Analyzing: 2 targets (5 packages loaded, 5 targets configured)
+Analyzing: 2 targets (5 packages loaded, 5 targets configured)
+
+Analyzing: 2 targets (81 packages loaded, 518 targets configured)
+
+Analyzing: 2 targets (99 packages loaded, 608 targets configured)
+
+Analyzing: 2 targets (109 packages loaded, 720 targets configured)
+
+Analyzing: 2 targets (134 packages loaded, 2145 targets configured)
+
+Analyzing: 2 targets (134 packages loaded, 2145 targets configured)
+
+Analyzing: 2 targets (138 packages loaded, 2187 targets configured)
+
+Analyzing: 2 targets (163 packages loaded, 2713 targets configured)
+
+Analyzing: 2 targets (164 packages loaded, 3801 targets configured)
+
+Analyzing: 2 targets (169 packages loaded, 5848 targets configured)
+
+Analyzing: 2 targets (187 packages loaded, 7135 targets configured)
+
+Analyzing: 2 targets (190 packages loaded, 7270 targets configured)
+
+Analyzing: 2 targets (194 packages loaded, 7898 targets configured)
+[1 / 1] no actions running
+INFO: Analyzed 2 targets (194 packages loaded, 7898 targets configured).
+[33 / 47] Creating runfiles tree bazel-out/reapi_linux_x86_64-opt-exec/bin/extractor/architecture_checks.runfiles [for tool]; 0s local ... (2 actions running)
+[37 / 47] Producing //extractor:architecture_state_check; 0s remote, remote-cache ... (3 actions running)
+INFO: From Producing //extractor:corpus_native_prepare_O0:
+ERROR    | 2026-10-02 22:36:58,846 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[38 / 47] Producing //extractor:architecture_state_check; 4s remote, remote-cache ... (5 actions, 2 running)
+INFO: From Producing //extractor:corpus_native_prepare_O2:
+ERROR    | 2026-10-03 05:36:59,395 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[39 / 47] Producing //extractor:architecture_state_check; 5s remote, remote-cache ... (5 actions, 4 running)
+[39 / 47] Producing //extractor:architecture_state_check; 7s remote, remote-cache ... (7 actions running)
+INFO: From Producing //extractor:architecture_state_check:
+ERROR    | 2026-10-02 22:37:00,178 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+INFO: From Producing //extractor:corpus_native_model_O0_alias:
+ERROR    | 2026-10-02 22:37:03,271 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[41 / 47] Producing //extractor:corpus_native_model_O0_division; 5s remote, remote-cache ... (5 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_overlap:
+ERROR    | 2026-10-02 22:37:04,438 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[42 / 47] Producing //extractor:corpus_native_model_O0_division; 7s remote, remote-cache ... (4 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_division:
+ERROR    | 2026-10-03 05:37:04,920 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+INFO: From Producing //extractor:corpus_native_model_O0_division:
+ERROR    | 2026-10-03 05:37:03,884 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[44 / 47] Producing //extractor:corpus_native_model_O0_overlap; 9s remote, remote-cache ... (2 actions running)
+INFO: From Producing //extractor:corpus_native_model_O2_alias:
+ERROR    | 2026-10-02 22:37:06,077 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[45 / 47] Producing //extractor:corpus_native_model_O0_overlap; 10s remote, remote-cache
+INFO: From Producing //extractor:corpus_native_model_O0_overlap:
+ERROR    | 2026-10-02 22:37:05,047 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+[46 / 47] Producing //extractor:architecture_runner_check; 0s remote, remote-cache
+INFO: Found 2 targets...
+Target //extractor:architecture_runner_check up-to-date:
+  bazel-bin/extractor/architecture_runner_check.json
+  bazel-bin/extractor/architecture_runner_check.json.runtime-trace.json
+Target //extractor:architecture_state_check up-to-date:
+  bazel-bin/extractor/architecture_state_check.json
+  bazel-bin/extractor/architecture_state_check.json.runtime-trace.json
+INFO: Elapsed time: 41.852s, Critical Path: 21.81s
+INFO: 47 processes: 25 internal, 12 local, 10 remote.
+INFO: Build completed successfully, 47 total actions
