@@ -15,32 +15,17 @@ class Amd64AdapterError(RuntimeError):
     """The exact instruction does not satisfy the E5 adapter contract."""
 
 
-GPR64 = (
-    "rax",
-    "rcx",
-    "rdx",
-    "rbx",
-    "rsp",
-    "rbp",
-    "rsi",
-    "rdi",
-    "r8",
-    "r9",
-    "r10",
-    "r11",
-    "r12",
-    "r13",
-    "r14",
-    "r15",
-)
+from extractor.architecture import architecture_layout, NORMALIZED_AMD64_FLAGS
+import archinfo
+
 FLAG_NAMES = ("CF", "ZF", "SF", "OF", "PF", "AF")
-REGISTER_NAMES = GPR64 + ("rip",)
 MEMORY_NAME = "mem"
-CANONICAL_NAMES = (
-    REGISTER_NAMES
-    + tuple(f"rflags_{name}" for name in FLAG_NAMES)
-    + (MEMORY_NAME,)
-)
+# Derived from the actual installed engine metadata; project-specific extraction
+# obtains the layout from project.arch and checks this declaration domain.
+AMD64_LAYOUT = architecture_layout(archinfo.ArchAMD64())
+REGISTER_NAMES = tuple(s.name for s in AMD64_LAYOUT.storage
+                       if s.name not in NORMALIZED_AMD64_FLAGS)
+CANONICAL_NAMES = REGISTER_NAMES + tuple(f"rflags_{n}" for n in FLAG_NAMES) + (MEMORY_NAME,)
 
 LTS_EXTRACTION_CONTEXT = z3.Context()
 _SMT_CACHE: dict[tuple[type, int], tuple[Any, z3.ExprRef]] = {}
@@ -103,11 +88,12 @@ def _u64(value: Any, field: str) -> int:
     return value
 
 
-def canonical_declarations() -> tuple[CanonicalDeclaration, ...]:
+def canonical_declarations(arch: Any | None = None) -> tuple[CanonicalDeclaration, ...]:
+    layout = AMD64_LAYOUT if arch is None else architecture_layout(arch)
     return (
         tuple(
-            CanonicalDeclaration(name, "bv", 64)
-            for name in REGISTER_NAMES
+            CanonicalDeclaration(item.name, "bv", item.bits)
+            for item in layout.storage if item.name not in NORMALIZED_AMD64_FLAGS
         )
         + tuple(
             CanonicalDeclaration(f"rflags_{name}", "bv", 1)
@@ -128,7 +114,7 @@ def declaration(name: str) -> CanonicalDeclaration:
 def canonical_register(name: str) -> z3.BitVecRef:
     if name not in REGISTER_NAMES:
         raise Amd64AdapterError(f"unknown canonical AMD64 register {name!r}")
-    return z3.BitVec(name, 64, ctx=LTS_EXTRACTION_CONTEXT)
+    return z3.BitVec(name, AMD64_LAYOUT.register(name).bits, ctx=LTS_EXTRACTION_CONTEXT)
 
 
 @lru_cache(maxsize=None)
@@ -453,13 +439,17 @@ def fresh_instruction_state(project: Any, source: int) -> Any:
     state.options.add(_angr.options.SYMBOLIC_WRITE_ADDRESSES)
     state.options.add(_angr.options.UNDER_CONSTRAINED_SYMEXEC)
     state.options.discard(_angr.options.UNICORN)
-    for name in GPR64:
-        setattr(
-            state.regs,
-            name,
-            _claripy.BVS(name, 64, explicit_name=True),
-        )
-    state.regs.rip = _claripy.BVV(source, 64)
+    layout = architecture_layout(project.arch)
+    if layout != AMD64_LAYOUT:
+        raise Amd64AdapterError("project architecture layout differs from canonical declaration layout")
+    state.globals["_wruh_architecture_layout"] = layout
+    for item in layout.storage:
+        if item.name in NORMALIZED_AMD64_FLAGS:
+            continue
+        state.registers.store(item.offset, _claripy.BVS(item.name, item.bits, explicit_name=True),
+                              size=item.size_bytes, endness=project.arch.register_endness)
+    state.registers.store(project.arch.ip_offset, _claripy.BVV(source, project.arch.bits),
+                          size=project.arch.bytes, endness=project.arch.register_endness)
 
     flag_bvs = _seed_flag_bvs()
     state.regs.cc_op = _claripy.BVV(_AMD64_OP_COPY, 64)
@@ -509,16 +499,15 @@ def install_typed_summary_state(
     prefix = f"ghot_summary_{index}"
     replacements = dict(state.globals.get("_ghot_typed_replacements", {}))
 
-    for name in GPR64:
-        synthetic_name = f"{prefix}_{name}__"
+    for item in AMD64_LAYOUT.storage:
+        if item.name in NORMALIZED_AMD64_FLAGS or item.name == AMD64_LAYOUT.ip_view:
+            continue
+        synthetic_name = f"{prefix}_{item.name}__"
         if synthetic_name in replacements:
             raise Amd64AdapterError("summary register placeholder is not fresh")
-        setattr(
-            state.regs,
-            name,
-            _claripy.BVS(synthetic_name, 64, explicit_name=True),
-        )
-        replacements[synthetic_name] = updates[name]
+        state.registers.store(item.offset, _claripy.BVS(synthetic_name, item.bits, explicit_name=True),
+                              size=item.size_bytes, endness=state.arch.register_endness)
+        replacements[synthetic_name] = updates[item.name]
 
     flag_bvs = {}
     for name in FLAG_NAMES:
@@ -611,13 +600,14 @@ def _post_flag_updates(
 def _post_updates(post: Any, source: int) -> dict[str, z3.ExprRef]:
     reads = post.globals.get("_ghot_memory_reads", {})
     updates: dict[str, z3.ExprRef] = {}
-    for name in GPR64:
+    for item in AMD64_LAYOUT.storage:
+        if item.name in NORMALIZED_AMD64_FLAGS or item.name == AMD64_LAYOUT.ip_view:
+            continue
         value = _resolve_memory_reads(
-            claripy_to_z3(getattr(post.regs, name)),
-            reads,
-        )
-        if not value.eq(canonical_register(name)):
-            updates[name] = value
+            claripy_to_z3(post.registers.load(item.offset, size=item.size_bytes,
+                                            endness=post.arch.register_endness)), reads)
+        if not value.eq(canonical_register(item.name)):
+            updates[item.name] = value
     updates.update(_post_flag_updates(post, source, reads))
     return updates
 

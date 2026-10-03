@@ -72,9 +72,9 @@ class FreshFunction:
         ).encode("utf-8")
 
 
-def artifact_declarations() -> tuple[Declaration, ...]:
+def artifact_declarations(arch: Any | None = None) -> tuple[Declaration, ...]:
     result = []
-    for declaration in canonical_declarations():
+    for declaration in canonical_declarations(arch):
         if declaration.sort == "bv":
             sort = TermSort.bv(declaration.width)
         elif declaration.sort == "array":
@@ -192,7 +192,7 @@ def extract_fresh_function(
         raise FreshExtractionError("CFG and loaded image identities disagree")
 
     root = roots[function_id]
-    declarations = artifact_declarations()
+    declarations = artifact_declarations(pinned.project.arch)
     owners = _decoded_owners(cfg)
     catalog = occurrence_catalog(pinned, cfg)
     occurrences = []
