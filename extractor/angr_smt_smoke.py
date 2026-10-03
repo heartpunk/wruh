@@ -36,7 +36,10 @@ for width, ebits, sbits in [(32, 8, 24), (64, 11, 53)]:
         (f"fp_unsigned_{width}", bits.val_to_fp(sort, signed=False, rm=rm), z3.fpUnsignedToFP(zrm, zbits, zsort)),
         (f"fp_cast_{width}", other.to_fp(sort, rm), z3.fpToFP(zrm, zother, zsort)),
     ])
+# Machine-facing conversion carries FP through bit-backed storage.
 for name, term, expected in cases:
+    if z3.is_fp(expected):
+        term, expected = term.raw_to_bv(), z3.fpToIEEEBV(expected)
     actual = claripy_to_z3(term)
     assert actual.sort() == expected.sort(), name
     assert claripy_to_z3(term) is actual, name
