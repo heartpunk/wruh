@@ -483,3 +483,14 @@ py_binary(
     target_compatible_with = _LINUX_X86_64,
     deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
 )
+
+reapi_artifact_action(
+    name = "open_transfers_check",
+    arguments = [],
+    dependencies = [],
+    dependency_arguments = [],
+    output = "open_transfers_check.json",
+    tool = ":open_transfers_smoke",
+    exec_compatible_with = _LINUX_X86_64,
+    target_compatible_with = _LINUX_X86_64,
+)

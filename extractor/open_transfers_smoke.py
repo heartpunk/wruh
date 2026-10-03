@@ -1,4 +1,8 @@
 """Exact target partition and admission controls (no candidate native execution)."""
+from extractor.runtime_trace import start_runtime_trace
+start_runtime_trace()
+from pathlib import Path
+import argparse
 from extractor.native_runtime import preload_libstdcxx
 preload_libstdcxx()
 import json
@@ -46,6 +50,9 @@ def main():
     # No candidate: exact symbolic transfer must survive, not raise or havoc.
     isolated=compose_fresh_paths({'roots':{'caller':cfg['roots']['caller']}},functions[:1],'caller')
     assert len(isolated)==1 and isolated[0].target.kind=='symbolic'
-    print(json.dumps({'partition':'complete and disjoint UNSAT checks','admission':'3 open / 3 strict rejects','no_candidate':'exact symbolic target preserved'}))
+    result = {'partition':'complete and disjoint UNSAT checks','admission':'3 open / 3 strict rejects','no_candidate':'exact symbolic target preserved'}
+    parser=argparse.ArgumentParser(); parser.add_argument('--output',type=Path); args=parser.parse_args()
+    if args.output: args.output.write_text(json.dumps(result,sort_keys=True)+'\n')
+    print(json.dumps(result))
 
 if __name__=='__main__': main()
