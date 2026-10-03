@@ -31,15 +31,15 @@ for width, ebits, sbits in [(32, 8, 24), (64, 11, 53)]:
     rm = c.fp.RM.RM_NearestTiesEven
     zrm = z3.RNE(ctx=LTS_EXTRACTION_CONTEXT)
     cases.extend([
-        (f"fp_reinterpret_{width}", bits.raw_to_fp(), z3.fpBVToFP(zbits, zsort)),
-        (f"fp_signed_{width}", bits.val_to_fp(sort, signed=True, rm=rm), z3.fpSignedToFP(zrm, zbits, zsort)),
-        (f"fp_unsigned_{width}", bits.val_to_fp(sort, signed=False, rm=rm), z3.fpUnsignedToFP(zrm, zbits, zsort)),
-        (f"fp_cast_{width}", other.to_fp(sort, rm), z3.fpToFP(zrm, zother, zsort)),
+        (f"fp_reinterpret_{width}", c.fpAbs(bits.raw_to_fp()), z3.fpAbs(z3.fpBVToFP(zbits, zsort, ctx=LTS_EXTRACTION_CONTEXT), ctx=LTS_EXTRACTION_CONTEXT)),
+        (f"fp_signed_{width}", bits.val_to_fp(sort, signed=True, rm=rm), z3.fpSignedToFP(zrm, zbits, zsort, ctx=LTS_EXTRACTION_CONTEXT)),
+        (f"fp_unsigned_{width}", bits.val_to_fp(sort, signed=False, rm=rm), z3.fpUnsignedToFP(zrm, zbits, zsort, ctx=LTS_EXTRACTION_CONTEXT)),
+        (f"fp_cast_{width}", other.to_fp(sort, rm), z3.fpToFP(zrm, zother, zsort, ctx=LTS_EXTRACTION_CONTEXT)),
     ])
 # Machine-facing conversion carries FP through bit-backed storage.
 for name, term, expected in cases:
     if z3.is_fp(expected):
-        term, expected = term.raw_to_bv(), z3.fpToIEEEBV(expected)
+        term, expected = term.raw_to_bv(), z3.fpToIEEEBV(expected, ctx=LTS_EXTRACTION_CONTEXT)
     actual = claripy_to_z3(term)
     assert actual.sort() == expected.sort(), name
     assert claripy_to_z3(term) is actual, name
