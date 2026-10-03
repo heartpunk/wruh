@@ -5,6 +5,33 @@ import json
 from pathlib import Path
 from typing import Any
 import angr
+from cle.backends.relocation import Relocation
+from cle.backends.elf.relocation.generic import (
+    RelocTruncate32Mixin, GenericCopyReloc, GenericIRelativeReloc,
+    GenericTLSOffsetReloc, GenericTLSModIdReloc, GenericTLSDescriptorReloc,
+)
+
+
+def relocation_write_size(reloc: Any) -> int:
+    """Match CLE's implemented write, rather than assume the machine word."""
+    method = type(reloc).relocate
+    if method is RelocTruncate32Mixin.relocate:
+        return 4
+    if method is GenericCopyReloc.relocate:
+        destination = getattr(reloc.symbol, 'size', None)
+        source = getattr(reloc.resolvedby, 'size', None)
+        if source and destination != source:
+            raise ValueError('COPY relocation source/destination size mismatch')
+        size = source or destination
+        if type(size) is not int or size <= 0:
+            raise ValueError('COPY relocation has no known positive extent')
+        return size
+    if method is GenericTLSDescriptorReloc.relocate:
+        return 2 * reloc.owner.arch.bytes
+    if method in (Relocation.relocate, GenericTLSOffsetReloc.relocate,
+                  GenericTLSModIdReloc.relocate, GenericIRelativeReloc.relocate):
+        return reloc.owner.arch.bytes
+    raise ValueError(f'unsupported relocation write extent: {type(reloc).__name__}')
 
 
 def load_object_set(artifact: Path, specification: Path | None = None) -> angr.Project:
@@ -58,12 +85,13 @@ def loaded_image_data(project: angr.Project) -> dict[str, Any]:
             resolved = getattr(reloc, 'resolvedby', None)
             resolved_path = getattr(getattr(resolved, 'owner', None), 'binary', None)
             real_target = bool(resolved_path and Path(resolved_path).is_file())
-            if not reloc.resolved or (resolved is not None and not real_target):
+            pending_resolver = isinstance(reloc, GenericIRelativeReloc)
+            if not reloc.resolved or (resolved is not None and not real_target) or pending_resolver:
                 undefined_bytes.append({'address': reloc.rebased_addr,
-                    'size': project.arch.bytes, 'reason': 'unresolved-relocation'})
+                    'size': relocation_write_size(reloc), 'reason': 'pending-resolver' if pending_resolver else 'unresolved-relocation'})
             relocations.append({'address': reloc.rebased_addr,
                 'symbol': symbol.name if symbol else None,
-                'resolved': bool(reloc.resolved and (resolved is None or real_target)),
+                'resolved': bool(reloc.resolved and (resolved is None or real_target) and not pending_resolver),
                 'target': resolved.rebased_addr if resolved else None})
         objects.append({'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'mapped_base': obj.mapped_base, 'linked_base': obj.linked_base,
