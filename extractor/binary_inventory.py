@@ -258,7 +258,11 @@ def inventory_project(
             raise InventoryError(f"incomplete decode for selected root {root}")
 
         for instruction in instructions:
-            if instruction.mnemonic.startswith("call"):
+            tail = (policy.open_transfers and instruction.mnemonic.startswith("jmp")
+                and len(instruction.operands) == 1
+                and instruction.operands[0].type == capstone.x86.X86_OP_IMM
+                and not (symbol.rebased_addr <= instruction.operands[0].imm < symbol.rebased_addr + symbol.size))
+            if instruction.mnemonic.startswith("call") or tail:
                 if len(instruction.operands) != 1:
                     raise InventoryError(
                         f"ambiguous call operands at {instruction.address:#x}"

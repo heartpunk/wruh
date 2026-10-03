@@ -74,7 +74,7 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         if cfg != actual_cfg:
             raise ValueError("supplied CFG differs from the recomputed CFG")
 
-    roots = tuple(dict.fromkeys((*_root_closure(cfg, arguments.root), *arguments.candidate_root)))
+    roots = tuple(cfg["roots"]) if pinned.manifest.get("open_transfers") else _root_closure(cfg, arguments.root)
     functions = tuple(
         extract_fresh_function(pinned, cfg, function_id)
         for function_id in roots

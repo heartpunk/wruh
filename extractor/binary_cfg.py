@@ -496,6 +496,8 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
                 root_at_address=root_at_address,
                 primitive_at_address=primitive_at_address,
             )
+            if kind == "open" and not pinned.manifest.get("open_transfers"):
+                raise InventoryError(f"CFG discovered undeclared call target {target}")
             graph_name = (
                 name if kind == "direct-local" else f"{'primitive' if kind == 'modeled-primitive' else 'open'}:{name}"
             )
