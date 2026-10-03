@@ -100,6 +100,14 @@ def prepare_native(args):
                 'elf_sha256':hashlib.sha256(data).hexdigest(),'elf_base64':base64.b64encode(data).decode(),
                 'disassembly':functions,'native_executed':False}
 
+def native_model(args):
+    data=json.loads(Path(args.scan).read_text())
+    data['selected']=[{'name':args.root}]
+    with tempfile.TemporaryDirectory() as temp:
+        path=Path(temp)/'scan.json';path.write_text(json.dumps(data))
+        args.scan=str(path)
+        return extract(args)
+
 def expression_ops(fresh):
     todo=[]
     for edge in fresh.local_edges:
@@ -148,10 +156,10 @@ def extract(args):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
-    parser.add_argument('--mode',choices=['scan','extract','prepare-native'],required=True)
+    parser.add_argument('--mode',choices=['scan','extract','prepare-native','native-model'],required=True)
     parser.add_argument('--optimization',choices=['0','2'])
     parser.add_argument('--source',action='append',default=[])
     parser.add_argument('--scan');parser.add_argument('--root');parser.add_argument('--output',required=True)
     args=parser.parse_args()
-    result={'scan':scan,'extract':extract,'prepare-native':prepare_native}[args.mode](args)
+    result={'scan':scan,'extract':extract,'prepare-native':prepare_native,'native-model':native_model}[args.mode](args)
     Path(args.output).write_text(json.dumps(result,sort_keys=True,indent=2)+'\n')

@@ -455,3 +455,19 @@ filegroup(name = "corpus_zeroth_all", srcs = [":corpus_extract_O%s_%s" % (opt, n
   target_compatible_with = _LINUX_X86_64,
  ) for optimization in ["0", "2"]
 ]
+
+[
+ reapi_artifact_action(
+  name = "corpus_native_model_O" + optimization + "_" + root,
+  arguments = ["--mode=native-model", "--root=" + root],
+  dependencies = [":corpus_native_prepare_O" + optimization],
+  dependency_arguments = ["--scan={path}"],
+  output = "corpus_native_model_O" + optimization + "_" + root + ".json",
+  tool = ":corpus_probe",
+  exec_compatible_with = _LINUX_X86_64,
+  target_compatible_with = _LINUX_X86_64,
+ ) for optimization in ["0", "2"] for root in ["alias", "overlap", "division"]
+]
+filegroup(name = "corpus_native_models", srcs = [
+ ":corpus_native_model_O" + optimization + "_" + root
+ for optimization in ["0", "2"] for root in ["alias", "overlap", "division"]])
