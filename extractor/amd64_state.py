@@ -8,7 +8,6 @@ from typing import Any, Mapping
 
 from extractor import runtime
 
-from claripy.backends.backend_z3 import BackendZ3
 import z3
 
 
@@ -44,7 +43,7 @@ CANONICAL_NAMES = (
 )
 
 LTS_EXTRACTION_CONTEXT = z3.Context()
-_BZ3 = BackendZ3()
+_SMT_CACHE: dict[tuple[type, int], tuple[Any, z3.ExprRef]] = {}
 _U64_MAX = (1 << 64) - 1
 
 _angr = runtime.angr
@@ -153,7 +152,33 @@ def canonical_memory() -> z3.ArrayRef:
 def claripy_to_z3(ast: Any) -> z3.ExprRef:
     """Cross the Angr boundary into the dedicated extraction context."""
 
-    return _BZ3.convert(ast).translate(LTS_EXTRACTION_CONTEXT)
+    key = (type(ast), ast.hash())
+    cached = _SMT_CACHE.get(key)
+    if cached is not None and ast.identical(cached[0]):
+        return cached[1]
+    if ast.op == "BoolV":
+        expression = z3.BoolVal(_claripy.is_true(ast), ctx=LTS_EXTRACTION_CONTEXT)
+        _SMT_CACHE[key] = (ast, expression)
+        return expression
+    # Public self-contained SMT export supplies declarations and preserves
+    # symbol names; Z3 parses it directly into the extraction context.
+    result_name = "__wruh_smt_result"
+    while result_name in ast.variables:
+        result_name += "_"
+    result = (_claripy.BoolS(result_name, explicit_name=True)
+              if isinstance(ast, _claripy.ast.Bool) else
+              _claripy.BVS(result_name, ast.size(), explicit_name=True))
+    transport = _claripy.Solver()
+    transport.add(result == ast)
+    formula = z3.parse_smt2_string(transport.to_smt2(), ctx=LTS_EXTRACTION_CONTEXT)
+    if len(formula) != 1 or not z3.is_eq(formula[0]):
+        raise Amd64AdapterError("Angr SMT export did not retain the result equality")
+    lhs, rhs = formula[0].children()
+    expression = rhs if str(lhs) == result_name else lhs
+    if str(lhs) != result_name and str(rhs) != result_name:
+        raise Amd64AdapterError("Angr SMT export lost the result symbol")
+    _SMT_CACHE[key] = (ast, expression)
+    return expression
 
 
 def load_le(

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Supply the owning ANGR_NIX clone root, not a linked JJ workspace.
+source_root="${1:?usage: scripts/stage-angr-nix ANGR_NIX_CLONE_ROOT}"
+revision=ca288bef3145174ae8385004e2cbcf6caabb9a76
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+archive="$(mktemp -t wruh-angr-nix.XXXXXX)"
+trap 'rm -f "$archive"' EXIT
+# Frozen committed source only; never copy ANGR_NIX working-copy/build state.
+git -C "$source_root" archive -o "$archive" "$revision"
+mkdir -p "$repo_root/.dependencies"
+if [[ -e "$repo_root/.dependencies/angr-nix" ]]; then
+  printf '%s\n' 'ANGR_NIX stage already exists; use that frozen stage or remove it explicitly before restaging.' >&2
+  exit 2
+fi
+stage="$(mktemp -d "$repo_root/.dependencies/angr-nix-stage.XXXXXX")"
+trap 'rm -f "$archive"; rm -rf "$stage"' EXIT
+tar -xf "$archive" -C "$stage"
+mv "$stage" "$repo_root/.dependencies/angr-nix"
+printf '%s\n' "$revision" > "$repo_root/.dependencies/angr-nix-revision"

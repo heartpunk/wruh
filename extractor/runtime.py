@@ -17,7 +17,7 @@ from extractor.native_runtime import (
 
 _EXPECTED_PYTHON = (3, 12, 13)
 _EXPECTED_TOP_LEVEL_VERSIONS = {
-    "angr": "9.2.214",
+    "angr": "10.0.1",
     "coverage": "7.15.2",
     "hypothesis": "6.160.0",
     "mutmut": "3.6.0",
@@ -28,7 +28,6 @@ _REQUIRED_MODULES = (
     "angr",
     "archinfo",
     "capstone",
-    "claripy",
     "cle",
     "coverage",
     "hypothesis",
@@ -43,7 +42,7 @@ _REQUIRED_MODULES = (
 _LIBSTDCXX = _preload_libstdcxx()
 
 import angr  # noqa: E402
-import claripy  # noqa: E402
+from angr import claripy  # noqa: E402
 
 
 def _fixture_bytes() -> bytes:

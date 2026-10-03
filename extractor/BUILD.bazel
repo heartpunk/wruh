@@ -432,3 +432,23 @@ py_binary(
  deps = ["@ayxg//:ayxg", requirement("hypothesis"), "@rules_python//python/runfiles"],
  target_compatible_with = _LINUX_X86_64,
 )
+
+py_binary(
+    name = "angr_upgrade_parity",
+    srcs = ["angr_upgrade_parity.py", "native_runtime.py"],
+    main = "angr_upgrade_parity.py",
+    data = ["@nix_native_deps//:libstdcxx"],
+    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
+    target_compatible_with = _LINUX_X86_64,
+    deps = ["@ayxg//:ayxg", "@ayxg//:z3"],
+)
+
+py_binary(
+    name = "angr_smt_smoke",
+    srcs = glob(["*.py"]),
+    main = "angr_smt_smoke.py",
+    data = ["amd64_smoke.hex", "@nix_native_deps//:libstdcxx"],
+    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
+    target_compatible_with = _LINUX_X86_64,
+    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
+)
