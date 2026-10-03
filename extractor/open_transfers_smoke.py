@@ -50,7 +50,19 @@ def main():
     # No candidate: exact symbolic transfer must survive, not raise or havoc.
     isolated=compose_fresh_paths({'roots':{'caller':cfg['roots']['caller']}},functions[:1],'caller')
     assert len(isolated)==1 and isolated[0].target.kind=='symbolic'
-    result = {'partition':'complete and disjoint UNSAT checks','admission':'3 open / 3 strict rejects','no_candidate':'exact symbolic target preserved'}
+    # Tail transfer follows the callee without inventing a new return frame.
+    tail_cfg={'roots':{'caller':root(100,'jmp'), 'callee':cfg['roots']['callee']}}
+    tail_edge=edge(100,0,Target('address',200))
+    tail_functions=(FreshFunction('caller',100,declarations,(),(tail_edge,)), functions[1])
+    tail_paths=compose_fresh_paths(tail_cfg,tail_functions,'caller')
+    assert len(tail_paths)==1 and tail_paths[0].target==Target('address',105)
+    # An external direct call retains its exact poststate and target.
+    outside_edge=edge(100,0,Target('address',300))
+    outside_cfg={'roots':{'caller':root(100,'call',[{'address':100,'target':300,'kind':'open','name':'external'}])}}
+    outside_paths=compose_fresh_paths(outside_cfg,(FreshFunction('caller',100,declarations,(),(outside_edge,)),),'caller')
+    assert len(outside_paths)==1 and outside_paths[0].target==Target('address',300)
+    assert outside_paths[0].update['rip']==TypedExpr.bv_lit(64,300)
+    result = {'tail_transfer':'no invented return frame','direct_external':'exact target/poststate retained','partition':'complete and disjoint UNSAT checks','admission':'3 open / 3 strict rejects','no_candidate':'exact symbolic target preserved'}
     parser=argparse.ArgumentParser(); parser.add_argument('--output',type=Path); args=parser.parse_args()
     if args.output: args.output.write_text(json.dumps(result,sort_keys=True)+'\n')
     print(json.dumps(result))
