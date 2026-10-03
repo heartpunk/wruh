@@ -1,0 +1,51 @@
+{
+  "schema": "wruh-cpython-closure-identity-v1",
+  "source_revision": "5d8e79e6",
+  "trace_action": "//extractor:open_object_check",
+  "python_version": "3.12.13 (main, Mar  3 2026, 12:39:30) [GCC 15.2.0]",
+  "python_build": {
+    "CONFIG_ARGS": "'--prefix=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13' '--bindir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/bin' '--sbindir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/sbin' '--includedir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/include' '--mandir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/share/man' '--infodir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/share/info' '--docdir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/share/doc/python' '--libdir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/lib' '--libexecdir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/libexec' '--localedir=/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/share/locale' '--without-ensurepip' '--with-system-expat' '--with-system-libmpdec' '--with-openssl=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.3-dev' '--with-tzpath=/nix/store/bzzvmj6wh8a7mqvq9i54fmvpsdxz4zqj-tzdata-2026b/share/zoneinfo' '--with-lto' '--enable-shared' '--enable-loadable-sqlite-extensions' 'CFLAGS=-I/nix/store/s8bvq48mqjiw3firz3l9wx19h55vldy4-libxcrypt-4.5.2/include' 'LIBS=-L/nix/store/s8bvq48mqjiw3firz3l9wx19h55vldy4-libxcrypt-4.5.2/lib' 'ac_cv_func_lchmod=no' 'PKG_CONFIG=pkg-config' 'PKG_CONFIG_PATH=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-file-5.48-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bash-5.3p9-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bzip2-1.0.8-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libffi-3.5.2-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-util-linux-minimal-2.42.2-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ncurses-6.6-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-xz-5.8.3-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zlib-1.3.2-dev/share/pkgconfig:/nix/store/s8bvq48mqjiw3firz3l9wx19h55vldy4-libxcrypt-4.5.2/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.3-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-sqlite-3.53.1-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-mpdecimal-4.0.1-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-expat-2.8.2-dev/lib/pkgconfig:/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-readline-8.3p3-dev/lib/pkgconfig' 'CC=gcc' 'LDFLAGS=-L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bzip2-1.0.8/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libffi-3.5.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-util-linux-minimal-2.42.2-lib/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ncurses-6.6/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-xz-5.8.3/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zlib-1.3.2/lib -L/nix/store/s8bvq48mqjiw3firz3l9wx19h55vldy4-libxcrypt-4.5.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.3/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-sqlite-3.53.1/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-mpdecimal-4.0.1/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-expat-2.8.2/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bluez-headers-5.86/lib -L/nix/store/bzzvmj6wh8a7mqvq9i54fmvpsdxz4zqj-tzdata-2026b/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-gdbm-1.26-lib/lib -L/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-readline-8.3p3/lib' 'CPPFLAGS=-I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bzip2-1.0.8-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libffi-3.5.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-util-linux-minimal-2.42.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-ncurses-6.6-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-xz-5.8.3-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-zlib-1.3.2-dev/include -I/nix/store/s8bvq48mqjiw3firz3l9wx19h55vldy4-libxcrypt-4.5.2/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-openssl-3.6.3-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-sqlite-3.53.1-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-mpdecimal-4.0.1-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-expat-2.8.2-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-bluez-headers-5.86/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-tzdata-2026b-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-gdbm-1.26-dev/include -I/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-readline-8.3p3-dev/include'",
+    "LDLIBRARY": "libpython3.12.so",
+    "LIBDIR": "/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/lib",
+    "Py_DEBUG": 0,
+    "SOABI": "cpython-312-x86_64-linux-gnu"
+  },
+  "objects": [
+    {
+      "elf": true,
+      "path": "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/python3.12",
+      "resolved_path": "/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/bin/python3.12",
+      "sha256": "e70d4d83d2159d0e306d7fe8f5fef19fa6e1e9575ded0120f6ea68f71d848fba",
+      "size_bytes": 15776
+    },
+    {
+      "elf": true,
+      "path": "/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/lib/libpython3.12.so.1.0",
+      "resolved_path": "/nix/store/3jm89jy56cprn52iw8vanpav58hlcj1v-python3-3.12.13/lib/libpython3.12.so.1.0",
+      "sha256": "bd44b32a9c3e5c02b2abfc66761490718150a0c8abe7e1b5ef8f964d69d35248",
+      "size_bytes": 8571384
+    },
+    {
+      "elf": true,
+      "path": "/nix/store/ias8xacs1h3jy7xgwi2awvim61k2ji6c-glibc-2.42-67/lib/ld-linux-x86-64.so.2",
+      "resolved_path": "/nix/store/ias8xacs1h3jy7xgwi2awvim61k2ji6c-glibc-2.42-67/lib/ld-linux-x86-64.so.2",
+      "sha256": "35c6a09b52908df5bb50d3c38ee63320fa038eb105f210b3e745f02791e84c65",
+      "size_bytes": 263056
+    },
+    {
+      "elf": true,
+      "path": "/nix/store/ias8xacs1h3jy7xgwi2awvim61k2ji6c-glibc-2.42-67/lib/libc.so.6",
+      "resolved_path": "/nix/store/ias8xacs1h3jy7xgwi2awvim61k2ji6c-glibc-2.42-67/lib/libc.so.6",
+      "sha256": "4b6b7a9379b38cb5f6531a7edc4d108391e45221d5b08f171f19460c141f1551",
+      "size_bytes": 2413096
+    },
+    {
+      "elf": true,
+      "path": "/nix/store/ias8xacs1h3jy7xgwi2awvim61k2ji6c-glibc-2.42-67/lib/libm.so.6",
+      "resolved_path": "/nix/store/ias8xacs1h3jy7xgwi2awvim61k2ji6c-glibc-2.42-67/lib/libm.so.6",
+      "sha256": "793d585cf6ddd7ad6adaa7a0142b75f2077fa87487c852ef45516dd7fd7bde42",
+      "size_bytes": 1102240
+    }
+  ],
+  "native_candidate_execution": false
+}
