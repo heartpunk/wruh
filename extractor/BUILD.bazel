@@ -546,7 +546,7 @@ py_binary(
     reapi_artifact_action(
         name = "cpython_extract_" + root,
         arguments = ["--root=" + root],
-        dependencies = ["//evidence/cpython:identity.json"] + ["@nix_native_deps//:cpython/object_" + str(index) for index in range(5)],
+        dependencies = ["//evidence/cpython:identity.json"] + ["@nix_native_deps//:cpython/object_" + str(index) + "/" + name for index, name in enumerate(["python3.12", "libpython3.12.so.1.0", "ld-linux-x86-64.so.2", "libc.so.6", "libm.so.6"])],
         dependency_arguments = ["--identity={path}"] + ["--object={path}"] * 5,
         output = "cpython_extract_" + root + ".json",
         tool = ":cpython_probe",
