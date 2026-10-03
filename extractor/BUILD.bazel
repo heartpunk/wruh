@@ -452,3 +452,24 @@ py_binary(
     target_compatible_with = _LINUX_X86_64,
     deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
 )
+
+py_binary(
+    name = "architecture_checks",
+    srcs = glob(["*.py"]),
+    main = "architecture_checks.py",
+    data = ["amd64_smoke.hex", "@nix_native_deps//:libstdcxx"],
+    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
+    target_compatible_with = _LINUX_X86_64,
+    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
+)
+
+reapi_artifact_action(
+    name = "architecture_state_check",
+    arguments = [],
+    dependencies = [],
+    dependency_arguments = [],
+    output = "architecture_state_check.json",
+    tool = ":architecture_checks",
+    exec_compatible_with = _LINUX_X86_64,
+    target_compatible_with = _LINUX_X86_64,
+)

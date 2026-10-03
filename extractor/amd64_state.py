@@ -423,7 +423,45 @@ def _memory_write_hook(state: Any) -> None:
     state.globals["_ghot_memory_writes"] = tuple(writes)
 
 
-def fresh_instruction_state(project: Any, source: int) -> Any:
+# VEX represents these architectural finite selectors in larger BV storage.
+# Splitting is demand-driven: integer instructions do not pay the FP cross-product.
+_SELECTOR_DOMAINS = {
+    "d": (1, (1 << 64) - 1),
+    "sseround": tuple(range(4)),
+    "fpround": tuple(range(4)),
+    "ftop": tuple(range(8)),
+}
+
+
+class _SelectorSplitRequired(Exception):
+    def __init__(self, name: str):
+        self.name = name
+        super().__init__(name)
+
+
+def _selector_read_hook(state: Any) -> None:
+    if not state.globals.get("_wruh_capture_selectors", False):
+        return
+    offset = state.inspect.reg_read_offset
+    if hasattr(offset, "op"):
+        if offset.op != "BVV":
+            raise Amd64AdapterError("symbolic register-file offset cannot identify selector domain")
+        offset = int(offset.args[0])
+    size = _access_size(state.inspect.reg_read_length, "register read")
+    for name in _SELECTOR_DOMAINS:
+        item = AMD64_LAYOUT.register(name)
+        if offset < item.offset + item.size_bytes and item.offset < offset + size:
+            expression = state.inspect.reg_read_expr
+            if expression is not None and expression.symbolic:
+                if name in state.globals.get("_wruh_selector_assignments", {}):
+                    raise Amd64AdapterError(
+                        f"selector {name} became symbolic inside one instruction; exact splitting unavailable")
+                raise _SelectorSplitRequired(name)
+
+
+def fresh_instruction_state(
+    project: Any, source: int, *, selector_assignments: Mapping[str, int] | None = None,
+) -> Any:
     """Create the canonical symbolic pre-state for one real instruction."""
 
     source = _u64(source, "source")
@@ -450,6 +488,19 @@ def fresh_instruction_state(project: Any, source: int) -> Any:
                               size=item.size_bytes, endness=project.arch.register_endness)
     state.registers.store(project.arch.ip_offset, _claripy.BVV(source, project.arch.bits),
                           size=project.arch.bytes, endness=project.arch.register_endness)
+
+    assignments = dict(selector_assignments or {})
+    for name, selected in assignments.items():
+        if name not in _SELECTOR_DOMAINS or selected not in _SELECTOR_DOMAINS[name]:
+            raise Amd64AdapterError(f"invalid explicit selector assignment {name}={selected}")
+        item = layout.register(name)
+        symbol = _claripy.BVS(name, item.bits, explicit_name=True)
+        state.add_constraints(symbol == selected)
+        state.registers.store(item.offset, _claripy.BVV(selected, item.bits),
+                              size=item.size_bytes, endness=project.arch.register_endness)
+    state.globals["_wruh_selector_assignments"] = assignments
+    state.globals["_wruh_capture_selectors"] = True
+    state.inspect.b("reg_read", when=_angr.BP_AFTER, action=_selector_read_hook)
 
     flag_bvs = _seed_flag_bvs()
     state.regs.cc_op = _claripy.BVV(_AMD64_OP_COPY, 64)
@@ -652,8 +703,20 @@ def step_instruction_outcomes(
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
-    state = fresh_instruction_state(project, source)
-    successors = project.factory.successors(state, num_inst=1).all_successors
+    pending: list[dict[str, int]] = [{}]
+    successors = []
+    while pending:
+        assignments = pending.pop(0)
+        state = fresh_instruction_state(project, source, selector_assignments=assignments)
+        try:
+            selected_successors = project.factory.successors(state, num_inst=1).all_successors
+        except _SelectorSplitRequired as split:
+            pending[0:0] = [dict(assignments, **{split.name: value})
+                            for value in _SELECTOR_DOMAINS[split.name]]
+            continue
+        for post in selected_successors:
+            post.globals["_wruh_capture_selectors"] = False
+        successors.extend(selected_successors)
     if not successors:
         raise Amd64AdapterError(f"instruction at {source:#x} has no outcomes")
     outcomes = []
