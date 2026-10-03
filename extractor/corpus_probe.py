@@ -13,6 +13,7 @@ from extractor.fresh import extract_fresh_function
 
 ROOTS = ['arithmetic','shifts','signed_shift','division','branch','signed_branch','loop','alias','overlap','widths','extend','call','memcmp','strcmp','strncmp']
 CANONICAL = ['var','bool_lit','bv_lit','bool_not','bool_and','bool_or','ite','bv_add','bv_sub','bv_mul','bv_udiv','bv_urem','bv_and','bv_or','bv_xor','bv_shl','bv_lshr','bv_ashr','bv_ult','bv_ule','bv_slt','bv_sle','eq','bv_not','zero_extend','sign_extend','extract','concat','const_array','select','store']
+PINNED = {'alias', 'overlap'}
 CONTROL = {'cfg:branch','cfg:join','cfg:backedge','jump:Ijk_Call','jump:Ijk_Ret'}
 
 def features(project, function):
@@ -67,6 +68,8 @@ def scan(args):
             if not gain:break
             selected.append({'name':name,'new_features':sorted(gain)})
             remaining-=gain;pool.remove(name)
+        for name in sorted(PINNED - {s['name'] for s in selected}):
+            selected.append({'name': name, 'new_features': [], 'reason': 'pinned memory-interaction coverage'})
         return {'optimization':args.optimization,'compiler':version,'command':command+['-o','<temporary>/corpus.elf'],
           'source_sha256':{p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in args.source},
           'elf_sha256':hashlib.sha256(elf.read_bytes()).hexdigest(),'elf_base64':base64.b64encode(elf.read_bytes()).decode(),

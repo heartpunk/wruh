@@ -1,0 +1,121 @@
+{
+  "method": "Exact equality after unsigned-BV maximum tautology, conjunction identities, and double-negation elimination; no approximate normalization.",
+  "cases": [
+    {
+      "case": "corpus_extract_O0_arithmetic",
+      "preserved": true,
+      "baseline_edges": 20,
+      "current_edges": 20
+    },
+    {
+      "case": "corpus_extract_O0_branch",
+      "preserved": true,
+      "baseline_edges": 18,
+      "current_edges": 18
+    },
+    {
+      "case": "corpus_extract_O0_call",
+      "preserved": true,
+      "baseline_edges": 12,
+      "current_edges": 12
+    },
+    {
+      "case": "corpus_extract_O0_extend",
+      "preserved": true,
+      "baseline_edges": 11,
+      "current_edges": 11
+    },
+    {
+      "case": "corpus_extract_O0_memcmp",
+      "preserved": true,
+      "baseline_edges": 53,
+      "current_edges": 53
+    },
+    {
+      "case": "corpus_extract_O0_overlap",
+      "preserved": true,
+      "baseline_edges": 21,
+      "current_edges": 21
+    },
+    {
+      "case": "corpus_extract_O0_signed_branch",
+      "preserved": true,
+      "baseline_edges": 16,
+      "current_edges": 16
+    },
+    {
+      "case": "corpus_extract_O0_signed_shift",
+      "preserved": true,
+      "baseline_edges": 10,
+      "current_edges": 10
+    },
+    {
+      "case": "corpus_extract_O0_strcmp",
+      "preserved": true,
+      "baseline_edges": 38,
+      "current_edges": 38
+    },
+    {
+      "case": "corpus_extract_O0_widths",
+      "preserved": true,
+      "baseline_edges": 26,
+      "current_edges": 26
+    },
+    {
+      "case": "corpus_extract_O2_arithmetic",
+      "preserved": true,
+      "baseline_edges": 9,
+      "current_edges": 9
+    },
+    {
+      "case": "corpus_extract_O2_call",
+      "preserved": true,
+      "baseline_edges": 6,
+      "current_edges": 6
+    },
+    {
+      "case": "corpus_extract_O2_extend",
+      "preserved": true,
+      "baseline_edges": 7,
+      "current_edges": 7
+    },
+    {
+      "case": "corpus_extract_O2_loop",
+      "preserved": true,
+      "baseline_edges": 45,
+      "current_edges": 45
+    },
+    {
+      "case": "corpus_extract_O2_overlap",
+      "preserved": true,
+      "baseline_edges": 6,
+      "current_edges": 6
+    },
+    {
+      "case": "corpus_extract_O2_signed_branch",
+      "preserved": true,
+      "baseline_edges": 7,
+      "current_edges": 7
+    },
+    {
+      "case": "corpus_extract_O2_signed_shift",
+      "preserved": true,
+      "baseline_edges": 7,
+      "current_edges": 7
+    },
+    {
+      "case": "corpus_extract_O2_strcmp",
+      "preserved": true,
+      "baseline_edges": 27,
+      "current_edges": 27
+    },
+    {
+      "case": "corpus_extract_O2_widths",
+      "preserved": true,
+      "baseline_edges": 15,
+      "current_edges": 15
+    }
+  ],
+  "preserved": 19,
+  "total": 19
+}
