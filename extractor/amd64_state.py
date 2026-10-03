@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+import logging
 from typing import Any, Mapping
 
 from extractor import runtime
@@ -705,6 +706,18 @@ def _symbolic_target_update(
     return target, target_value
 
 
+class _EngineFallbackCapture(logging.Handler):
+    """Fail closed if the public engine reports a symbolic-rounding fallback."""
+    def __init__(self) -> None:
+        super().__init__()
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        message = record.getMessage()
+        if "symbolic rounding mode found" in message:
+            self.messages.append(message)
+
+
 def step_instruction_outcomes(
     project: Any,
     source: int,
@@ -719,12 +732,21 @@ def step_instruction_outcomes(
     while pending:
         assignments = pending.pop(0)
         state = fresh_instruction_state(project, source, selector_assignments=assignments)
+        capture = _EngineFallbackCapture()
+        logger = logging.getLogger("angr.engines.vex.claripy.irop")
+        logger.addHandler(capture)
         try:
-            selected_successors = project.factory.successors(state, num_inst=1).all_successors
-        except _SelectorSplitRequired as split:
-            pending[0:0] = [dict(assignments, **{split.name: value})
-                            for value in _SELECTOR_DOMAINS[split.name]]
-            continue
+            try:
+                selected_successors = project.factory.successors(state, num_inst=1).all_successors
+            except _SelectorSplitRequired as split:
+                pending[0:0] = [dict(assignments, **{split.name: value})
+                                for value in _SELECTOR_DOMAINS[split.name]]
+                continue
+            if capture.messages:
+                raise Amd64AdapterError(
+                    f"instruction at {source:#x} requested unsupported symbolic rounding: {capture.messages}")
+        finally:
+            logger.removeHandler(capture)
         for post in selected_successors:
             post.globals["_wruh_capture_selectors"] = False
         successors.extend(selected_successors)
