@@ -47,11 +47,13 @@ def main():
         # Actual CLE relocation classes: unknown-mask extent follows their writes.
         memory_bytes=bytes(range(64)); fixture_path=directory/'relocation.bin'; fixture_path.write_bytes(memory_bytes)
         segment=SimpleNamespace(min_addr=0x1000,memsize=64,is_readable=True,is_writable=True,is_executable=False)
-        owner=SimpleNamespace(binary=str(fixture_path),mapped_base=0x1000,linked_base=0,arch=SimpleNamespace(bytes=8),segments=[segment],imports={})
+        owner=SimpleNamespace(binary=str(fixture_path),mapped_base=0x1000,linked_base=0,arch=SimpleNamespace(bytes=8,name="AMD64"),segments=[segment],imports={})
         symbol=SimpleNamespace(name='unknown',size=24,is_import=False)
         owner.relocs=[R_X86_64_PC32(owner,symbol,0,addend=0),R_X86_64_64(owner,symbol,8,addend=0),R_X86_64_COPY(owner,symbol,24,addend=0)]
         fake=SimpleNamespace(loader=SimpleNamespace(all_objects=[owner],memory=SimpleNamespace(load=lambda address,size: memory_bytes[address-0x1000:address-0x1000+size])))
-        masks=loaded_image_data(fake)['objects'][0]['undefined_bytes']
+        from unittest.mock import patch
+        with patch('extractor.loaded_image.skipped_elf_relocations', return_value=[]):
+            masks=loaded_image_data(fake)['objects'][0]['undefined_bytes']
         assert [(item['address'],item['size']) for item in masks]==[(0x1000,4),(0x1008,8),(0x1018,24)]
         masked={address for item in masks for address in range(item['address'],item['address']+item['size'])}
         assert 0x1004 not in masked and 0x1007 not in masked and 0x1030 not in masked

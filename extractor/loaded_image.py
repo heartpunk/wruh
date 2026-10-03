@@ -4,6 +4,9 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+from elftools.elf.elffile import ELFFile
+from elftools.elf.relocation import RelocationSection
+from cle.backends.elf.relocation import ALL_RELOCATIONS
 import angr
 from cle.backends.relocation import Relocation
 from cle.backends.elf.relocation.generic import (
@@ -64,6 +67,31 @@ def load_object_set(artifact: Path, specification: Path | None = None) -> angr.P
     return project
 
 
+def skipped_elf_relocations(obj: Any) -> list[dict[str, Any]]:
+    """CLE discards unimplemented ELF relocation entries; retain them explicitly."""
+    table = ALL_RELOCATIONS.get(obj.arch.name)
+    if table is None:
+        raise ValueError(f"unsupported ELF relocation architecture: {obj.arch.name}")
+    result = []
+    with open(obj.binary, 'rb') as stream:
+        elf = ELFFile(stream)
+        for section in elf.iter_sections():
+            if not isinstance(section, RelocationSection):
+                continue
+            for reloc in section.iter_relocations():
+                kind = reloc['r_info_type']
+                if kind == 0 or kind in table:
+                    continue
+                if obj.arch.name != 'AMD64' or kind != 36:
+                    raise ValueError(f"unsupported skipped ELF relocation {kind} in {obj.binary}")
+                result.append({'address': obj.mapped_base + reloc['r_offset'] - obj.linked_base,
+                    'linked_address': reloc['r_offset'], 'elf_type': kind,
+                    'size': 16, 'name': 'R_X86_64_TLSDESC',
+                    'section': section.name, 'symbol_index': reloc['r_info_sym'],
+                    'resolved': False, 'reason': 'unsupported-tls-descriptor'})
+    return result
+
+
 def loaded_image_data(project: angr.Project) -> dict[str, Any]:
     """Snapshot is an initialization artifact, never instruction semantics."""
     objects = []
@@ -79,7 +107,8 @@ def loaded_image_data(project: angr.Project) -> dict[str, Any]:
                 'executable': bool(segment.is_executable),
                 'bytes': project.loader.memory.load(segment.min_addr, size).hex()})
         relocations = []
-        undefined_bytes = []
+        skipped = skipped_elf_relocations(obj)
+        undefined_bytes = [{key: record[key] for key in ("address", "size", "reason")} for record in skipped]
         for reloc in obj.relocs:
             symbol = getattr(reloc, 'symbol', None)
             resolved = getattr(reloc, 'resolvedby', None)
@@ -96,7 +125,7 @@ def loaded_image_data(project: angr.Project) -> dict[str, Any]:
         objects.append({'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'mapped_base': obj.mapped_base, 'linked_base': obj.linked_base,
             'segments': segments, 'relocations': relocations,
-            'undefined_bytes': undefined_bytes})
+            'undefined_bytes': undefined_bytes, 'skipped_relocations': skipped})
     return {'schema': 'wruh-loaded-image-v1', 'objects': objects,
         'initialization_only': True, 'unresolved_relocations_are_open': True,
         'undefined_bytes_override_segment_bytes': True}
