@@ -63,6 +63,12 @@ def check():
     prove(z3.Or(*(o.guard for o in family.outcomes)))
     for out in family.outcomes:
         prove(z3.Implies(out.guard, out.updates["ftop"] == (canonical_register("ftop") + 1)))
+    family = instruction("sse-rounding-selector-store", "0fae1f")
+    assert len(family.outcomes) == 4
+    prove(z3.Or(*(o.guard for o in family.outcomes)) == z3.ULE(canonical_register("sseround"),3))
+    family = instruction("x87-rounding-selector-store", "d93f")
+    assert len(family.outcomes) == 4
+    prove(z3.Or(*(o.guard for o in family.outcomes)) == z3.ULE(canonical_register("fpround"),3))
     family = instruction("direction-selector-partition", "a4")
     assert len(family.outcomes) == 2
     prove(z3.Or(*(o.guard for o in family.outcomes)) ==

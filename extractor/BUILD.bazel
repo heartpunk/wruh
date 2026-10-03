@@ -514,3 +514,21 @@ reapi_artifact_action(
     exec_compatible_with = _LINUX_X86_64,
     target_compatible_with = _LINUX_X86_64,
 )
+
+py_binary(
+    name = "architecture_runner_checks",
+    srcs = glob(["*.py"]),
+    main = "architecture_runner_checks.py",
+    deps = ["@ayxg//:ayxg"],
+    target_compatible_with = _LINUX_X86_64,
+)
+
+reapi_artifact_action(
+    name = "architecture_runner_check",
+    dependencies = [":corpus_native_model_O" + opt + "_" + root for opt in ["0", "2"] for root in ["alias", "overlap", "division"]],
+    dependency_arguments = ["--model={path}"] * 6,
+    output = "architecture_runner_check.json",
+    tool = ":architecture_runner_checks",
+    exec_compatible_with = _LINUX_X86_64,
+    target_compatible_with = _LINUX_X86_64,
+)
