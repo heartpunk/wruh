@@ -29,11 +29,10 @@ example {Γ : Ctx} (s t : Env Γ) :
 example (s t : Env registers) :
     ¬ (((extract (adapter registers)
       (⟨[⟨.boolLit false, swap.update⟩]⟩ : QFAbvSTS registers)).steps[0]'(by exact Nat.zero_lt_succ 0)).denotes s t) := by
-  simp [extract, extractTagged, adapter, observation, QFAbvSTS.symbolicStep,
-    ShareCommon.shareCommon', Wruh.FreshTransform.transform,
-    Wruh.FreshTransform.resolve, Wruh.FreshTransform.fromResolved,
+  simp [extract, extractTagged, extractTaggedWith, adapter, QFAbvSTS.symbolicStep,
+    ShareCommon.shareCommon',
     QFAbvStep.compose, QFAbvStep.identity, QFAbvStep.denotes,
-    LetChain.close, Eval.evalBool, Eval.eval, Expr.subst]
+    Eval.evalBool, Eval.eval, Expr.subst]
 
 /-- Arbitrary models, including memory-valued states, require no recovery premise. -/
 example {Γ : Ctx} (source : QFAbvSTS Γ) :

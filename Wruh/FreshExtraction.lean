@@ -25,10 +25,15 @@ structure SymexLaws (A : Adapter P I M Γ) : Prop where
       Eval.evalBool ρ input.guard = true ∧
         A.emulate p (input.update.eval ρ) target
 
-/-- Run symex from the canonical identity state, retaining provenance. -/
-def extractTagged (A : Adapter P I M Γ) (p : P) : List (I × Transformer Γ M) :=
-  (A.symex p (QFAbvStep.identity Γ)).map fun successor =>
+/-- Run an operational symex interface from identity, retaining provenance. -/
+def extractTaggedWith
+    (symex : P → QFAbvStep Γ Γ → List (TaggedSuccessor I M Γ))
+    (p : P) : List (I × Transformer Γ M) :=
+  (symex p (QFAbvStep.identity Γ)).map fun successor =>
     (successor.site, ⟨successor.step, successor.metadata⟩)
+
+def extractTagged (A : Adapter P I M Γ) (p : P) : List (I × Transformer Γ M) :=
+  extractTaggedWith A.symex p
 
 /-- Assemble the ordinary AYXG STS from those same successors. -/
 def extract (A : Adapter P I M Γ) (p : P) : QFAbvSTS Γ :=
@@ -37,7 +42,7 @@ def extract (A : Adapter P I M Γ) (p : P) : QFAbvSTS Γ :=
 private theorem tagged_steps (A : Adapter P I M Γ) (p : P) :
     (extractTagged A p).map (fun entry => entry.2.step) =
       (A.symex p (QFAbvStep.identity Γ)).map TaggedSuccessor.step := by
-  simp [extractTagged, List.map_map]
+  simp [extractTagged, extractTaggedWith, List.map_map]
 
 /-- The actual extraction recovers the whole independently specified relation. -/
 theorem extract_transport (A : Adapter P I M Γ) (laws : SymexLaws A)

@@ -73,15 +73,14 @@ def parseSite (Γ : Ctx) (address occurrenceId : Nat) (response : Json) :
     (parseOutcome Γ occurrenceId roots)
   pure { address, sourceGuard, outcomes }
 
-/-- Only the operational adapter fields are used here. The two source-relation
-fields are proof premises for a separate angr correspondence result; this
-executable asserts no such result. -/
-def adapter (Γ : Ctx) : Adapter (List (Site Γ)) (Site Γ) (Metadata Γ) Γ where
-  sites program := program
-  emulate _ _ _ := False
-  emulateAt _ _ _ _ := False
-  input _ site := ⟨site.sourceGuard, StateUpdate.identity Γ⟩
-  step _ site _ := site.outcomes
+/-- Supply tagged successors from angr observations. No concrete relation or
+correspondence claim is needed by this executable operation. -/
+def symex (Γ : Ctx) (program : List (Site Γ)) (_ : QFAbvStep Γ Γ) :
+    List (TaggedSuccessor (Site Γ) (Metadata Γ) Γ) :=
+  program.flatMap fun site =>
+    site.outcomes.map fun outcome =>
+      let transformer := Wruh.FreshTransform.transform site.sourceGuard outcome
+      { site, step := transformer.step, metadata := transformer.metadata }
 
 private abbrev RootWriter (Γ : Ctx) := StateM (Array (TypedExpr Γ))
 
@@ -127,7 +126,7 @@ private def edgeJson {Γ : Ctx} (address : Nat)
 def functionJson {Γ : Ctx} (declarations architecture : Json)
     (functionId : String) (entry : Nat) (occurrences : List Json)
     (sites : List (Site Γ)) : RootWriter Γ Json := do
-  let tagged := extractTagged (adapter Γ) sites
+  let tagged := extractTaggedWith (symex Γ) sites
   let mut edges := #[]
   for (site, transformer) in tagged do
     edges := edges.push (← edgeJson site.address transformer)
