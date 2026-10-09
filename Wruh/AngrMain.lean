@@ -63,7 +63,12 @@ private def run (args : List String) : IO Unit := do
   let priorPythonPath ← IO.getEnv "PYTHONPATH"
   let pythonPath := ayxgSource ++ "/python:" ++ cwd.toString ++
     (priorPythonPath.map (":" ++ ·) |>.getD "")
-  let python := (← IO.getEnv "WRUH_PYTHON").getD "python3"
+  let python ← match ← IO.getEnv "WRUH_PYTHON" with
+    | some path => pure path
+    | none =>
+      match ← IO.getEnv "GHOT_NIX_ANGR_ROOT" with
+      | some root => pure (root ++ "/bin/python3")
+      | none => pure "python3"
   let child ← IO.Process.spawn {
     cmd := python
     args := #["-m", "extractor.lean_angr_worker"] ++ workerArgs
