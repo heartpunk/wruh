@@ -25,6 +25,6 @@ The CLI also forwards `--provider`, `--manifest`, `--objects`, `--cfg`,
 `WRUH_PYTHON` can select a Python interpreter explicitly; otherwise the driver
 uses the pinned angr interpreter from `GHOT_NIX_ANGR_ROOT` when available.
 
-This entry point calls the operational symex function directly. The generic
-recovery theorem uses a separate whole-relation sound-and-complete law; this
-executable makes no claim that angr satisfies that law.
+This entry point assembles tagged fresh successors. The generic recovery theorem
+uses a whole-relation sound-and-complete law for arbitrary symbolic inputs;
+this executable makes no claim that angr satisfies that law.

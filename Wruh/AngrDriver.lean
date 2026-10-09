@@ -73,9 +73,9 @@ def parseSite (Γ : Ctx) (address occurrenceId : Nat) (response : Json) :
     (parseOutcome Γ occurrenceId roots)
   pure { address, sourceGuard, outcomes }
 
-/-- Supply tagged successors from angr observations. No concrete relation or
-correspondence claim is needed by this executable operation. -/
-def symex (Γ : Ctx) (program : List (Site Γ)) (_ : QFAbvStep Γ Γ) :
+/-- Supply fresh tagged successors from angr observations. This operation is
+only for canonical input; no arbitrary-input symex claim is made here. -/
+def freshSuccessors (Γ : Ctx) (program : List (Site Γ)) :
     List (TaggedSuccessor (Site Γ) (Metadata Γ) Γ) :=
   program.flatMap fun site =>
     site.outcomes.map fun outcome =>
@@ -126,7 +126,7 @@ private def edgeJson {Γ : Ctx} (address : Nat)
 def functionJson {Γ : Ctx} (declarations architecture : Json)
     (functionId : String) (entry : Nat) (occurrences : List Json)
     (sites : List (Site Γ)) : RootWriter Γ Json := do
-  let tagged := extractTaggedWith (symex Γ) sites
+  let tagged := tagSuccessors (freshSuccessors Γ sites)
   let mut edges := #[]
   for (site, transformer) in tagged do
     edges := edges.push (← edgeJson site.address transformer)
