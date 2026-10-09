@@ -12,3 +12,6 @@ require ayxg from (run_io do
 
 lean_lib Wruh where
   globs := #[`Wruh.*]
+
+lean_exe «wruh-fresh» where
+  root := `Wruh.AngrMain

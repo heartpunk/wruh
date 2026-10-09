@@ -42,12 +42,14 @@ private def parseOutcome (Γ : Ctx) (occurrenceId : Nat)
   let target ← asSort (.bv 64) (← root roots (← natField item "target"))
   let targetValue? ← field item "target_value"
   let targetValue ← if targetValue? == Json.null then pure none else some <$> targetValue?.getNat?
+  let outcomeId ← natField item "outcome_id"
+  let jumpkind ← (← field item "jumpkind").getStr?
   let metadata : Metadata Γ := {
     occurrenceId
-    outcomeId := ← natField item "outcome_id"
+    outcomeId
     target
     targetValue
-    jumpkind := ← (← field item "jumpkind").getStr?
+    jumpkind
   }
   pure {
     temporaryCtx := Γ
@@ -61,8 +63,9 @@ private def parseOutcome (Γ : Ctx) (occurrenceId : Nat)
 /-- Decode one worker response using AYXG's shared, typed expression DAG reader. -/
 def parseSite (Γ : Ctx) (address occurrenceId : Nat) (response : Json) :
     Except String (Site Γ) := do
-  if (← (← field response "kind").getStr?) != "step" ||
-      (← natField response "address") != address then
+  let kind ← (← field response "kind").getStr?
+  let actualAddress ← natField response "address"
+  if kind != "step" || actualAddress != address then
     throw "angr response does not match requested site"
   let roots := (← parseRootsDag Γ (← field response "expression_dag")).toArray
   let sourceGuard ← asSort .bool (← root roots (← natField response "source_guard"))
@@ -73,18 +76,12 @@ def parseSite (Γ : Ctx) (address occurrenceId : Nat) (response : Json) :
 /-- Only the operational adapter fields are used here. The two source-relation
 fields are proof premises for a separate angr correspondence result; this
 executable asserts no such result. -/
-def adapter (Γ : Ctx) : Adapter (List (Site Γ)) Nat (Metadata Γ) Γ where
-  sites program := program.map Site.address
+def adapter (Γ : Ctx) : Adapter (List (Site Γ)) (Site Γ) (Metadata Γ) Γ where
+  sites program := program
   emulate _ _ _ := False
   emulateAt _ _ _ _ := False
-  input program address :=
-    match program.find? (fun site => site.address == address) with
-    | some site => ⟨site.sourceGuard, StateUpdate.identity Γ⟩
-    | none => ⟨.boolLit false, StateUpdate.identity Γ⟩
-  step program address _ :=
-    match program.find? (fun site => site.address == address) with
-    | some site => site.outcomes
-    | none => []
+  input _ site := ⟨site.sourceGuard, StateUpdate.identity Γ⟩
+  step _ site _ := site.outcomes
 
 private abbrev RootWriter (Γ : Ctx) := StateM (Array (TypedExpr Γ))
 
@@ -132,8 +129,8 @@ def functionJson {Γ : Ctx} (declarations architecture : Json)
     (sites : List (Site Γ)) : RootWriter Γ Json := do
   let tagged := extractTagged (adapter Γ) sites
   let mut edges := #[]
-  for (address, transformer) in tagged do
-    edges := edges.push (← edgeJson address transformer)
+  for (site, transformer) in tagged do
+    edges := edges.push (← edgeJson site.address transformer)
   pure <| Json.mkObj [
     ("schema", toJson "ghot-fresh-function-v1"),
     ("function_id", toJson functionId),
@@ -146,13 +143,17 @@ def functionJson {Γ : Ctx} (declarations architecture : Json)
 /-- Package all Lean-authored edges in AYXG's existing shared-DAG envelope. -/
 def bundleJson {Γ : Ctx} (inventory : Json) (functions : List Json)
     (roots : Array (TypedExpr Γ)) : Except String Json := do
+  let imageSha256 ← field inventory "image_sha256"
+  let rootId ← field inventory "root_id"
+  let cfg ← field inventory "cfg"
+  let externalEdges ← field inventory "external_edges"
   let fields := [
     ("schema", toJson "wruh-fresh-bundle-v1"),
-    ("image_sha256", ← field inventory "image_sha256"),
-    ("root_id", ← field inventory "root_id"),
-    ("cfg", ← field inventory "cfg"),
+    ("image_sha256", imageSha256),
+    ("root_id", rootId),
+    ("cfg", cfg),
     ("functions", toJson functions),
-    ("external_edges", ← field inventory "external_edges")]
+    ("external_edges", externalEdges)]
   let fields := match (inventory.getObjVal? "loaded_image").toOption with
     | some image => fields ++ [("loaded_image", image)]
     | none => fields
