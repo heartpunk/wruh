@@ -33,3 +33,6 @@ jobs:
         run: nix flake check --no-build --no-write-lock-file
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor
+
+      - name: Build the local equivalence tool
+        run: nix develop --no-write-lock-file --command bazel build //extractor:fresh_equivalence_tool
