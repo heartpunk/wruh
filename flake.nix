@@ -2,7 +2,7 @@
   description = "Wruh fresh handler extraction environment";
 
   inputs = {
-    ifrl.url = "git+ssh://git@github.com/heartpunk/ifrl.git?rev=04f9fb38cf205ab091cb690b6b58f711b65edf54";
+    ifrl.url = "git+ssh://git@github.com/heartpunk/ifrl.git?ref=ci/wave-1&rev=5cca8cb3235ebe8288e43a254d05380b10189f37&allRefs=1";
     nixpkgs.follows = "ifrl/nixpkgs";
     angr-nix = {
       follows = "ifrl/angr-nix";
