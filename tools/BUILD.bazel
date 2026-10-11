@@ -1,6 +1,5 @@
 exports_files([
-    "nix_native_deps.bzl",
-    "reapi_artifact_action.bzl",
+    "ghot_inputs.bzl",
 ])
 
 platform(

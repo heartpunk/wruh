@@ -1,12 +1,15 @@
 module(name = "wruh", version = "0.1.0")
 
-bazel_dep(name = "ayxg", version = "0.1.0")
-local_path_override(module_name = "ayxg", path = ".dependencies/ayxg")
-
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_python", version = "1.7.0")
 bazel_dep(name = "ghot_vendored_arpy", version = "1.1.1")
 bazel_dep(name = "ghot_vendored_mulpyplexer", version = "0.9")
+bazel_dep(name = "ifrl", version = "0.1.0")
+git_override(
+    module_name = "ifrl",
+    remote = "git@github.com:heartpunk/ifrl.git",
+    commit = "46c35e52726d1f595d9d25e453062f5af1905db9",
+)
 
 local_path_override(module_name = "ghot_vendored_arpy", path = "third_party/arpy")
 local_path_override(module_name = "ghot_vendored_mulpyplexer", path = "third_party/mulpyplexer")
@@ -35,7 +38,7 @@ register_toolchains("@nix_python_toolchains//:all")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
-    hub_name = "wruh_pypi",
+    hub_name = "extractor_pypi",
     python_interpreter = "python3.12",
     python_version = "3.12",
     requirements_by_platform = {
@@ -44,14 +47,13 @@ pip.parse(
 )
 override_repo(
     pip,
-    wruh_pypi_312_angr = "nix_angr",
-    wruh_pypi_312_arpy = "ghot_vendored_arpy",
-    wruh_pypi_312_mulpyplexer = "ghot_vendored_mulpyplexer",
+    extractor_pypi_312_arpy = "ghot_vendored_arpy",
+    extractor_pypi_312_mulpyplexer = "ghot_vendored_mulpyplexer",
 )
-use_repo(pip, "wruh_pypi")
+use_repo(pip, "extractor_pypi")
 
-nix_native_deps = use_extension("//tools:nix_native_deps.bzl", "nix_native_deps")
+nix_native_deps = use_extension("@ifrl//bazel/wruh/tools:nix_native_deps.bzl", "nix_native_deps")
 use_repo(nix_native_deps, "nix_native_deps")
 
-nix_angr = use_extension("//tools:nix_native_deps.bzl", "nix_angr")
-use_repo(nix_angr, "nix_angr")
+ghot_inputs = use_repo_rule("//tools:ghot_inputs.bzl", "ghot_inputs_repository")
+ghot_inputs(name = "ghot_inputs")

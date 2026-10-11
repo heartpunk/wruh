@@ -1,6 +1,6 @@
-load("@wruh_pypi//:requirements.bzl", "requirement")
+load("@extractor_pypi//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary")
-load("//tools:reapi_artifact_action.bzl", "reapi_artifact_action")
+load("@ifrl//bazel/wruh/tools:reapi_artifact_action.bzl", "reapi_artifact_action")
 
 package(default_visibility = ["//visibility:private"])
 
@@ -11,546 +11,68 @@ _LINUX_X86_64 = [
     "@platforms//cpu:x86_64",
 ]
 
-[
-    py_binary(
-        name = stage,
-        visibility = ["//visibility:public"],
-        srcs = glob(["*.py"]),
-        main = stage + "_cli.py",
-        data = ["amd64_smoke.hex", "@nix_native_deps//:libstdcxx"],
-        env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)",
-               "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-        target_compatible_with = _LINUX_X86_64,
-        deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("pyelftools"), requirement("z3-solver")],
-    ) for stage in ["extract", "compose"]
+py_binary(
+    name = "fresh_equivalence_tool",
+    srcs = glob(["*.py"]),
+    data = [
+        "amd64_smoke.hex",
+        "@nix_native_deps//:libstdcxx",
+    ],
+    env = {
+        "GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)",
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONSAFEPATH": "1",
+    },
+    main = "fresh_equivalence.py",
+    target_compatible_with = _LINUX_X86_64,
+    deps = [
+        requirement("angr"),
+        requirement("capstone"),
+        requirement("z3-solver"),
+    ],
+)
+
+_HANDLER_NAMES = [
+    "addi", "add", "lb", "sb", "beq", "goto", "slli", "srli", "srai", "mul",
 ]
 
-# Static-only zeroth-pass corpus analysis. Candidate ELFs are never executed.
-py_binary(
-    name = "corpus_probe",
-    srcs = glob(["*.py"]),
-    data = ["amd64_smoke.hex", "@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    main = "corpus_probe.py",
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("pyelftools"), requirement("z3-solver")],
-)
-
-reapi_artifact_action(
- name = "corpus_scan_O0",
- arguments = ["--mode=scan", "--optimization=0"],
- dependencies = ["//corpus:templates.c", "//corpus:real/memcmp.c", "//corpus:real/strcmp.c", "//corpus:real/strncmp.c"],
- dependency_arguments = ["--source={path}"] * 4,
- output = "corpus_scan_O0.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_arithmetic",
- arguments = ["--mode=extract", "--root=arithmetic"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_arithmetic.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_shifts",
- arguments = ["--mode=extract", "--root=shifts"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_shifts.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_signed_shift",
- arguments = ["--mode=extract", "--root=signed_shift"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_signed_shift.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_division",
- arguments = ["--mode=extract", "--root=division"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_division.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_branch",
- arguments = ["--mode=extract", "--root=branch"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_branch.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_signed_branch",
- arguments = ["--mode=extract", "--root=signed_branch"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_signed_branch.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_loop",
- arguments = ["--mode=extract", "--root=loop"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_loop.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_alias",
- arguments = ["--mode=extract", "--root=alias"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_alias.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_overlap",
- arguments = ["--mode=extract", "--root=overlap"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_overlap.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_widths",
- arguments = ["--mode=extract", "--root=widths"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_widths.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_extend",
- arguments = ["--mode=extract", "--root=extend"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_extend.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_call",
- arguments = ["--mode=extract", "--root=call"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_call.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_memcmp",
- arguments = ["--mode=extract", "--root=memcmp"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_memcmp.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_strcmp",
- arguments = ["--mode=extract", "--root=strcmp"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_strcmp.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O0_strncmp",
- arguments = ["--mode=extract", "--root=strncmp"],
- dependencies = [":corpus_scan_O0"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O0_strncmp.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_scan_O2",
- arguments = ["--mode=scan", "--optimization=2"],
- dependencies = ["//corpus:templates.c", "//corpus:real/memcmp.c", "//corpus:real/strcmp.c", "//corpus:real/strncmp.c"],
- dependency_arguments = ["--source={path}"] * 4,
- output = "corpus_scan_O2.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_arithmetic",
- arguments = ["--mode=extract", "--root=arithmetic"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_arithmetic.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_shifts",
- arguments = ["--mode=extract", "--root=shifts"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_shifts.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_signed_shift",
- arguments = ["--mode=extract", "--root=signed_shift"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_signed_shift.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_division",
- arguments = ["--mode=extract", "--root=division"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_division.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_branch",
- arguments = ["--mode=extract", "--root=branch"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_branch.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_signed_branch",
- arguments = ["--mode=extract", "--root=signed_branch"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_signed_branch.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_loop",
- arguments = ["--mode=extract", "--root=loop"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_loop.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_alias",
- arguments = ["--mode=extract", "--root=alias"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_alias.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_overlap",
- arguments = ["--mode=extract", "--root=overlap"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_overlap.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_widths",
- arguments = ["--mode=extract", "--root=widths"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_widths.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_extend",
- arguments = ["--mode=extract", "--root=extend"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_extend.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_call",
- arguments = ["--mode=extract", "--root=call"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_call.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_memcmp",
- arguments = ["--mode=extract", "--root=memcmp"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_memcmp.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_strcmp",
- arguments = ["--mode=extract", "--root=strcmp"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_strcmp.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
- name = "corpus_extract_O2_strncmp",
- arguments = ["--mode=extract", "--root=strncmp"],
- dependencies = [":corpus_scan_O2"],
- dependency_arguments = ["--scan={path}"],
- output = "corpus_extract_O2_strncmp.json",
- tool = ":corpus_probe",
- exec_compatible_with = _LINUX_X86_64,
- target_compatible_with = _LINUX_X86_64,
-)
-
-filegroup(name = "corpus_zeroth_all", srcs = [":corpus_extract_O%s_%s" % (opt, name) for opt in ["0", "2"] for name in ["arithmetic","shifts","signed_shift","division","branch","signed_branch","loop","alias","overlap","widths","extend","call","memcmp","strcmp","strncmp"]])
-
-[
- reapi_artifact_action(
-  name = "corpus_native_prepare_O" + optimization,
-  arguments = ["--mode=prepare-native", "--optimization=" + optimization],
-  dependencies = ["//corpus:templates.c", "//corpus:native/harness.c"],
-  dependency_arguments = ["--source={path}"] * 2,
-  output = "corpus_native_prepare_O" + optimization + ".json",
-  tool = ":corpus_probe",
-  exec_compatible_with = _LINUX_X86_64,
-  target_compatible_with = _LINUX_X86_64,
- ) for optimization in ["0", "2"]
-]
-
-[
- reapi_artifact_action(
-  name = "corpus_native_model_O" + optimization + "_" + root,
-  arguments = ["--mode=native-model", "--root=" + root],
-  dependencies = [":corpus_native_prepare_O" + optimization],
-  dependency_arguments = ["--scan={path}"],
-  output = "corpus_native_model_O" + optimization + "_" + root + ".json",
-  tool = ":corpus_probe",
-  exec_compatible_with = _LINUX_X86_64,
-  target_compatible_with = _LINUX_X86_64,
- ) for optimization in ["0", "2"] for root in ["alias", "overlap", "division"]
-]
-filegroup(name = "corpus_native_models", srcs = [
- ":corpus_native_model_O" + optimization + "_" + root
- for optimization in ["0", "2"] for root in ["alias", "overlap", "division"]])
-
-py_binary(
- name = "native_differential",
- srcs = glob(["*.py"]) + ["//corpus:native/sandbox.py"],
- main = "native_differential.py",
- data = [":corpus_native_prepare_O0.json", ":corpus_native_prepare_O2.json"] + [
-  ":corpus_native_model_O" + opt + "_" + root + ".json"
-  for opt in ["0", "2"] for root in ["alias", "overlap", "division"]],
- args = ["--binary=$(rlocationpath :corpus_native_prepare_O0.json)", "--binary=$(rlocationpath :corpus_native_prepare_O2.json)"] + [
-  "--model=$(rlocationpath :corpus_native_model_O" + opt + "_" + root + ".json)"
-  for opt in ["0", "2"] for root in ["alias", "overlap", "division"]],
- deps = ["@ayxg//:ayxg", requirement("hypothesis"), "@rules_python//python/runfiles"],
- target_compatible_with = _LINUX_X86_64,
-)
-
-py_binary(
-    name = "angr_upgrade_parity",
-    srcs = ["angr_upgrade_parity.py", "native_runtime.py"],
-    main = "angr_upgrade_parity.py",
-    data = ["@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3"],
-)
-
-py_binary(
-    name = "angr_smt_smoke",
-    srcs = glob(["*.py"]),
-    main = "angr_smt_smoke.py",
-    data = ["amd64_smoke.hex", "@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("pyelftools"), requirement("z3-solver")],
-)
-
-py_binary(
-    name = "architecture_checks",
-    srcs = glob(["*.py"]),
-    main = "architecture_checks.py",
-    data = ["amd64_smoke.hex", "@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("z3-solver")],
-)
-
-reapi_artifact_action(
-    name = "architecture_state_check",
-    arguments = [],
-    dependencies = [],
-    dependency_arguments = [],
-    output = "architecture_state_check.json",
-    tool = ":architecture_checks",
-    exec_compatible_with = _LINUX_X86_64,
-    target_compatible_with = _LINUX_X86_64,
-)
-
-py_binary(
-    name = "open_transfers_smoke",
-    srcs = glob(["*.py"]),
-    main = "open_transfers_smoke.py",
-    data = ["@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("pyelftools"), requirement("z3-solver")],
-)
-
-reapi_artifact_action(
-    name = "open_transfers_check",
-    arguments = [],
-    dependencies = [],
-    dependency_arguments = [],
-    output = "open_transfers_check.json",
-    tool = ":open_transfers_smoke",
-    exec_compatible_with = _LINUX_X86_64,
-    target_compatible_with = _LINUX_X86_64,
-)
-
-py_binary(
-    name = "open_object_smoke",
-    srcs = glob(["*.py"]),
-    main = "open_object_smoke.py",
-    data = ["@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("capstone"), requirement("pyelftools"), requirement("z3-solver")],
-)
-reapi_artifact_action(
-    name = "open_object_check",
-    arguments = [],
-    dependencies = ["//corpus/open-transfers:entry.c", "//corpus/open-transfers:library.c"],
-    dependency_arguments = ["--entry={path}", "--library={path}"],
-    output = "open_object_check.json",
-    tool = ":open_object_smoke",
-    exec_compatible_with = _LINUX_X86_64,
-    target_compatible_with = _LINUX_X86_64,
-)
-
-py_binary(
-    name = "architecture_runner_checks",
-    srcs = glob(["*.py"]),
-    main = "architecture_runner_checks.py",
-    deps = ["@ayxg//:ayxg"],
-    target_compatible_with = _LINUX_X86_64,
-)
-
-reapi_artifact_action(
-    name = "architecture_runner_check",
-    dependencies = [":corpus_native_model_O" + opt + "_" + root for opt in ["0", "2"] for root in ["alias", "overlap", "division"]],
-    dependency_arguments = ["--model={path}"] * 6,
-    output = "architecture_runner_check.json",
-    tool = ":architecture_runner_checks",
-    exec_compatible_with = _LINUX_X86_64,
-    target_compatible_with = _LINUX_X86_64,
-)
-
-py_binary(
-    name = "cpython_probe",
-    srcs = glob(["*.py"]),
-    main = "cpython_probe.py",
-    data = ["@nix_native_deps//:libstdcxx"],
-    env = {"GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)", "PYTHONNOUSERSITE": "1", "PYTHONSAFEPATH": "1"},
-    target_compatible_with = _LINUX_X86_64,
-    deps = ["@ayxg//:ayxg", "@ayxg//:z3", requirement("angr"), requirement("pyelftools"), requirement("capstone"), requirement("z3-solver")],
-)
 [
     reapi_artifact_action(
-        name = "cpython_extract_" + root,
-        arguments = ["--root=" + root],
-        dependencies = ["//evidence/cpython:identity.json"] + ["@nix_native_deps//:cpython/object_" + str(index) + "/" + name for index, name in enumerate(["python3.12", "libpython3.12.so.1.0", "ld-linux-x86-64.so.2", "libc.so.6", "libm.so.6"])],
-        dependency_arguments = ["--identity={path}"] + ["--object={path}"] * 5,
-        output = "cpython_extract_" + root + ".json",
-        tool = ":cpython_probe",
+        name = handler + "_handler_fresh_equivalence",
+        arguments = [
+            "--handler=" + handler + "_handler",
+            "--timeout-ms=300000",
+            "--record-only",
+        ],
+        dependencies = [
+            "@ghot_inputs//:tinymemory_wruh_provider.py",
+            "@ghot_inputs//:extractor_artifact",
+            "@ghot_inputs//:tinymemory_linux_x86_64_manifest.json",
+            "@ghot_inputs//:tinymemory_linux_x86_64_cfg.json",
+        ],
+        dependency_arguments = [
+            "--provider={path}",
+            "--artifact={path}",
+            "--manifest={path}",
+            "--cfg={path}",
+        ],
         exec_compatible_with = _LINUX_X86_64,
+        exec_properties = {
+            "cpu_count": "2",
+            "memory_mb": "8000",
+        },
+        inputs = ["@ghot_inputs//:provider_bundle"],
+        output = handler + "_handler_fresh_equivalence.json",
         target_compatible_with = _LINUX_X86_64,
-    ) for root in ["PyBytes_Size", "PyObject_Call", "PyFloat_AsDouble", "float_add", "float_mul"]
+        tool = ":fresh_equivalence_tool",
+    )
+    for handler in _HANDLER_NAMES
 ]
+
+filegroup(
+    name = "handler_fresh_equivalence_all",
+    srcs = [
+        ":" + handler + "_handler_fresh_equivalence"
+        for handler in _HANDLER_NAMES
+    ],
+)
