@@ -48,16 +48,15 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1791737130,
-        "narHash": "sha256-hC5Ss8VJSBCl1XHfpu89ryHGSkGfuHUgTPSllOloZi4=",
-        "ref": "refs/heads/main",
-        "rev": "46c35e52726d1f595d9d25e453062f5af1905db9",
+        "lastModified": 1791737988,
+        "narHash": "sha256-7M5k+B9NHUmWo9No60veOc46Hl8jsKHtJdeNXtHFPP0=",
+        "rev": "04f9fb38cf205ab091cb690b6b58f711b65edf54",
         "revCount": 4,
         "type": "git",
         "url": "ssh://git@github.com/heartpunk/ifrl.git"
       },
       "original": {
-        "rev": "46c35e52726d1f595d9d25e453062f5af1905db9",
+        "rev": "04f9fb38cf205ab091cb690b6b58f711b65edf54",
         "type": "git",
         "url": "ssh://git@github.com/heartpunk/ifrl.git"
       }
