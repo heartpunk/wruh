@@ -5,8 +5,7 @@
     ifrl.url = "git+ssh://git@github.com/heartpunk/ifrl.git?rev=812c5201e78febb0d863a2af5b27dc0a2fbd085a";
     nixpkgs.follows = "ifrl/nixpkgs";
     angr-nix = {
-      url = "github:heartpunk/angr-nix/experiment/ixyk-angr-10";
-      inputs.nixpkgs.follows = "ifrl/nixpkgs";
+      follows = "ifrl/angr-nix";
     };
   };
 
