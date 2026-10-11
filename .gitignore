@@ -4,3 +4,8 @@
 .lake/
 
 lake-manifest.json
+
+# Generated Python bytecode
+__pycache__/
+*.pyc
+*.pyo
