@@ -3,7 +3,7 @@
 
   inputs = {
     ifrl = {
-      url = "git+ssh://git@github.com/heartpunk/ifrl.git?ref=ci/wave-1&rev=5cca8cb3235ebe8288e43a254d05380b10189f37&allRefs=1";
+      url = "git+ssh://git@github.com/heartpunk/ifrl.git?ref=main&rev=c69a322ec903672a2def1841be661eb6a339c89b&allRefs=1";
       inputs.angr-nix.follows = "angr-nix";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
