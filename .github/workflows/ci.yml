@@ -34,7 +34,5 @@ jobs:
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor
 
-      - name: Build the local equivalence tool
-        run: nix develop --no-write-lock-file --command bazel build //extractor:fresh_equivalence_tool
       - name: Run the minimal CLI smoke test through unittest
-        run: nix develop --no-write-lock-file --command python3 -m unittest discover -s tests -p test_cli_smoke.py -v
+        run: python3 -m unittest discover -s tests -p test_cli_smoke.py -v

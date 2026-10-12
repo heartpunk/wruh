@@ -10,20 +10,9 @@ start_runtime_trace()
 import argparse
 import importlib.util
 import json
-from ayxg.codec import dumps, loads
 from pathlib import Path
 import sys
 from typing import Any
-
-from extractor.native_runtime import preload_libstdcxx
-
-_LIBSTDCXX = preload_libstdcxx()
-
-from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import load_pinned_binary, exact_symbol_inventory_policy, inventory_project, PinnedBinary
-from extractor.loaded_image import load_object_set, loaded_image_data
-from extractor.fresh import extract_fresh_function
-
 
 def _provider(path: Path) -> Any:
     spec = importlib.util.spec_from_file_location("wruh_abi_provider", path)
@@ -56,6 +45,22 @@ def _root_closure(cfg: dict[str, Any], root_id: str) -> tuple[str, ...]:
 
 
 def _run(arguments: argparse.Namespace) -> dict[str, Any]:
+    # Delay the extraction stack until after argparse has handled --help. This
+    # keeps the CLI entrypoint inspectable without importing the full runtime.
+    from extractor.native_runtime import preload_libstdcxx
+
+    preload_libstdcxx()
+
+    from extractor.binary_cfg import build_static_cfg
+    from extractor.binary_inventory import (
+        PinnedBinary,
+        exact_symbol_inventory_policy,
+        inventory_project,
+        load_pinned_binary,
+    )
+    from extractor.fresh import extract_fresh_function
+    from extractor.loaded_image import load_object_set, loaded_image_data
+
     provider = _provider(arguments.provider) if arguments.provider else None
     if provider is not None:
         if arguments.manifest is None:
@@ -106,6 +111,8 @@ def main() -> int:
     parser.add_argument("--candidate-root", action="append", default=[], help="additional discovered target to extract; unmatched transfers stay open")
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
+    from ayxg.codec import dumps
+
     arguments.output.write_text(dumps(_run(arguments), indent=2, sort_keys=True) + "\n")
     return 0
 
