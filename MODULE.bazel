@@ -7,7 +7,7 @@ bazel_dep(name = "ghot_vendored_mulpyplexer", version = "0.9")
 bazel_dep(name = "ifrl", version = "0.1.0")
 git_override(
     module_name = "ifrl",
-    remote = "git@github.com:heartpunk/ifrl.git",
+    remote = "https://github.com/heartpunk/ifrl.git",
     commit = "46c35e52726d1f595d9d25e453062f5af1905db9",
 )
 
