@@ -25,6 +25,10 @@ jobs:
           github_access_token: ${{ github.token }}
           extra_nix_config: |
             accept-flake-config = true
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: wruh
+          authToken: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Use HTTPS for public GitHub flake inputs
         run: |
           git config --global --add url.https://github.com/.insteadOf ssh://git@github.com/
@@ -33,3 +37,6 @@ jobs:
         run: nix flake check --no-build --no-write-lock-file
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor
+
+      - name: Run the minimal CLI smoke test through unittest
+        run: python3 -m unittest discover -s tests -p test_cli_smoke.py -v
