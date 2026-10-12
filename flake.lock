@@ -3,22 +3,21 @@
     "angr-nix": {
       "inputs": {
         "nixpkgs": [
-          "ifrl",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1789637756,
-        "narHash": "sha256-saq8P8fhEy1erRoOou+Clrv6gea2LzvHOubsPnRyDes=",
+        "lastModified": 1790997233,
+        "narHash": "sha256-3Ro8GoJVh7MbfLPZa0mWhQIUCqG4ZWJ/5BR2f5gjKPc=",
         "owner": "heartpunk",
         "repo": "angr-nix",
-        "rev": "b8113fce638c08269c9965a67c330cb33e002e29",
+        "rev": "ca288bef3145174ae8385004e2cbcf6caabb9a76",
         "type": "github"
       },
       "original": {
         "owner": "heartpunk",
-        "ref": "experiment/ixyk-angr-10",
         "repo": "angr-nix",
+        "rev": "ca288bef3145174ae8385004e2cbcf6caabb9a76",
         "type": "github"
       }
     },
@@ -42,7 +41,9 @@
     },
     "ifrl": {
       "inputs": {
-        "angr-nix": "angr-nix",
+        "angr-nix": [
+          "angr-nix"
+        ],
         "lean4-nix": "lean4-nix",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay"
@@ -121,10 +122,7 @@
     },
     "root": {
       "inputs": {
-        "angr-nix": [
-          "ifrl",
-          "angr-nix"
-        ],
+        "angr-nix": "angr-nix",
         "ifrl": "ifrl",
         "nixpkgs": [
           "ifrl",
