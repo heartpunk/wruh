@@ -24,6 +24,8 @@ docker compose run --rm -T dev bash -euo pipefail -c '
   bazel --version
   git --version
   python3 --version
+  lean --version
+  lake --version
   touch .wruh-container-owner-check
 '
 test "$(stat -c %u .wruh-container-owner-check)" = "$(id -u)"
