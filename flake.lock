@@ -21,6 +21,39 @@
         "type": "github"
       }
     },
+    "ayxg": {
+      "inputs": {
+        "floatlib-src": [
+          "floatlib-src"
+        ],
+        "ifrl": [
+          "ifrl"
+        ],
+        "lean4-nix": [
+          "ifrl",
+          "lean4-nix"
+        ],
+        "nixpkgs": [
+          "ayxg",
+          "ifrl",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791856477,
+        "narHash": "sha256-tlppCcvI1VNFrnOnknq3P79Yk22EMVHkSph+ssqXcxY=",
+        "owner": "heartpunk",
+        "repo": "ayxg",
+        "rev": "9689144cf70c3923b9000a88473a65e408f0935b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "heartpunk",
+        "repo": "ayxg",
+        "rev": "9689144cf70c3923b9000a88473a65e408f0935b",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -36,6 +69,23 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "floatlib-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790782245,
+        "narHash": "sha256-NNykGEact1Js3kKrPbO67mHvcIOlFvNJafSSQKW3exA=",
+        "owner": "lean-dojo",
+        "repo": "FloatLib",
+        "rev": "1e83f09ed8c41a953cf8f93d26c210778177b94a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lean-dojo",
+        "repo": "FloatLib",
+        "rev": "1e83f09ed8c41a953cf8f93d26c210778177b94a",
         "type": "github"
       }
     },
@@ -61,6 +111,159 @@
         "ref": "main",
         "type": "git",
         "url": "ssh://git@github.com/heartpunk/ifrl.git"
+      }
+    },
+    "lake-aesop-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395947,
+        "narHash": "sha256-yF2+P7H0B3546zopncnH2APEynRRJjTy+17OEAFovkE=",
+        "owner": "leanprover-community",
+        "repo": "aesop",
+        "rev": "355695d523e41d0554926416cba2a2b3544fbbc9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "aesop",
+        "rev": "355695d523e41d0554926416cba2a2b3544fbbc9",
+        "type": "github"
+      }
+    },
+    "lake-batteries-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395052,
+        "narHash": "sha256-Y/Vfr3gVFfik2Rfshgu0iIn0IQYYCb6ShDt5nZe4RBc=",
+        "owner": "leanprover-community",
+        "repo": "batteries",
+        "rev": "f2effa3d803fda822b1f97b806c47cf2adfbcbc2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "batteries",
+        "rev": "f2effa3d803fda822b1f97b806c47cf2adfbcbc2",
+        "type": "github"
+      }
+    },
+    "lake-cli-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395056,
+        "narHash": "sha256-3HLYlycvm4Ho98pB7eF+u8RN1GQJ7Ve6COqMSZr4Hic=",
+        "owner": "leanprover",
+        "repo": "lean4-cli",
+        "rev": "e92c9f15fdfacc8536f31cfb3b7ad26c3c8cd204",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover",
+        "repo": "lean4-cli",
+        "rev": "e92c9f15fdfacc8536f31cfb3b7ad26c3c8cd204",
+        "type": "github"
+      }
+    },
+    "lake-importgraph-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395433,
+        "narHash": "sha256-U3eskYuk2vJ35IJqBsIgOHKL03UHtlEriyssNkBxwjM=",
+        "owner": "leanprover-community",
+        "repo": "import-graph",
+        "rev": "e928b72544873815af278d38681b31c0293588e3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "import-graph",
+        "rev": "e928b72544873815af278d38681b31c0293588e3",
+        "type": "github"
+      }
+    },
+    "lake-leansearchclient-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395064,
+        "narHash": "sha256-S2dp1E3Xv9b+U+r+b/MKGHviOg7ySE8QAX7EoB6Jbl8=",
+        "owner": "leanprover-community",
+        "repo": "LeanSearchClient",
+        "rev": "ddf04cf3949fa556442341e87d47f9f6e6074707",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "LeanSearchClient",
+        "rev": "ddf04cf3949fa556442341e87d47f9f6e6074707",
+        "type": "github"
+      }
+    },
+    "lake-mathlib-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789432181,
+        "narHash": "sha256-hhhfTEvpw6UyA0z1KO6Skv8Ao8XqfEw41gihG1i5M0k=",
+        "owner": "leanprover-community",
+        "repo": "mathlib4",
+        "rev": "5ed2965256430c3649e86755f9576b54eca72435",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "mathlib4",
+        "rev": "5ed2965256430c3649e86755f9576b54eca72435",
+        "type": "github"
+      }
+    },
+    "lake-plausible-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395058,
+        "narHash": "sha256-/ianaKsruF30J5tqK4vtbXsFd3mu4Xt8Ppj4ibHDEvg=",
+        "owner": "leanprover-community",
+        "repo": "plausible",
+        "rev": "118aa17ee84656b8bd727fef7c458ee8c833385c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "plausible",
+        "rev": "118aa17ee84656b8bd727fef7c458ee8c833385c",
+        "type": "github"
+      }
+    },
+    "lake-proofwidgets-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395097,
+        "narHash": "sha256-xjd3p+637F5q7xGTpDpy3/UCewpO8ArCfSAMAnAAjgs=",
+        "owner": "leanprover-community",
+        "repo": "ProofWidgets4",
+        "rev": "106ff4fafc74ef4ac99d81dbf3ab399118f497a5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "ProofWidgets4",
+        "rev": "106ff4fafc74ef4ac99d81dbf3ab399118f497a5",
+        "type": "github"
+      }
+    },
+    "lake-qq-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789395062,
+        "narHash": "sha256-fRsOiIgpS0YYWUsL/TwYn+orRC4rgNz7NSQ4+XCHCHQ=",
+        "owner": "leanprover-community",
+        "repo": "quote4",
+        "rev": "6a489d9af5d0c47e5b259e2e8bcdfc1811b5a259",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover-community",
+        "repo": "quote4",
+        "rev": "6a489d9af5d0c47e5b259e2e8bcdfc1811b5a259",
+        "type": "github"
       }
     },
     "lean4-nix": {
@@ -120,7 +323,18 @@
     "root": {
       "inputs": {
         "angr-nix": "angr-nix",
+        "ayxg": "ayxg",
+        "floatlib-src": "floatlib-src",
         "ifrl": "ifrl",
+        "lake-aesop-src": "lake-aesop-src",
+        "lake-batteries-src": "lake-batteries-src",
+        "lake-cli-src": "lake-cli-src",
+        "lake-importgraph-src": "lake-importgraph-src",
+        "lake-leansearchclient-src": "lake-leansearchclient-src",
+        "lake-mathlib-src": "lake-mathlib-src",
+        "lake-plausible-src": "lake-plausible-src",
+        "lake-proofwidgets-src": "lake-proofwidgets-src",
+        "lake-qq-src": "lake-qq-src",
         "nixpkgs": [
           "ifrl",
           "nixpkgs"
