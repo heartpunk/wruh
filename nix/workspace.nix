@@ -42,31 +42,62 @@ import sys
 
 ayxg, wruh = map(pathlib.Path, sys.argv[1:])
 manifest = json.loads((ayxg / "lake-manifest.json").read_text())
-packages = [
-    {
+git_packages = [
+    package
+    for package in manifest["packages"]
+    if package["type"] == "git"
+]
+
+def path_entry(package, directory):
+    return {
         "type": "path",
-        "dir": f".lake/packages/{package['name']}",
+        "dir": directory,
+        "scope": package.get("scope", ""),
         "name": package["name"],
         "manifestFile": package["manifestFile"],
         "inherited": package["inherited"],
         "configFile": package["configFile"],
     }
-    for package in manifest["packages"]
-    if package["type"] == "git"
-]
 
 for root, prefix in (
     (ayxg, ".lake/packages"),
     (wruh, ".lake/packages/ayxg/.lake/packages"),
 ):
     entries = [
-        {**package, "dir": f"{prefix}/{package['name']}"}
-        for package in packages
+        path_entry(package, f"{prefix}/{package['name']}")
+        for package in git_packages
     ]
     overrides = {"version": manifest["version"], "packages": entries}
     path = root / ".lake" / "package-overrides.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(overrides, indent=2) + "\n")
+
+# The WRUH Lakefile has no checked-in manifest. Seed its generated workspace
+# manifest with AYXG and its flake-pinned transitive packages as local paths;
+# otherwise Lake tries to fetch those packages before applying overrides.
+workspace_packages = [
+    path_entry(
+        {"name": "ayxg", "scope": "", "manifestFile": "lake-manifest.json",
+         "inherited": False, "configFile": "lakefile.lean"},
+        ".lake/packages/ayxg",
+    )
+]
+for package in manifest["packages"]:
+    if package["type"] == "git":
+        directory = f".lake/packages/ayxg/.lake/packages/{package['name']}"
+    else:
+        directory = f".lake/packages/ayxg/{package['dir']}"
+    workspace_packages.append(path_entry(package, directory))
+
+wruh_manifest = {
+    "version": manifest["version"],
+    "packagesDir": manifest["packagesDir"],
+    "packages": workspace_packages,
+    "name": "wruh",
+    "lakeDir": manifest["lakeDir"],
+    "fixedToolchain": False,
+}
+(wruh / "lake-manifest.json").write_text(json.dumps(wruh_manifest, indent=2) + "\n")
 PY
 
   export PATH="${pkgs.lib.makeBinPath [ pkgs.lean pkgs.coreutils pkgs.git ]}:$PATH"
@@ -76,7 +107,7 @@ PY
   jobs="''${NIX_BUILD_CORES:-1}"
 
   cd "$ayxg"
-  lake -Kjobs="$jobs" build
+  lake -Kjobs="$jobs" build Ayxg
   cd "$workspace"
-  lake -Kjobs="$jobs" build
+  lake -Kjobs="$jobs" build Wruh wruh-fresh
 ''
