@@ -16,27 +16,48 @@
   outputs = { nixpkgs, angr-nix, ifrl, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
-    in {
-      devShells = nixpkgs.lib.genAttrs systems (system:
-        let pkgs = nixpkgs.legacyPackages.${system};
-        in {
-        default = pkgs.mkShell {
-          inputsFrom = [ ifrl.devShells.${system}.default ];
+      environments = nixpkgs.lib.genAttrs systems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          ifrlShell = ifrl.devShells.${system}.default;
           packages = [
             angr-nix.packages.${system}.default
             pkgs.git
             pkgs.jdk21_headless
             (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
-          ];
-          JAVA_HOME = pkgs.jdk21_headless.home;
-          GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
-          GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
+          ] ++ (ifrlShell.buildInputs or []) ++ (ifrlShell.nativeBuildInputs or []);
+          environment = {
+            JAVA_HOME = pkgs.jdk21_headless.home;
+            GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
+            GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
+            PYTHONNOUSERSITE = "1";
+            PYTHONSAFEPATH = "1";
+          };
           shellHook = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             export PATH="/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin:$PATH"
           '';
-          PYTHONNOUSERSITE = "1";
-          PYTHONSAFEPATH = "1";
+        in {
+          inherit packages environment shellHook;
+          shell = pkgs.mkShell ({
+            inputsFrom = [ ifrlShell ];
+            inherit packages shellHook;
+          } // environment);
+          development = import ./nix/dev-environment.nix {
+            inherit pkgs packages environment shellHook;
+          };
+        });
+    in {
+      devShells = nixpkgs.lib.mapAttrs (_: environment: {
+        default = environment.shell;
+      }) environments;
+      packages = nixpkgs.lib.mapAttrs (system: environment: {
+        default = environment.development;
+        dev-environment = environment.development;
+      } // nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
+        docker-image = import ./nix/docker-image.nix {
+          pkgs = nixpkgs.legacyPackages.${system};
+          development = environment.development;
         };
-      });
+      }) environments;
     };
 }
