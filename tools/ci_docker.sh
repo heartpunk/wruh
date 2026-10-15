@@ -13,6 +13,13 @@ docker image inspect ghcr.io/heartpunk/wruh-dev:latest --format '{{.Size}} bytes
 docker compose run --rm -T dev bash -euo pipefail -c '
   test -f /workspace/Wruh.lean
   test -f /workspace/lakefile.lean
+  test -f /workspace/.lake/build/lib/lean/Wruh/FreshExtraction.olean
+  test -f /workspace/.lake/packages/ayxg/.lake/build/lib/lean/Ayxg/QfAbv/SymbolicStep.olean
+  test -x "$GHOT_REAPI_WORKER_RUNTIME_ROOT/bin/python3"
+  test -x "$GHOT_REAPI_WORKER_RUNTIME_ROOT/bin/clang"
+  test -f "$GHOT_REAPI_WORKER_RUNTIME_ROOT/lib/libprofiler.so"
+  test ! -e "$GHOT_REAPI_WORKER_RUNTIME_ROOT/bin/lean"
+  test -f "$GHOT_NIX_ANGR_ROOT/lib/python3.12/site-packages/angr/__init__.py"
   if command -v nix; then
     printf "%s\n" "Unexpected Nix executable in the runtime image." >&2
     exit 1
@@ -24,8 +31,11 @@ docker compose run --rm -T dev bash -euo pipefail -c '
   bazel --version
   git --version
   python3 --version
-  lean --version
+  python3 -c "import angr, z3"
+  z3 --version
+  lean --version | grep -F "version 4.34.0"
   lake --version
+  test -x /workspace/.lake/build/bin/wruh-fresh
   touch .wruh-container-owner-check
 '
 test "$(stat -c %u .wruh-container-owner-check)" = "$(id -u)"
