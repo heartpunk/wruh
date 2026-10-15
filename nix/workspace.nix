@@ -19,6 +19,7 @@ pkgs.runCommand "wruh-workspace" {
     pkgs.findutils
     pkgs.git
     pkgs.lean
+    pkgs.python312
   ];
 } ''
   set -euo pipefail
@@ -29,6 +30,44 @@ pkgs.runCommand "wruh-workspace" {
   ayxg="$workspace/.lake/packages/ayxg"
   cp -R ${ayxgSrc}/. "$ayxg/"
   ${pkgs.lib.concatMapStrings stageLakeSource lakeSources}
+
+  # Nix's pinned GitHub source trees have no Git checkout metadata. Keep Lake
+  # from trying to delete and reclone them by overriding Git manifest entries
+  # to their staged, revision-pinned source paths.
+  chmod -R u+w "$workspace"
+  python3 - "$ayxg" "$workspace" <<'PY'
+import json
+import pathlib
+import sys
+
+ayxg, wruh = map(pathlib.Path, sys.argv[1:])
+manifest = json.loads((ayxg / "lake-manifest.json").read_text())
+packages = [
+    {
+        "type": "path",
+        "dir": f".lake/packages/{package['name']}",
+        "name": package["name"],
+        "manifestFile": package["manifestFile"],
+        "inherited": package["inherited"],
+        "configFile": package["configFile"],
+    }
+    for package in manifest["packages"]
+    if package["type"] == "git"
+]
+
+for root, prefix in (
+    (ayxg, ".lake/packages"),
+    (wruh, ".lake/packages/ayxg/.lake/packages"),
+):
+    entries = [
+        {**package, "dir": f"{prefix}/{package['name']}"}
+        for package in packages
+    ]
+    overrides = {"version": manifest["version"], "packages": entries}
+    path = root / ".lake" / "package-overrides.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(overrides, indent=2) + "\n")
+PY
 
   export PATH="${pkgs.lib.makeBinPath [ pkgs.lean pkgs.coreutils pkgs.git ]}:$PATH"
   export WRUH_AYXG_SOURCE="$ayxg"
