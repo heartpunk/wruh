@@ -5,8 +5,6 @@ services:
     init: true
     user: "${WRUH_UID:-1000}:${WRUH_GID:-1000}"
     working_dir: /workspace
-    volumes:
-      - .:/workspace
     security_opt:
       - seccomp=unconfined
       - apparmor=${WRUH_APPARMOR_PROFILE:-unconfined}

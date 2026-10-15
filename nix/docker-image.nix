@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Sophie Smithburg
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-{ pkgs, development }:
+{ pkgs, development, workspace }:
 let
   entrypoint = pkgs.writeShellScript "wruh-container" ''
     set -euo pipefail
@@ -27,15 +27,16 @@ pkgs.dockerTools.buildLayeredImage {
   tag = "latest";
   contents = [
     development
+    workspace
     pkgs.cacert
     pkgs.dockerTools.binSh
     pkgs.dockerTools.usrBinEnv
     pkgs.dockerTools.fakeNss
   ];
   extraCommands = ''
-    mkdir -p tmp workspace run/wruh
+    mkdir -p tmp run/wruh
     chmod 1777 tmp run/wruh
-    chmod 0777 workspace
+    chmod -R a+rwX workspace
     rm etc/passwd etc/group
     ln -s /run/wruh/passwd etc/passwd
     ln -s /run/wruh/group etc/group

@@ -13,7 +13,7 @@
     };
   };
 
-  outputs = { nixpkgs, angr-nix, ifrl, ... }:
+  outputs = { self, nixpkgs, angr-nix, ifrl, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
       environments = nixpkgs.lib.genAttrs systems (system:
@@ -45,6 +45,7 @@
           development = import ./nix/dev-environment.nix {
             inherit pkgs packages environment shellHook;
           };
+          workspace = import ./nix/workspace.nix { inherit pkgs; src = self; };
         });
     in {
       devShells = nixpkgs.lib.mapAttrs (_: environment: {
@@ -57,6 +58,7 @@
         docker-image = import ./nix/docker-image.nix {
           pkgs = nixpkgs.legacyPackages.${system};
           development = environment.development;
+          workspace = environment.workspace;
         };
       }) environments;
     };
