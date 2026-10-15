@@ -9,8 +9,10 @@ nix build .#docker-image --out-link "$RUNNER_TEMP/wruh-image" --print-build-logs
 docker load --input "$RUNNER_TEMP/wruh-image"
 docker image inspect ghcr.io/heartpunk/wruh-dev:latest --format '{{.Size}} bytes'
 
-# Only the checkout is mounted: no host Nix store, daemon, or Docker socket.
+# The image includes the checkout; no host Nix store, daemon, or Docker socket is mounted.
 docker compose run --rm -T dev bash -euo pipefail -c '
+  test -f /workspace/Wruh.lean
+  test -f /workspace/lakefile.lean
   if command -v nix; then
     printf "%s\n" "Unexpected Nix executable in the runtime image." >&2
     exit 1
