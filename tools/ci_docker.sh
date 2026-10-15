@@ -37,9 +37,9 @@ docker compose run --rm -T dev bash -euo pipefail -c '
   lake --version
   test -x /workspace/.lake/build/bin/wruh-fresh
   touch .wruh-container-owner-check
+  test "$(stat -c %u .wruh-container-owner-check)" = "$(id -u)"
+  rm .wruh-container-owner-check
 '
-test "$(stat -c %u .wruh-container-owner-check)" = "$(id -u)"
-rm .wruh-container-owner-check
 
 # Preserve the image for Docker-only users to load.
 cp -L "$RUNNER_TEMP/wruh-image" "$RUNNER_TEMP/wruh-dev.tar.gz"
