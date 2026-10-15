@@ -1,0 +1,65 @@
+name: Docker development environment
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+        with:
+          github_access_token: ${{ github.token }}
+          extra_nix_config: |
+            accept-flake-config = true
+      - name: Use HTTPS for public GitHub flake inputs
+        run: |
+          git config --global --add url.https://github.com/.insteadOf ssh://git@github.com/
+          git config --global --add url.https://github.com/.insteadOf git@github.com:
+      - name: Build and smoke-test the self-contained image
+        run: bash tools/ci_docker.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wruh-dev-linux-amd64
+          path: ${{ runner.temp }}/wruh-dev.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: docker
+    if: github.repository == 'heartpunk/wruh' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: wruh-dev-linux-amd64
+          path: ${{ runner.temp }}/image
+      - name: Publish the tested image
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          docker load --input "$RUNNER_TEMP/image/wruh-dev.tar.gz"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker tag ghcr.io/heartpunk/wruh-dev:latest "ghcr.io/heartpunk/wruh-dev:$GITHUB_SHA"
+          docker push "ghcr.io/heartpunk/wruh-dev:$GITHUB_SHA"
+          docker push ghcr.io/heartpunk/wruh-dev:latest
