@@ -1,5 +1,19 @@
 # Universal fresh extraction contract
 
+> **Current status (2026-10-17):** The plan below is a historical preregistration
+> and is superseded by the labeled port at Wruh commit
+> `f6459e1` (`Port Wruh proof to labeled AYXG STS`). The implemented
+> `SymexLaws.soundComplete` compares a particular source edge label and complete
+> `Config Unit Γ` endpoints on both sides. `extract_bisimulation` proves a
+> label-sensitive bisimulation with `successor.edge = edge` and equality of
+> complete states. `extract_bisimulation_and_outcomes` also carries the
+> label-to-PC/error-state contract through `OutcomeLaws`. The old `canStep`
+> contract below is not the current theorem statement.
+
+> `FreshTransform` remains in the concrete JSON driver because it resolves
+> ordered temporary reads and constructs the complete guarded update. It is not
+> the state-only projection used by the earlier bisimulation statement.
+
 Recorded before implementation. Workspace `/Users/sophiesmithburg/workspaces/wruh-fresh-semantic-transport`, bookmark `fresh-semantic-transport`, baseline `de5491ceeb46`. Read-only AYXG `179342d8a0b63dcdea34c4db45cd29a04ca782f0`. Foreground owns only this new workspace.
 
 The adapter supplies source sites, independent whole-source and per-site emulation relations, fresh symbolic input states, and a symbolic step function. The driver invokes that step function for each source site, applies retained `FreshTransform.transform` to its before/after observations, and assembles an ordinary AYXG QFAbvSTS. Metadata is retained in a tagged intermediate. Ordered temporary read bindings are interpreted by the existing transformer.

@@ -1,41 +1,59 @@
 import Wruh.AyxgSymex
 
 namespace Wruh.FreshExtractionExamples
-open Ayxg.QfAbv Wruh.FreshExtraction Wruh.AyxgSymex
+
+open Ayxg Ayxg.QfAbv Ayxg.LTS.QfAbv Wruh.FreshExtraction Wruh.AyxgSymex
+
 variable [FPInterpretation]
 
 private def registers : Ctx := [⟨"x", .bv 8⟩, ⟨"y", .bv 8⟩]
+
 private def swap : QFAbvStep registers registers :=
   ⟨.boolLit true, .cons (.var (.there .here)) (.cons (.var .here) .nil)⟩
-private def model : QFAbvSTS registers := ⟨[swap]⟩
 
-/-- Evaluate the actual extracted update: assignments remain simultaneous. -/
+private structure NamedEdge (Γ : Ctx) where
+  id : Nat
+  step : QFAbvStep Γ Γ
+
+private def namedEdgeSemantics {Γ : Ctx} :
+    SymbolicEdgeSemantics Unit Γ (NamedEdge Γ) where
+  source := fun _ => ()
+  symbolicLabel edge := ⟨edge.step.guard, edge.step.update⟩
+  nextControl := fun _ _ => ()
+
+private def firstEdge : NamedEdge registers := ⟨17, swap⟩
+private def secondEdge : NamedEdge registers := ⟨23, swap⟩
+
+private def model : SymbolicTransitionSystem Unit registers (NamedEdge registers) where
+  edgeSemantics := namedEdgeSemantics
+  transAt := fun _ => [firstEdge, secondEdge]
+
+/-- The extracted step retains the complete simultaneous update. -/
 example (x y : BitVec 8) :
-    ((extract (adapter registers) model).steps[0]'(by exact Nat.zero_lt_succ 0)).update.eval
+    (((extract (adapter registers) model).transAt ())[0]'(by
+      simp [extract, adapter, SymbolicTransitionSystem.ofSymbolicSuccessors]
+      rw [SymbolicTransitionSystem.symbolicStep_length]
+      simp [model])).step.update.eval
       (.cons x (.cons y .nil)) = .cons y (.cons x .nil) := rfl
 
-/-- Empty source remains empty, with no invented transition. -/
-example {Γ : Ctx} : (extract (adapter Γ) (⟨[]⟩ : QFAbvSTS Γ)).steps = [] := rfl
+/-- These edges have the same guard and update but distinct IDs. Extraction
+must retain both exact labels. -/
+example (s t : Config Unit registers) :
+    model.toLTS.Tr s firstEdge t ∧ model.toLTS.Tr s secondEdge t →
+      (∃ first,
+        (extract (adapter registers) model).toLTS.Tr s first t ∧
+          first.edge = firstEdge) ∧
+      (∃ second,
+        (extract (adapter registers) model).toLTS.Tr s second t ∧
+          second.edge = secondEdge) := by
+  rintro ⟨firstTransition, secondTransition⟩
+  exact ⟨(recovers model s t firstEdge).2 firstTransition,
+    (recovers model s t secondEdge).2 secondTransition⟩
 
-/-- Duplicate alternatives survive assembly. -/
-example : (extract (adapter registers) (⟨[swap, swap]⟩ : QFAbvSTS registers)).steps.length = 2 := rfl
+/-- No bounded unrolling is used: even cyclic source rules are matched by the
+one-step labeled relation. -/
+example : IsLabelledBisimulation
+    (extract (adapter registers) model).toLTS model.toLTS
+      (fun successor edge => successor.edge = edge) Eq := bisimilar model
 
-/-- No bounded unrolling: even a cyclic identity system has exact one-step recovery. -/
-example {Γ : Ctx} (s t : Env Γ) :
-    (extract (adapter Γ) (⟨[QFAbvStep.identity Γ]⟩ : QFAbvSTS Γ)).toLTS.canStep s t ↔
-      (⟨[QFAbvStep.identity Γ]⟩ : QFAbvSTS Γ).toLTS.canStep s t := recovers _ s t
-
-/-- Disabled source edge stays disabled in the actual output. -/
-example (s t : Env registers) :
-    ¬ (((extract (adapter registers)
-      (⟨[⟨.boolLit false, swap.update⟩]⟩ : QFAbvSTS registers)).steps[0]'(by exact Nat.zero_lt_succ 0)).denotes s t) := by
-  simp [extract, extractTagged, tagSuccessors, adapter, QFAbvSTS.symbolicStep,
-    ShareCommon.shareCommon',
-    QFAbvStep.compose, QFAbvStep.identity, QFAbvStep.denotes,
-    Eval.evalBool, Eval.eval, Expr.subst]
-
-/-- Arbitrary models, including memory-valued states, require no recovery premise. -/
-example {Γ : Ctx} (source : QFAbvSTS Γ) :
-    IsBisimulation (extract (adapter Γ) source).toLTS.canStep source.toLTS.canStep Eq :=
-  bisimilar source
 end Wruh.FreshExtractionExamples
