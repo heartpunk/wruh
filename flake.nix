@@ -3,11 +3,11 @@
 
   inputs = {
     ifrl = {
-      url = "git+ssh://git@github.com/heartpunk/ifrl.git?ref=main&rev=c69a322ec903672a2def1841be661eb6a339c89b&allRefs=1";
+      url = "github:heartpunk/ifrl/c69a322ec903672a2def1841be661eb6a339c89b";
       inputs.angr-nix.follows = "angr-nix";
     };
     ayxg = {
-      url = "github:heartpunk/ayxg/f862dea13d5a3e6c41a6a5de8cc7b4214f165783";
+      url = "github:heartpunk/ayxg/5106df06d92620da810c325b8779ce97a14f7f0e";
       inputs.ifrl.follows = "ifrl";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
