@@ -1,4 +1,30 @@
-# Checked universal semantic transport
+> **Historical evidence note (2026-10-17):** This build record documents the
+> earlier unlabeled `canStep` proof at the source revision listed below. It does
+> not describe the current theorem. Wruh commit `f6459e1` ports the theorem to
+> labeled source-indexed transitions with complete `Config Unit Γ` states;
+> see the current-status note in `CONTRACT.md`. The old proof record below is
+> retained as history; it is not evidence for the current labeled theorem.
+
+# Current labeled migration verification (2026-10-17)
+
+- Wruh theorem port: `f6459e1` (`Port Wruh proof to labeled AYXG STS`).
+- AYXG source-indexed API migration and removal of the old Lean `QFAbvSTS` API:
+  `21eae8e` (`Migrate QF_ABV models to labeled STS`).
+- AYXG checks passed: `lake -Kjobs=8 build Ayxg`,
+  `tests/lean/SymbolicStepExamples.lean`,
+  `tests/lean_bridge/Bridge/Examples.lean`, and
+  `notes/voogd-symbolic-step/ProofAudit.lean`.
+- Against that AYXG tree, Wruh built `Wruh`, `Wruh.FreshTransformExamples`, and
+  `Wruh.FreshExtractionExamples` successfully (2,178 Lake jobs). The corrected
+  `ProofAudit.lean` then typechecked with exit 0.
+- The audit covers labeled transition soundness/completeness, exact-label
+  bisimulation, the outcome-state contract, and the AYXG instance laws. Each
+  audited theorem reports only `[propext, Classical.choice, Quot.sound]`.
+- NixOS logs: `/tmp/codex-bisim-20261016/ayxg-bridge-fix-check.log`,
+  `/tmp/codex-bisim-20261016/wruh-labeled-final.log`, and
+  `/tmp/codex-bisim-20261016/wruh-labeled-audit.log`.
+
+# Historical checked universal semantic transport
 
 ## Revisions and ownership
 - Isolated workspace: /Users/sophiesmithburg/workspaces/wruh-fresh-semantic-transport

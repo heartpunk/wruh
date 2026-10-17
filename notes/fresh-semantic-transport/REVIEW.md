@@ -1,5 +1,11 @@
 # Independent source review
 
+> **Historical scope:** This review describes the pre-port source, whose
+> bisimulation compared `canStep` and did not observe the retained metadata.
+> It does not review the labeled theorem committed at Wruh `f6459e1`. That
+> theorem's exact contract is recorded at the top of `CONTRACT.md`; this review
+> remains here to preserve the earlier review history.
+
 Reviewer: collaboration agent universal_transport_review, GPT-6 Sol. Read-only; no build, remote access or edits. Original goal supplied, including the question: could this theorem hold while source-model recovery fails?
 
 Result: passed. Source emulation is independently AYXG model.toLTS.canStep, per-site semantics edge.denotes. All four instance laws are proved from identity and AYXG symbolicStep soundness/completeness. Recovery and identity bisimulation have no remaining adapter-law premise. No circular recovery assumption, supplied transcript, sorry, axiom declaration, admit or unsafe found in the reviewed WRUH files.
