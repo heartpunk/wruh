@@ -21,6 +21,38 @@
         "type": "github"
       }
     },
+    "ayxg": {
+      "inputs": {
+        "floatlib-src": "floatlib-src",
+        "ifrl": [
+          "ifrl"
+        ],
+        "lean4-nix": [
+          "ayxg",
+          "ifrl",
+          "lean4-nix"
+        ],
+        "nixpkgs": [
+          "ayxg",
+          "ifrl",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792224992,
+        "narHash": "sha256-eflK/G6tQgvVDC/g7hC+GvaZQFNna4eFtgG8oRElO+c=",
+        "owner": "heartpunk",
+        "repo": "ayxg",
+        "rev": "f862dea13d5a3e6c41a6a5de8cc7b4214f165783",
+        "type": "github"
+      },
+      "original": {
+        "owner": "heartpunk",
+        "repo": "ayxg",
+        "rev": "f862dea13d5a3e6c41a6a5de8cc7b4214f165783",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -36,6 +68,23 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "floatlib-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790782245,
+        "narHash": "sha256-NNykGEact1Js3kKrPbO67mHvcIOlFvNJafSSQKW3exA=",
+        "owner": "lean-dojo",
+        "repo": "FloatLib",
+        "rev": "1e83f09ed8c41a953cf8f93d26c210778177b94a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lean-dojo",
+        "repo": "FloatLib",
+        "rev": "1e83f09ed8c41a953cf8f93d26c210778177b94a",
         "type": "github"
       }
     },
@@ -122,6 +171,7 @@
     "root": {
       "inputs": {
         "angr-nix": "angr-nix",
+        "ayxg": "ayxg",
         "ifrl": "ifrl",
         "nixpkgs": [
           "ifrl",
