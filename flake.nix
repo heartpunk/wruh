@@ -3,8 +3,12 @@
 
   inputs = {
     ifrl = {
-      url = "git+ssh://git@github.com/heartpunk/ifrl.git?ref=main&rev=c69a322ec903672a2def1841be661eb6a339c89b&allRefs=1";
+      url = "github:heartpunk/ifrl/c69a322ec903672a2def1841be661eb6a339c89b";
       inputs.angr-nix.follows = "angr-nix";
+    };
+    ayxg = {
+      url = "github:heartpunk/ayxg/5106df06d92620da810c325b8779ce97a14f7f0e";
+      inputs.ifrl.follows = "ifrl";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
     angr-nix = {
@@ -13,7 +17,7 @@
     };
   };
 
-  outputs = { nixpkgs, angr-nix, ifrl, ... }:
+  outputs = { nixpkgs, angr-nix, ifrl, ayxg, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
     in {
@@ -21,18 +25,20 @@
         let pkgs = nixpkgs.legacyPackages.${system};
         in {
         default = pkgs.mkShell {
-          inputsFrom = [ ifrl.devShells.${system}.default ];
+          inputsFrom = [ ifrl.devShells.${system}.default ayxg.devShells.${system}.default ];
           packages = [
             angr-nix.packages.${system}.default
             pkgs.git
             pkgs.jdk21_headless
             (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
           ];
+          WRUH_AYXG_SOURCE = "${ayxg.outPath}";
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
           shellHook = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-            export PATH="/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin:$PATH"
+            # Keep the runtime available without shadowing the shared Lean toolchain.
+            export PATH="$PATH:/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin"
           '';
           PYTHONNOUSERSITE = "1";
           PYTHONSAFEPATH = "1";

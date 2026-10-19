@@ -1,4 +1,5 @@
 import Wruh.FreshExtraction
+import Wruh.FreshTransform
 import Ayxg.QfAbv.JsonCodec
 import Lean
 
@@ -7,17 +8,31 @@ namespace Wruh.AngrDriver
 
 open Lean Ayxg.QfAbv Ayxg.QfAbv.JsonCodec Wruh.Observation Wruh.FreshExtraction
 
+inductive FaultKind where
+  | integerDivision
+  deriving DecidableEq, Repr
+
 structure Metadata (Γ : Ctx) where
   occurrenceId : Nat
   outcomeId : Nat
   target : Expr Γ (.bv 64)
   targetValue : Option Nat
   jumpkind : String
+  kind : OutcomeKind Γ FaultKind
 
 structure Site (Γ : Ctx) where
   address : Nat
   sourceGuard : Expr Γ .bool
   outcomes : List (Outcome Γ (Metadata Γ))
+
+/-- Interpret the outcome-bearing part of an extracted edge label. The label
+also retains the complete site and raw angr jumpkind for provenance. -/
+def outcomeView [FPInterpretation] (Γ : Ctx) :
+    OutcomeView (Site Γ × Metadata Γ) Γ (BitVec 64) FaultKind where
+  site edge := BitVec.ofNat 64 edge.1.address
+  target edge env := Eval.evalBv env edge.2.target
+  targetValue edge := edge.2.targetValue.map (BitVec.ofNat 64)
+  kind edge := edge.2.kind
 
 private def root {Γ : Ctx} (roots : Array (TypedExpr Γ)) (index : Nat) :
     Except String (TypedExpr Γ) :=
@@ -33,7 +48,8 @@ private def parseUpdate (Γ : Ctx) (roots : Array (TypedExpr Γ)) :
       pure (.cons value (← parseUpdate Γ roots rest indices))
   | _, _ => throw "complete update has wrong length"
 
-private def parseOutcome (Γ : Ctx) (occurrenceId : Nat)
+private def parseOutcome (Γ : Ctx) (sourceGuard : Expr Γ .bool)
+    (occurrenceId : Nat)
     (roots : Array (TypedExpr Γ)) (item : Json) :
     Except String (Outcome Γ (Metadata Γ)) := do
   let guard ← asSort .bool (← root roots (← natField item "guard"))
@@ -44,12 +60,18 @@ private def parseOutcome (Γ : Ctx) (occurrenceId : Nat)
   let targetValue ← if targetValue? == Json.null then pure none else some <$> targetValue?.getNat?
   let outcomeId ← natField item "outcome_id"
   let jumpkind ← (← field item "jumpkind").getStr?
+  let kind : OutcomeKind Γ FaultKind :=
+    if jumpkind == "Ijk_SigFPE_IntDiv" then
+      .fault ⟨.integerDivision, .boolAnd sourceGuard guard⟩
+    else
+      .ordinary
   let metadata : Metadata Γ := {
     occurrenceId
     outcomeId
     target
     targetValue
     jumpkind
+    kind
   }
   pure {
     temporaryCtx := Γ
@@ -70,17 +92,17 @@ def parseSite (Γ : Ctx) (address occurrenceId : Nat) (response : Json) :
   let roots := (← parseRootsDag Γ (← field response "expression_dag")).toArray
   let sourceGuard ← asSort .bool (← root roots (← natField response "source_guard"))
   let outcomes ← (← (← field response "outcomes").getArr?).toList.mapM
-    (parseOutcome Γ occurrenceId roots)
+    (parseOutcome Γ sourceGuard occurrenceId roots)
   pure { address, sourceGuard, outcomes }
 
 /-- Supply fresh tagged successors from angr observations. This operation is
 only for canonical input; no arbitrary-input symex claim is made here. -/
 def freshSuccessors (Γ : Ctx) (program : List (Site Γ)) :
-    List (TaggedSuccessor (Site Γ) (Metadata Γ) Γ) :=
+    List (TaggedSuccessor (Site Γ × Metadata Γ) Γ) :=
   program.flatMap fun site =>
     site.outcomes.map fun outcome =>
       let transformer := Wruh.FreshTransform.transform site.sourceGuard outcome
-      { site, step := transformer.step, metadata := transformer.metadata }
+      { edge := (site, transformer.metadata), step := transformer.step }
 
 private abbrev RootWriter (Γ : Ctx) := StateM (Array (TypedExpr Γ))
 
@@ -105,10 +127,9 @@ private def edgeJson {Γ : Ctx} (address : Nat)
   let guard ← addRoot (.mk .bool step.guard)
   let assignments ← updateJson Γ step.update
   let mirroredPc ← addRoot (.mk (.bv 64) metadata.target)
-  let target :=
-    if metadata.jumpkind == "Ijk_SigFPE_IntDiv" then
-      Json.mkObj [("kind", toJson "error")]
-    else match metadata.targetValue with
+  let target := match metadata.kind with
+    | .fault _ => Json.mkObj [("kind", toJson "error")]
+    | .ordinary | .recovery _ => match metadata.targetValue with
       | some value => Json.mkObj [("kind", toJson "address"), ("value", toJson value)]
       | none => Json.mkObj [("kind", toJson "symbolic"), ("value", mirroredPc)]
   pure <| Json.mkObj [
@@ -126,9 +147,12 @@ private def edgeJson {Γ : Ctx} (address : Nat)
 def functionJson {Γ : Ctx} (declarations architecture : Json)
     (functionId : String) (entry : Nat) (occurrences : List Json)
     (sites : List (Site Γ)) : RootWriter Γ Json := do
-  let tagged := tagSuccessors (freshSuccessors Γ sites)
+  let tagged := freshSuccessors Γ sites
   let mut edges := #[]
-  for (site, transformer) in tagged do
+  for successor in tagged do
+    let (site, metadata) := successor.edge
+    let transformer : Wruh.FreshTransform.Transformer Γ (Metadata Γ) :=
+      ⟨successor.step, metadata⟩
     edges := edges.push (← edgeJson site.address transformer)
   pure <| Json.mkObj [
     ("schema", toJson "ghot-fresh-function-v1"),
