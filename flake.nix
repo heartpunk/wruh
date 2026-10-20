@@ -2,22 +2,15 @@
   description = "Wruh fresh handler extraction environment";
 
   inputs = {
-    ifrl = {
-      url = "github:heartpunk/ifrl/c69a322ec903672a2def1841be661eb6a339c89b";
-      inputs.angr-nix.follows = "angr-nix";
-    };
+    ifrl.url = "github:heartpunk/ifrl/0eeb6ac73ee585ccdf746ba4f2c6e62291da930a";
     ayxg = {
-      url = "github:heartpunk/ayxg/5d5ce159200dc4e7eeaf9965bdac6c857b2b7b3c";
+      url = "github:heartpunk/ayxg/c7bd6ecc08a570c5b4a67643dcd33fc6c461bfec";
       inputs.ifrl.follows = "ifrl";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
-    angr-nix = {
-      url = "github:heartpunk/angr-nix/ca288bef3145174ae8385004e2cbcf6caabb9a76";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { nixpkgs, angr-nix, ifrl, ayxg, ... }:
+  outputs = { nixpkgs, ifrl, ayxg, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
     in {
@@ -27,11 +20,13 @@
         default = pkgs.mkShell {
           inputsFrom = [ ifrl.devShells.${system}.default ayxg.devShells.${system}.default ];
           packages = [
-            angr-nix.packages.${system}.default
+            ifrl.lib.angr-nix.packages.${system}.default
             pkgs.git
             pkgs.jdk21_headless
             (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
           ];
+          IFRL_ANGR_ROOT = "${ifrl.lib.angr-nix.packages.${system}.angr}";
+          GHOT_NIX_ANGR_ROOT = "${ifrl.lib.angr-nix.packages.${system}.default}";
           WRUH_AYXG_SOURCE = "${ayxg.outPath}";
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
