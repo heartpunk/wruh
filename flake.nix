@@ -7,7 +7,7 @@
       inputs.angr-nix.follows = "angr-nix";
     };
     ayxg = {
-      url = "github:heartpunk/ayxg/5106df06d92620da810c325b8779ce97a14f7f0e";
+      url = "github:heartpunk/ayxg/5d5ce159200dc4e7eeaf9965bdac6c857b2b7b3c";
       inputs.ifrl.follows = "ifrl";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
