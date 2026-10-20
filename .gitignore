@@ -9,3 +9,10 @@ lake-manifest.json
 __pycache__/
 *.pyc
 *.pyo
+
+# Disposable CI output and shared baseline checkout.
+ci-reports/
+ci-mutation-cache/
+.ifrl-ci/
+__pycache__/
+.pytest_cache/
