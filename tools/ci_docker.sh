@@ -1,45 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-WRUH_UID=$(id -u)
-WRUH_GID=$(id -g)
-export WRUH_UID WRUH_GID
-docker compose config --quiet
-nix build .#docker-image --out-link "$RUNNER_TEMP/wruh-image" --print-build-logs
-docker load --input "$RUNNER_TEMP/wruh-image"
-docker image inspect ghcr.io/heartpunk/wruh-dev:latest --format '{{.Size}} bytes'
-
-# The image includes the checkout; no host Nix store, daemon, or Docker socket is mounted.
-docker compose run --rm -T dev bash -euo pipefail -c '
-  test -f /workspace/Wruh.lean
-  test -f /workspace/lakefile.lean
-  test -f /workspace/.lake/build/lib/lean/Wruh/FreshExtraction.olean
-  test -f /workspace/.lake/packages/ayxg/.lake/build/lib/lean/Ayxg/QfAbv/SymbolicStep.olean
-  test -x "$GHOT_REAPI_WORKER_RUNTIME_ROOT/bin/python3"
-  test -x "$GHOT_REAPI_WORKER_RUNTIME_ROOT/bin/clang"
-  test -f "$GHOT_REAPI_WORKER_RUNTIME_ROOT/lib/libprofiler.so"
-  test ! -e "$GHOT_REAPI_WORKER_RUNTIME_ROOT/bin/lean"
-  test -f "$GHOT_NIX_ANGR_ROOT/lib/python3.12/site-packages/angr/__init__.py"
-  if command -v nix; then
-    printf "%s\n" "Unexpected Nix executable in the runtime image." >&2
-    exit 1
-  fi
-  test ! -e /nix/var/nix/daemon-socket/socket
+cd "$(dirname "$0")/.."
+image="${WRUH_IMAGE:-ghcr.io/heartpunk/wruh-dev:latest}"
+# A full Git checkout is required: linked worktree .git pointers are not portable.
+test -d .git
+docker build --network=host --tag "$image" .
+docker image inspect "$image" --format '{{.Size}} bytes'
+# Verify a fresh container with no network or mounted host stack.
+docker run --rm --network=none "$image" bash -euo pipefail -c '
   test "$(id -u)" != 0
-  test -n "$JAVA_HOME"
-  java -version
-  bazel --version
-  git --version
-  python3 --version
-  python3 -c "import angr, z3"
-  z3 --version
-  lean --version | grep -F "version 4.34.0"
-  lake --version
-  test -x /workspace/.lake/build/bin/wruh-fresh
-  touch .wruh-container-owner-check
-  test "$(stat -c %u .wruh-container-owner-check)" = "$(id -u)"
-  rm .wruh-container-owner-check
+  test -w /nix/store
+  nix --version
+  git rev-parse HEAD
+  python3 -c "import angr, z3; assert angr.__version__.startswith("10.")"
+  lean --version
+  test -f .lake/build/lib/lean/Wruh/FreshExtraction.olean
+  test -x .lake/build/bin/wruh-fresh
+  lake build Wruh wruh-fresh
+  python3 -m unittest discover -s tests -p test_cli_smoke.py -v
+  # Exercise Nix writes as well as reads without needing network access.
+  nix build --offline --no-link --expr '''derivation {
+    name = "wruh-container-smoke"; system = builtins.currentSystem;
+    builder = "/bin/sh"; args = [ "-c" "echo usable > $out" ];
+  }'''
 '
-
-# Preserve the image for Docker-only users to load.
-cp -L "$RUNNER_TEMP/wruh-image" "$RUNNER_TEMP/wruh-dev.tar.gz"
+if [ -n "${RUNNER_TEMP:-}" ]; then
+  docker save "$image" | gzip > "$RUNNER_TEMP/wruh-dev.tar.gz"
+fi

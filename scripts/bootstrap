@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+# Hosted Ubuntu environments use this path; the Docker image already has Nix.
+if ! command -v nix >/dev/null; then
+  if ! command -v apt-get >/dev/null; then
+    printf '%s\n' 'Install Nix first, or use the WRUH Docker image.' >&2
+    exit 1
+  fi
+  elevate=()
+  if [ "$(id -u)" -ne 0 ]; then elevate=(sudo); fi
+  "${elevate[@]}" apt-get update
+  "${elevate[@]}" apt-get install -y --no-install-recommends nix-bin ca-certificates git curl xz-utils
+fi
+# Fetch the ordinary Lake cache and build exactly as the Lean CI does.
+# Subsequent invocations reuse the Nix store and Lake build outputs.
+exec "$repo_root/scripts/wruh-env" bash -euo pipefail -c '
+  lake exe cache get
+  lake build Wruh wruh-fresh
+'

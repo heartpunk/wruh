@@ -1,0 +1,11 @@
+.lake
+.dependencies
+.ifrl-ci
+.jj
+result
+result-*
+bazel-*
+**/__pycache__
+.pytest_cache
+ci-reports
+ci-mutation-cache
