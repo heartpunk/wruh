@@ -5,11 +5,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && userdel ubuntu \
     && useradd --uid 1000 --create-home --shell /bin/bash wruh \
     && mkdir -p /nix /workspace \
-    && chown -R wruh:wruh /nix /workspace
+    && chown -R wruh:wruh /nix /workspace \
+    && printf '%s\n' 'sandbox = false' 'build-users-group =' > /etc/nix/nix.conf
 # Single-user Nix works without systemd, a host daemon, or privileged containers.
 ENV USER=wruh HOME=/home/wruh NIX_REMOTE=local
-ENV NIX_CONFIG="sandbox = false
-build-users-group ="
 USER wruh
 WORKDIR /workspace
 RUN nix-store --init
