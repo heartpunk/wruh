@@ -31,7 +31,11 @@
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
-          shellHook = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+          shellHook = ''
+            # AYXG selects its own Python for solver checks. Extraction needs
+            # IFRL's Angr environment after the inherited hooks have run.
+            export PATH="${ifrl.lib.angr-nix.packages.${system}.default}/bin:$PATH"
+          '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             # Keep the runtime available without shadowing the shared Lean toolchain.
             export PATH="$PATH:/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin"
           '';
