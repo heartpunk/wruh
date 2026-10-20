@@ -33,8 +33,8 @@ jobs:
         run: |
           git config --global --add url.https://github.com/.insteadOf ssh://git@github.com/
           git config --global --add url.https://github.com/.insteadOf git@github.com:
-      - name: Evaluate the pinned Nix flake
-        run: nix flake check --no-build --no-write-lock-file
+      - name: Build the pinned development shell
+        run: nix develop --no-write-lock-file --command true
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor
 
