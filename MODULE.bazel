@@ -2,17 +2,13 @@ module(name = "wruh", version = "0.1.0")
 
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_python", version = "1.7.0")
-bazel_dep(name = "ghot_vendored_arpy", version = "1.1.1")
-bazel_dep(name = "ghot_vendored_mulpyplexer", version = "0.9")
 bazel_dep(name = "ifrl", version = "0.1.0")
 git_override(
     module_name = "ifrl",
     remote = "https://github.com/heartpunk/ifrl.git",
-    commit = "9aa5e2953b840c3ec0879c2c4fa068dee3348498",
+    commit = "aee884bfc890f05c655b491677c0687b6ee1510c",
 )
 
-local_path_override(module_name = "ghot_vendored_arpy", path = "third_party/arpy")
-local_path_override(module_name = "ghot_vendored_mulpyplexer", path = "third_party/mulpyplexer")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.defaults(python_version = "3.12")
@@ -36,56 +32,8 @@ nix_python_toolchains(
 )
 register_toolchains("@nix_python_toolchains//:all")
 
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "extractor_pypi",
-    python_interpreter = "python3.12",
-    python_version = "3.12",
-    requirements_by_platform = {
-        "//extractor:requirements_linux_x86_64.txt": "linux_x86_64",
-    },
-)
-override_repo(
-    pip,
-    extractor_pypi_312_angr = "shared_angr",
-    extractor_pypi_312_arpy = "ghot_vendored_arpy",
-    extractor_pypi_312_mulpyplexer = "ghot_vendored_mulpyplexer",
-)
-use_repo(pip, "extractor_pypi")
-
 nix_native_deps = use_extension("@ifrl//bazel/wruh/tools:nix_native_deps.bzl", "nix_native_deps")
 use_repo(nix_native_deps, "nix_native_deps")
 
-ghot_inputs = use_repo_rule("@ifrl//bazel/wruh/tools:ghot_inputs.bzl", "ghot_inputs_repository")
-ghot_inputs(name = "ghot_inputs")
-
-angr_repository = use_repo_rule("@ifrl//bazel/angr:repository.bzl", "angr_repository")
-angr_repository(
-    name = "shared_angr",
-    deps = [
-        "@extractor_pypi//angr_data:pkg",
-        "@extractor_pypi//archinfo:pkg",
-        "@extractor_pypi//pyvex:pkg",
-        "@extractor_pypi//cle:pkg",
-        "@extractor_pypi//pypcode:pkg",
-        "@extractor_pypi//capstone:pkg",
-        "@extractor_pypi//networkx:pkg",
-        "@extractor_pypi//sympy:pkg",
-        "@extractor_pypi//cachetools:pkg",
-        "@extractor_pypi//sortedcontainers:pkg",
-        "@extractor_pypi//protobuf:pkg",
-        "@extractor_pypi//psutil:pkg",
-        "@extractor_pypi//cffi:pkg",
-        "@extractor_pypi//pycparser:pkg",
-        "@extractor_pypi//rich:pkg",
-        "@extractor_pypi//gitpython:pkg",
-        "@extractor_pypi//lmdb:pkg",
-        "@extractor_pypi//mulpyplexer:pkg",
-        "@extractor_pypi//msgspec:pkg",
-        "@extractor_pypi//pydemumble:pkg",
-        "@extractor_pypi//typing_extensions:pkg",
-        "@extractor_pypi//cxxheaderparser:pkg",
-        "@extractor_pypi//platformdirs:pkg",
-        "@extractor_pypi//z3_solver:pkg",
-    ],
-)
+angr_environment_repository = use_repo_rule("@ifrl//bazel/angr:repository.bzl", "angr_environment_repository")
+angr_environment_repository(name = "shared_angr")
