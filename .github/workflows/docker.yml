@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Build and smoke-test the self-contained image
+      - name: Build image and validate bootstrap after startup
         run: bash tools/ci_docker.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

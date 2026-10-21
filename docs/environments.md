@@ -1,19 +1,26 @@
 # WRUH environments
 
-The Docker image includes Nix, a writable WRUH checkout, and compiled Lean
-objects. The host needs Docker only. The development shell and dependency
-versions come from the repository's existing `flake.nix` and `flake.lock`.
+The image contains Nix, public Cachix configuration, and a writable WRUH source
+checkout. Dependencies and Lean objects are downloaded or built **after startup**
+by `scripts/bootstrap`, using the existing `flake.nix` and `flake.lock`.
+The host needs Docker only; first setup needs network access.
 
 ```sh
-docker run --rm -it ghcr.io/heartpunk/wruh-dev:latest
-# Or run a command directly:
-docker run --rm ghcr.io/heartpunk/wruh-dev:latest python3 -c 'import angr'
+docker run --name wruh-work -it ghcr.io/heartpunk/wruh-dev:latest
+# Inside the container:
+./scripts/bootstrap
+./scripts/wruh-env bash
 ```
 
+Resume the same prepared container with `docker start -ai wruh-work`.
+Its writable filesystem retains the Nix store, Lean objects, and your edits.
+Removing the container removes that state; push changes before removing it.
+Run commands through `./scripts/wruh-env COMMAND ...` after setup, and rerun
+bootstrap after changing dependency pins.
+
 The default user is `wruh` (UID 1000). Nix runs locally inside the container;
-no host Nix store, daemon socket, or privileged mode is needed. Work in a named
-container to retain edits between sessions, and push changes before removing it.
-Agent CLIs can be installed inside it; supply their authentication at runtime.
+no host Nix store, daemon socket, or privileged mode is needed.
+Agent CLIs can be installed inside it; supply authentication at runtime.
 
 ## Build locally
 
@@ -26,7 +33,7 @@ docker compose run --rm dev
 
 The `tools` Dockerfile target provides Ubuntu and usable Nix without copying
 a checkout. Providers that manage their own checkout can use that target and
-run the same bootstrap afterward. The default `ready` target includes WRUH.
+run the same bootstrap afterward. The default `source` target includes WRUH source without prebuilt dependencies.
 
 ## Hosted agents
 

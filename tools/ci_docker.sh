@@ -6,8 +6,11 @@ image="${WRUH_IMAGE:-ghcr.io/heartpunk/wruh-dev:latest}"
 test -d .git
 docker build --network=host --tag "$image" .
 docker image inspect "$image" --format '{{.Size}} bytes'
-# Verify a fresh container with no network or mounted host stack.
-docker run --rm --interactive --network=none "$image" bash -euo pipefail <<'SMOKE'
+# Bootstrap after startup, exactly as a developer or hosted agent does.
+container=$(docker run --detach --init --network=host "$image" sleep infinity)
+trap 'docker rm --force "$container" >/dev/null' EXIT
+docker exec "$container" ./scripts/bootstrap
+docker exec --interactive "$container" ./scripts/wruh-env bash -euo pipefail <<'SMOKE'
   test "$(id -u)" != 0
   test -w /nix/store
   nix --version
