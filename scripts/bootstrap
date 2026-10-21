@@ -30,6 +30,7 @@ exec "$repo_root/scripts/wruh-env" bash -euo pipefail -c '
     git clone --no-checkout https://github.com/heartpunk/ayxg.git .lake/packages/ayxg
   fi
   git -C .lake/packages/ayxg fetch origin "$ayxg_revision"
+  git -C .lake/packages/ayxg checkout --force --detach "$ayxg_revision"
   lake exe cache get
   lake build Wruh wruh-fresh
 '
