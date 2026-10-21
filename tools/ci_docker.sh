@@ -19,7 +19,7 @@ docker run --rm --network=none "$image" bash -euo pipefail -c '
   lake build Wruh wruh-fresh
   python3 -m unittest discover -s tests -p test_cli_smoke.py -v
   # Exercise Nix writes as well as reads without needing network access.
-  nix build --offline --no-link --expr '''derivation {
+  nix build --offline --impure --no-link --expr '''derivation {
     name = "wruh-container-smoke"; system = builtins.currentSystem;
     builder = "/bin/sh"; args = [ "-c" "echo usable > $out" ];
   }'''

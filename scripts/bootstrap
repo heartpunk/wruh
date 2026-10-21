@@ -16,6 +16,13 @@ fi
 # Fetch the ordinary Lake cache and build exactly as the Lean CI does.
 # Subsequent invocations reuse the Nix store and Lake build outputs.
 exec "$repo_root/scripts/wruh-env" bash -euo pipefail -c '
+  # A pin can remain fetchable after its branch is rebased, but normal clones
+  # only include reachable commits. Fetch the exact shared pin before Lake.
+  ayxg_revision=$(python3 -c "import json; print(json.load(open(\"flake.lock\"))[\"nodes\"][\"ayxg\"][\"locked\"][\"rev\"])")
+  if [ ! -d .lake/packages/ayxg/.git ]; then
+    git clone --no-checkout https://github.com/heartpunk/ayxg.git .lake/packages/ayxg
+  fi
+  git -C .lake/packages/ayxg fetch origin "$ayxg_revision"
   lake exe cache get
   lake build Wruh wruh-fresh
 '
