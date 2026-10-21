@@ -1,24 +1,18 @@
 """Explicit CLE image loading and separate relocated initial-memory data."""
 from __future__ import annotations
-
 import hashlib
 import json
 from pathlib import Path
 from typing import Any
-
-import angr
-from cle.backends.elf.relocation import ALL_RELOCATIONS
-from cle.backends.elf.relocation.generic import (
-    GenericCopyReloc,
-    GenericIRelativeReloc,
-    GenericTLSDescriptorReloc,
-    GenericTLSModIdReloc,
-    GenericTLSOffsetReloc,
-    RelocTruncate32Mixin,
-)
-from cle.backends.relocation import Relocation
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
+from cle.backends.elf.relocation import ALL_RELOCATIONS
+import angr
+from cle.backends.relocation import Relocation
+from cle.backends.elf.relocation.generic import (
+    RelocTruncate32Mixin, GenericCopyReloc, GenericIRelativeReloc,
+    GenericTLSOffsetReloc, GenericTLSModIdReloc, GenericTLSDescriptorReloc,
+)
 
 
 def relocation_write_size(reloc: Any) -> int:

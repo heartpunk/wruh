@@ -1,25 +1,13 @@
 """Static lifting checks; no candidate code is executed natively."""
 from __future__ import annotations
-
 import json
 from pathlib import Path
-
 from extractor.runtime_trace import start_runtime_trace
-
 start_runtime_trace()
-import z3
-
 from extractor import runtime
-from extractor.amd64_state import (
-    AMD64_LAYOUT,
-    FLAG_NAMES,
-    canonical_declarations,
-    canonical_flag,
-    canonical_register,
-    canonical_register_view,
-    step_instruction_outcomes,
-)
-from extractor.amd64_state import LTS_EXTRACTION_CONTEXT as CTX
+import z3
+from extractor.amd64_state import (AMD64_LAYOUT, FLAG_NAMES, LTS_EXTRACTION_CONTEXT as CTX,
+    canonical_declarations, canonical_flag, canonical_register, canonical_register_view, step_instruction_outcomes)
 from extractor.architecture import NORMALIZED_AMD64_FLAGS
 
 

@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-import json
+from ayxg.expr import Declaration, TermSort
+
 from dataclasses import dataclass
+import json
 from typing import Any
 
 import z3
-from ayxg.expr import Declaration, TermSort
 
 from extractor.amd64_state import (
     InstructionOutcomeFamily,
     canonical_declarations,
     step_instruction_outcomes,
 )
-from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.artifact import (
     DecodedInstructionEvidence,
     EdgeId,
@@ -23,6 +23,7 @@ from extractor.artifact import (
     OutcomeId,
     StaticOccurrenceId,
 )
+from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.binary_inventory import PinnedBinary
 from extractor.typed_z3 import step_summary_from_z3
 

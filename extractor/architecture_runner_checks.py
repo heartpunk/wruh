@@ -1,12 +1,9 @@
 """Run expanded STS models only; candidate binaries are never executed."""
 from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path
-
 from extractor.runtime_trace import start_runtime_trace
-
 start_runtime_trace()
 from extractor.corpus_runner import CorpusRunner
 

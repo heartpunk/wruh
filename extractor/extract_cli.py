@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 from extractor.runtime_trace import start_runtime_trace
 
 start_runtime_trace()
@@ -9,10 +10,9 @@ start_runtime_trace()
 import argparse
 import importlib.util
 import json
-import sys
 from pathlib import Path
+import sys
 from typing import Any
-
 
 def _provider(path: Path) -> Any:
     spec = importlib.util.spec_from_file_location("wruh_abi_provider", path)

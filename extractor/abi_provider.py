@@ -6,8 +6,7 @@ models stay in the provider's owning project.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Protocol
+from typing import Any, Mapping, Protocol
 
 from extractor.artifact import LocalEdge
 from extractor.binary_inventory import InventoryPolicy, PinnedBinary

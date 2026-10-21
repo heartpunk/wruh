@@ -1,16 +1,12 @@
 """Compose exported fresh STSes without loading or executing a binary."""
 from __future__ import annotations
-
 from extractor.runtime_trace import start_runtime_trace
-
 start_runtime_trace()
 import argparse
-from pathlib import Path
-
+import json
 from ayxg.codec import dumps, loads
-
+from pathlib import Path
 from extractor.native_runtime import preload_libstdcxx
-
 _LIBSTDCXX = preload_libstdcxx()
 from extractor.artifact import LocalEdge
 from extractor.fresh import FreshFunction

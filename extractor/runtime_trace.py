@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import atexit
+from collections import Counter
 import cProfile
 import hashlib
 import importlib.machinery
 import json
-import logging
 import os
+from pathlib import Path
 import pstats
 import sys
 import sysconfig
 import time
-from collections import Counter
-from pathlib import Path
 from typing import Any
+
 
 _AUDIT_EVENTS = {
     "ctypes.dlopen",
@@ -32,7 +32,6 @@ def _bounded_repr(value: object, limit: int = 4096) -> str:
     try:
         rendered = repr(value)
     except Exception as error:  # pragma: no cover - diagnostic fallback
-        logging.getLogger(__name__).exception("Runtime trace could not represent %s", type(value).__name__)
         rendered = f"<repr failed: {type(error).__name__}: {error}>"
     if len(rendered) > limit:
         return rendered[:limit] + "...<truncated>"

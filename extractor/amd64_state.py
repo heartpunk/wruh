@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import logging
-from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import cache
-from typing import Any
+from functools import lru_cache
+import logging
+from typing import Any, Mapping
 
 from extractor import runtime
 
-# Initialize the native runtime before loading solver libraries.
-# isort: split
 import z3
 
 
@@ -19,9 +16,8 @@ class Amd64AdapterError(RuntimeError):
     """The exact instruction does not satisfy the E5 adapter contract."""
 
 
+from extractor.architecture import architecture_layout, NORMALIZED_AMD64_FLAGS
 import archinfo
-
-from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
 
 FLAG_NAMES = ("CF", "ZF", "SF", "OF", "PF", "AF")
 MEMORY_NAME = "mem"
@@ -38,7 +34,8 @@ _U64_MAX = (1 << 64) - 1
 
 _angr = runtime.angr
 _claripy = runtime.claripy
-from angr.engines.vex.claripy import ccall as _angr_ccall
+from angr.engines.vex.claripy import ccall as _angr_ccall  # noqa: E402
+
 
 _AMD64_OP_COPY: int = _angr_ccall.data["AMD64"]["OpTypes"][
     "G_CC_OP_COPY"
@@ -114,14 +111,14 @@ def declaration(name: str) -> CanonicalDeclaration:
     raise Amd64AdapterError(f"unknown canonical AMD64 declaration {name!r}")
 
 
-@cache
+@lru_cache(maxsize=None)
 def canonical_register(name: str) -> z3.BitVecRef:
     if name not in REGISTER_NAMES:
         raise Amd64AdapterError(f"unknown canonical AMD64 register {name!r}")
     return z3.BitVec(name, AMD64_LAYOUT.register(name).bits, ctx=LTS_EXTRACTION_CONTEXT)
 
 
-@cache
+@lru_cache(maxsize=None)
 def canonical_register_view(name: str) -> z3.BitVecRef:
     """Read a metadata-derived alias without introducing independent state."""
     try:
@@ -137,7 +134,7 @@ def canonical_register_view(name: str) -> z3.BitVecRef:
     return z3.Extract(low + view.size_bytes * 8 - 1, low, backing)
 
 
-@cache
+@lru_cache(maxsize=None)
 def canonical_flag(name: str) -> z3.BitVecRef:
     if name not in FLAG_NAMES:
         raise Amd64AdapterError(f"unknown canonical AMD64 flag {name!r}")
@@ -148,7 +145,7 @@ def canonical_flag(name: str) -> z3.BitVecRef:
     )
 
 
-@cache
+@lru_cache(maxsize=None)
 def canonical_memory() -> z3.ArrayRef:
     address = z3.BitVecSort(AMD64_LAYOUT.address_bits, ctx=LTS_EXTRACTION_CONTEXT)
     byte = z3.BitVecSort(8, ctx=LTS_EXTRACTION_CONTEXT)

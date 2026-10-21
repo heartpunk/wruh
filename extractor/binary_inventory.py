@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections import Counter
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+import hashlib
+import json
 from pathlib import Path
+from typing import Any, Callable
 from types import SimpleNamespace
-from typing import Any
 
-import angr
 import capstone
+import angr
 
 
 class InventoryError(RuntimeError):
@@ -131,6 +130,7 @@ def exact_symbol_inventory_policy(
 def _function_symbol_at(project: angr.Project, address: int) -> Any | None:
     """Choose one exact, sized in-object function symbol at an address."""
 
+    image = project.loader.main_object
     candidates = [
         symbol
         for obj in project.loader.all_objects

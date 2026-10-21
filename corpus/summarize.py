@@ -1,9 +1,6 @@
 """Summarize declared zeroth-pass output files without running candidates."""
-import argparse
-import csv
-import json
+import argparse,csv,json
 from pathlib import Path
-
 p=argparse.ArgumentParser();p.add_argument('results',type=Path);p.add_argument('--output',type=Path,required=True);a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
 scans=[json.loads(f.read_text()) for f in sorted(a.results.glob('corpus_scan_O[02].json'))]
 rows=[json.loads(f.read_text()) for f in sorted(a.results.glob('corpus_extract_*.json')) if 'runtime-trace' not in f.name]

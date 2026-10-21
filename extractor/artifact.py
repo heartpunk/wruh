@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import re
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, Callable, Mapping, TypeVar
+
 
 from ayxg.expr import ArtifactError, Declaration, TermSort, TypedExpr
+
 
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]*\Z")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")

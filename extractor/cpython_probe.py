@@ -1,9 +1,7 @@
 """Static extraction of selected functions from the exact extraction CPython."""
 from extractor.runtime_trace import start_runtime_trace
-
 start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
-
 preload_libstdcxx()
 import argparse
 import hashlib
@@ -11,17 +9,11 @@ import json
 import tempfile
 from dataclasses import replace
 from pathlib import Path
-
 from ayxg.codec import dumps
-
-from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import (
-    PinnedBinary,
-    exact_symbol_inventory_policy,
-    inventory_project,
-)
-from extractor.fresh import extract_fresh_function
 from extractor.loaded_image import load_object_set, loaded_image_data
+from extractor.binary_inventory import inventory_project, exact_symbol_inventory_policy, PinnedBinary
+from extractor.binary_cfg import build_static_cfg
+from extractor.fresh import extract_fresh_function
 
 
 def main() -> None:

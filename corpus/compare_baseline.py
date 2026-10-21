@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-
 def norm(v):
  if isinstance(v,list):return [norm(x) for x in v]
  if not isinstance(v,dict):return v
