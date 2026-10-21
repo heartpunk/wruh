@@ -1,10 +1,13 @@
 """Compare fixed old/new extracted edge relations; no candidate execution."""
 from __future__ import annotations
+
 import argparse
 import json
-from pathlib import Path
 import time
+from pathlib import Path
+
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
 import z3
 from ayxg.expr import Declaration, TypedExpr
@@ -36,7 +39,7 @@ def main() -> int:
         assert len(b['local_edges']) == len(c['local_edges'])
         ctx = z3.Context()
         variables = declaration_variables(tuple(Declaration.from_data(x) for x in c['declarations']), ctx)
-        def convert(value):
+        def convert(value, variables=variables, ctx=ctx):
             return expr_to_z3(TypedExpr.from_data(value), variables, ctx)
         results = []
         for old, new in zip(b['local_edges'], c['local_edges']):

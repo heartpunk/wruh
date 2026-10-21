@@ -1,12 +1,17 @@
 """Architecture-specific step construction from Z3 state expressions."""
 from __future__ import annotations
+
 from collections.abc import Mapping
+
 from extractor.native_runtime import preload_libstdcxx
+
 _LIBSTDCXX = preload_libstdcxx()
 import z3
 from ayxg.expr import BOOL, ArtifactError, Declaration, TypedExpr
 from ayxg.z3 import expr_from_z3
-from extractor.artifact import Assignment, StepSummary, Target, BV64
+
+from extractor.artifact import BV64, Assignment, StepSummary, Target
+
 
 def complete_update(
     declarations: tuple[Declaration, ...],

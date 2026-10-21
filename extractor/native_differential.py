@@ -1,12 +1,21 @@
 """Audited bounded native/STS differential campaign."""
 from __future__ import annotations
-import argparse,base64,hashlib,json,tempfile,time
+
+import argparse
+import base64
+import hashlib
+import json
+import tempfile
+import time
 from collections import Counter
 from pathlib import Path
+
+from hypothesis import Phase, given, seed, settings
+from hypothesis import strategies as st
 from python.runfiles import runfiles
-from hypothesis import given,settings,seed,strategies as st,Phase
+
+from corpus.native.sandbox import HASHES, run
 from extractor.corpus_runner import CorpusRunner
-from corpus.native.sandbox import run,HASHES
 
 NAMES=('alias','overlap','division')
 BOUNDARIES=(0,1,255,256,65535,65536,0x7fffffff,0xffffffff)
@@ -39,17 +48,19 @@ def main(args):
             records.append(record)
             Path(args.output).write_text(json.dumps({'records':records,'counts':dict(Counter(r['status'] for r in records)),'seed':20261002,'seconds':time.monotonic()-started},indent=2)+'\n')
             if status!='MATCH':raise AssertionError(json.dumps({'optimization':opt,'inputs':inputs,'status':status}))
+        def run_generated(opt, case):
+            @seed(20261002+case)
+            @settings(max_examples=64,deadline=None,database=None,phases=(Phase.generate,Phase.shrink))
+            @given(a=st.integers(0,7),b=st.integers(0,7),x=st.integers(0,0xffffffff),initial=st.integers(0,0xffffffff))
+            def generated(a,b,x,initial):check(opt,(case,a,b,x,initial),'hypothesis')
+            generated()
         for opt in ('0','2'):
             for x in BOUNDARIES:
                 for a,b in ((0,0),(0,7),(7,7),(7,0)):check(opt,(0,a,b,x,0xffffffff),'deterministic')
                 for a in (0,1,7):check(opt,(1,a,0,x,0x12345678),'deterministic')
                 for divisor in (0,1,3,0xffffffff):check(opt,(2,0,0,x,divisor),'deterministic')
             for case in range(3):
-                @seed(20261002+case)
-                @settings(max_examples=64,deadline=None,database=None,phases=(Phase.generate,Phase.shrink))
-                @given(a=st.integers(0,7),b=st.integers(0,7),x=st.integers(0,0xffffffff),initial=st.integers(0,0xffffffff))
-                def generated(a,b,x,initial):check(opt,(case,a,b,x,initial),'hypothesis')
-                generated()
+                run_generated(opt, case)
     print(json.dumps({'counts':dict(Counter(r['status'] for r in records)),'seconds':time.monotonic()-started}))
 
 if __name__=='__main__':

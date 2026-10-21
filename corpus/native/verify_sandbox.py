@@ -1,4 +1,8 @@
-import importlib.util,json,pathlib,subprocess
+import importlib.util
+import json
+import pathlib
+import subprocess
+
 spec=importlib.util.spec_from_file_location('sandbox','/tmp/wruh-sandbox.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 ns={n:str(pathlib.Path('/proc/self/ns/'+n).stat().st_ino) for n in ['user','net','pid','mnt']}
 script='''import os,json,pathlib,socket,sys
@@ -25,6 +29,7 @@ closure=tuple(pathlib.Path('/tmp/wruh-trusted-python-closure.txt').read_text().s
 cmd=m.command(pathlib.Path('/nix/store/m1fw8l8y9ycxh5dzispbb7cwl6rra14l-python3-3.13.12/bin/python3.13'),('-c',script,json.dumps(ns),m.LIBC),tuple(sorted(set(closure+m.RUNTIME))))
 cmd.remove('--collect');cmd.insert(1,'--remain-after-exit')
 import select
+
 unit=next(v.split('=',1)[1] for v in cmd if v.startswith('--unit='))
 p=subprocess.Popen(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 try:

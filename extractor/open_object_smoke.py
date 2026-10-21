@@ -1,19 +1,37 @@
 """Compile trusted fixture as data, then load/inventory/extract; never execute it."""
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
-import argparse, hashlib, json, shutil, subprocess, tempfile
+import argparse
+import hashlib
+import json
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
-from extractor.loaded_image import load_object_set, loaded_image_data, relocation_write_size, skipped_elf_relocations
-from cle.backends.elf.relocation.amd64 import R_X86_64_PC32, R_X86_64_64, R_X86_64_COPY
-from cle.backends.relocation import Relocation
 from types import SimpleNamespace
+
+from cle.backends.elf.relocation.amd64 import R_X86_64_64, R_X86_64_COPY, R_X86_64_PC32
+from cle.backends.relocation import Relocation
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-from extractor.binary_inventory import inventory_project, exact_symbol_inventory_policy, PinnedBinary
+
 from extractor.binary_cfg import build_static_cfg
+from extractor.binary_inventory import (
+    PinnedBinary,
+    exact_symbol_inventory_policy,
+    inventory_project,
+)
 from extractor.fresh import extract_fresh_function
+from extractor.loaded_image import (
+    load_object_set,
+    loaded_image_data,
+    relocation_write_size,
+    skipped_elf_relocations,
+)
 
 
 def main():

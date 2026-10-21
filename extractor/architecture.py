@@ -5,6 +5,7 @@ AMD64's four lazy condition-code fields are normalized to six flag bits by the
 adapter; all other modeled registers, including artificial ones, are retained.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 

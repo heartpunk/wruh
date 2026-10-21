@@ -1,18 +1,36 @@
 """Exact target partition and admission controls (no candidate native execution)."""
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
-from pathlib import Path
 import argparse
+from pathlib import Path
+
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
 import json
+
 import z3
 from ayxg.expr import Declaration, TermSort, TypedExpr
 from ayxg.z3 import declaration_variables, expr_to_z3
-from extractor.artifact import Assignment, LocalEdge, StepSummary, EdgeId, StaticOccurrenceId, OutcomeId, Target
+
+from extractor.artifact import (
+    Assignment,
+    EdgeId,
+    LocalEdge,
+    OutcomeId,
+    StaticOccurrenceId,
+    StepSummary,
+    Target,
+)
+from extractor.binary_inventory import (
+    CallKind,
+    CallResolution,
+    InventoryError,
+    classify_call,
+)
 from extractor.fresh import FreshFunction
 from extractor.fresh_composition import compose_fresh_paths
-from extractor.binary_inventory import classify_call, CallResolution, CallKind, InventoryError
 
 
 def main():

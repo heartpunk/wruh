@@ -5,13 +5,15 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import os
-from pathlib import Path
 import site
 import sys
+from pathlib import Path
 from typing import Any
 
 from extractor.native_runtime import (
     preload_libstdcxx as _preload_libstdcxx,
+)
+from extractor.native_runtime import (
     runfiles_root as _runfiles_root,
 )
 
@@ -41,8 +43,8 @@ _REQUIRED_MODULES = (
 
 _LIBSTDCXX = _preload_libstdcxx()
 
-import angr  # noqa: E402
-from angr import claripy  # noqa: E402
+import angr
+from angr import claripy
 
 
 def _fixture_bytes() -> bytes:

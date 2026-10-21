@@ -1,7 +1,8 @@
 """Public Angr SMT boundary checks; no candidate binary execution."""
-from extractor.amd64_state import claripy_to_z3, LTS_EXTRACTION_CONTEXT
-from extractor.runtime import claripy as c
 import z3
+
+from extractor.amd64_state import LTS_EXTRACTION_CONTEXT, claripy_to_z3
+from extractor.runtime import claripy as c
 
 x, y, b = c.BVS('x', 64, explicit_name=True), c.BVS('y', 64, explicit_name=True), c.BoolS('b', explicit_name=True)
 xz, yz, bz = z3.BitVec('x', 64, ctx=LTS_EXTRACTION_CONTEXT), z3.BitVec('y', 64, ctx=LTS_EXTRACTION_CONTEXT), z3.Bool('b', ctx=LTS_EXTRACTION_CONTEXT)

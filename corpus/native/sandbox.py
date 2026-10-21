@@ -1,6 +1,9 @@
 """Fail-closed Linux native harness launcher. Requires explicit approval upstream."""
 from __future__ import annotations
-import hashlib, json, subprocess, uuid
+
+import hashlib
+import subprocess
+import uuid
 from pathlib import Path
 
 BWRAP = '/nix/store/qn1pfnn2xgfwdr6avw1fnvwsabi83973-bubblewrap-0.11.0/bin/bwrap'
@@ -34,7 +37,7 @@ def run(binary: Path, optimization: str, inputs: tuple[int,...]) -> dict:
         raise ValueError('input outside approved domain')
     cmd=command(binary,inputs)
     try:
-        p=subprocess.run(cmd,text=True,capture_output=True,timeout=5)
+        p=subprocess.run(cmd,text=True,capture_output=True,timeout=5,check=False)
     except subprocess.TimeoutExpired as exc:
         return {'status':'TIMEOUT','command':cmd,'error':str(exc)}
     result={'command':cmd,'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}

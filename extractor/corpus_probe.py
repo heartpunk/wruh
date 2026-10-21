@@ -1,14 +1,30 @@
 """Static-only zeroth-pass compiler, VEX feature collector, and fresh extractor."""
 from __future__ import annotations
-import argparse, base64, hashlib, json, os, shutil, subprocess, tempfile, time
+
+import argparse
+import base64
+import hashlib
+import json
+import logging
+import shutil
+import subprocess
+import tempfile
+import time
 from pathlib import Path
+
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
-from extractor import runtime as _runtime
-import angr
-from extractor.binary_inventory import PinnedBinary, inventory_project, exact_symbol_inventory_policy
-from extractor.binary_cfg import build_static_cfg
+from extractor.runtime import angr
+
+# isort: split
 from extractor import binary_cfg as cfg_module
+from extractor.binary_cfg import build_static_cfg
+from extractor.binary_inventory import (
+    PinnedBinary,
+    exact_symbol_inventory_policy,
+    inventory_project,
+)
 from extractor.fresh import extract_fresh_function
 
 ROOTS = ['arithmetic','shifts','signed_shift','division','branch','signed_branch','loop','alias','overlap','widths','extend','call','memcmp','strcmp','strncmp']
@@ -151,6 +167,7 @@ def extract(args):
               'occurrences':len(fresh.occurrences),'local_edges':len(fresh.local_edges),'canonical_ops':ops,'expression_objects':nodes,
               'cfg':cfg,'fresh_model':fresh.to_data(),'seconds':time.monotonic()-started}
         except Exception as exc:
+            logging.getLogger(__name__).exception("Corpus extraction failed for %s", args.root)
             import traceback
             return {'root':args.root,'optimization':scan['optimization'],'status':'FAIL','stage':'inventory/cfg/fresh','error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'partition_trace':partition_trace,'seconds':time.monotonic()-started}
 

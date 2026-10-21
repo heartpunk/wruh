@@ -1,11 +1,21 @@
 """Bounded concrete execution of extracted local edges using AYXG semantics."""
 from __future__ import annotations
-from ayxg.expr import Declaration
-from ayxg.qfabv import (ArraySort, BoolSort, QFAbvArrayValue, QFAbvContext,
-                       QFAbvExpr, QFAbvUpdate, QFAbvValuation, decode_sort)
+
 from ayxg.eval import eval_expr, eval_update
+from ayxg.expr import Declaration
+from ayxg.qfabv import (
+    ArraySort,
+    BoolSort,
+    QFAbvArrayValue,
+    QFAbvContext,
+    QFAbvExpr,
+    QFAbvUpdate,
+    QFAbvValuation,
+    decode_sort,
+)
+
+from extractor.architecture import NORMALIZED_AMD64_FLAGS, ArchitectureLayout
 from extractor.artifact import LocalEdge
-from extractor.architecture import ArchitectureLayout, NORMALIZED_AMD64_FLAGS
 
 STORAGE = 0x100000
 STACK = 0x200008  # SysV function entry: rsp mod 16 = 8.

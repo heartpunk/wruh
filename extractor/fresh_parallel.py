@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
 import os
+from concurrent.futures import ProcessPoolExecutor
 from typing import Any
 
 from extractor.binary_inventory import PinnedBinary
 from extractor.fresh import FreshExtractionError, FreshFunction, extract_fresh_function
-
 
 _FORK_PINNED: PinnedBinary | None = None
 _FORK_CFG: dict[str, Any] | None = None
