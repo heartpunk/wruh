@@ -10,4 +10,8 @@ $(cat "$repo_root/nix/cache.conf")"
 if [ "$#" -eq 0 ]; then
   set -- bash --noprofile --norc
 fi
-exec nix develop "$repo_root" --no-update-lock-file --command "$@"
+exec nix develop "$repo_root" --no-update-lock-file --command bash -c '
+  export PYTHONPATH="$1:$WRUH_AYXG_SOURCE/python${PYTHONPATH:+:$PYTHONPATH}"
+  shift
+  exec "$@"
+' bash "$repo_root" "$@"
