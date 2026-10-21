@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && userdel ubuntu \
     && useradd --uid 1000 --create-home --shell /bin/bash wruh \
-    && mkdir -p /nix /workspace \
+    && mkdir -p /nix /workspace /etc/nix \
     && chown -R wruh:wruh /nix /workspace \
     && printf '%s\n' 'sandbox = false' 'build-users-group =' > /etc/nix/nix.conf
 # Single-user Nix works without systemd, a host daemon, or privileged containers.
