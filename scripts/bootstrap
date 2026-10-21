@@ -12,6 +12,13 @@ if ! command -v nix >/dev/null; then
   if [ "$(id -u)" -ne 0 ]; then elevate=(sudo); fi
   "${elevate[@]}" apt-get update
   "${elevate[@]}" apt-get install -y --no-install-recommends nix-bin ca-certificates git curl xz-utils
+  # Hosted containers generally have no systemd Nix daemon. Initialize a
+  # local store for the setup user, matching the Docker image.
+  "${elevate[@]}" install -d -o "$(id -u)" -g "$(id -g)" /nix
+  config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/nix"
+  mkdir -p "$config_dir"
+  printf '%s\n' 'sandbox = false' 'build-users-group =' >> "$config_dir/nix.conf"
+  nix-store --init
 fi
 # Fetch the ordinary Lake cache and build exactly as the Lean CI does.
 # Subsequent invocations reuse the Nix store and Lake build outputs.
