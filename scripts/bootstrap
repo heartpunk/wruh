@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+# Hosted Ubuntu environments use this path; the Docker image already has Nix.
+if ! command -v nix >/dev/null; then
+  if ! command -v apt-get >/dev/null; then
+    printf '%s\n' 'Install Nix first, or use the WRUH Docker image.' >&2
+    exit 1
+  fi
+  elevate=()
+  if [ "$(id -u)" -ne 0 ]; then elevate=(sudo); fi
+  "${elevate[@]}" apt-get update
+  "${elevate[@]}" apt-get install -y --no-install-recommends nix-bin ca-certificates git curl xz-utils
+  # Hosted containers generally have no systemd Nix daemon. Initialize a
+  # local store for the setup user, matching the Docker image.
+  "${elevate[@]}" install -d -o "$(id -u)" -g "$(id -g)" /nix
+  config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/nix"
+  mkdir -p "$config_dir"
+  printf '%s\n' 'sandbox = false' 'build-users-group =' >> "$config_dir/nix.conf"
+  nix-store --init
+fi
+# Fetch the ordinary Lake cache and build exactly as the Lean CI does.
+# Subsequent invocations reuse the Nix store and Lake build outputs.
+exec "$repo_root/scripts/wruh-env" bash -euo pipefail -c '
+  # A pin can remain fetchable after its branch is rebased, but normal clones
+  # only include reachable commits. Fetch the exact shared pin before Lake.
+  ayxg_revision=$(python3 -c "import json; print(json.load(open(\"flake.lock\"))[\"nodes\"][\"ayxg\"][\"locked\"][\"rev\"])")
+  if [ ! -d .lake/packages/ayxg/.git ]; then
+    git clone --no-checkout https://github.com/heartpunk/ayxg.git .lake/packages/ayxg
+  fi
+  git -C .lake/packages/ayxg fetch origin "$ayxg_revision"
+  git -C .lake/packages/ayxg checkout --force --detach "$ayxg_revision"
+  lake exe cache get
+  lake build Wruh wruh-fresh
+'

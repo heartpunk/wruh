@@ -1,0 +1,8 @@
+services:
+  dev:
+    image: ${WRUH_IMAGE:-ghcr.io/heartpunk/wruh-dev:latest}
+    platform: linux/amd64
+    init: true
+    working_dir: /workspace
+    stdin_open: true
+    tty: true

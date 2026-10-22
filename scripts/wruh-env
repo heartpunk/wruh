@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if ! command -v nix >/dev/null; then
+  printf '%s\n' 'Run scripts/bootstrap to install Nix and prepare WRUH.' >&2
+  exit 1
+fi
+export NIX_CONFIG="${NIX_CONFIG:-}
+$(cat "$repo_root/nix/cache.conf")"
+if [ "$#" -eq 0 ]; then
+  set -- bash --noprofile --norc
+fi
+exec nix develop "$repo_root" --no-update-lock-file --command bash -c '
+  export PYTHONPATH="$1:$WRUH_AYXG_SOURCE/python${PYTHONPATH:+:$PYTHONPATH}"
+  shift
+  exec "$@"
+' bash "$repo_root" "$@"

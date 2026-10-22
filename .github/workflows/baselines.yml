@@ -1,0 +1,17 @@
+name: Suite CI baselines
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '34 4 * * *'
+permissions:
+  contents: read
+jobs:
+  baselines:
+    uses: heartpunk/ifrl/.github/workflows/suite-baselines.yml@2ad24b06ad4c887008e095b40e8101d96ca8894d
+    with:
+      baseline-ref: 2ad24b06ad4c887008e095b40e8101d96ca8894d
+      python-nix-shell: '.'
+      lean-nix-shell: '.'
