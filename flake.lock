@@ -28,11 +28,6 @@
         "ifrl": [
           "ifrl"
         ],
-        "lean4-nix": [
-          "ayxg",
-          "ifrl",
-          "lean4-nix"
-        ],
         "nixpkgs": [
           "ayxg",
           "ifrl",
@@ -40,17 +35,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1792621158,
-        "narHash": "sha256-VfI6uFaprsCODPnnjAdcrF6hhZe2/bmJsLHheLVGGew=",
+        "lastModified": 1792630765,
+        "narHash": "sha256-GUegGfXER8X0M5qqnrf4WWInt4dwzFTAb173Rc6iTx8=",
         "owner": "heartpunk",
         "repo": "ayxg",
-        "rev": "f643678e5ac49d1268e4bc5480e26821164d7ffa",
+        "rev": "ada7c821a3d7610d9d3cd2d17cd2f1ab48537579",
         "type": "github"
       },
       "original": {
         "owner": "heartpunk",
         "repo": "ayxg",
-        "rev": "f643678e5ac49d1268e4bc5480e26821164d7ffa",
+        "rev": "ada7c821a3d7610d9d3cd2d17cd2f1ab48537579",
         "type": "github"
       }
     },
@@ -97,17 +92,17 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1792623521,
-        "narHash": "sha256-iM15YqMY8RJXk7rtekzboh9JPpBSJP29L8a+oZhFxqo=",
+        "lastModified": 1792629951,
+        "narHash": "sha256-lefXqToQoZFigR5bnL/T9QxEz/BmBpCcQTs7mWYO898=",
         "owner": "heartpunk",
         "repo": "ifrl",
-        "rev": "2ad24b06ad4c887008e095b40e8101d96ca8894d",
+        "rev": "8b2ebf5e623cd024c5afb818dcf9159b6c20d0c7",
         "type": "github"
       },
       "original": {
         "owner": "heartpunk",
         "repo": "ifrl",
-        "rev": "2ad24b06ad4c887008e095b40e8101d96ca8894d",
+        "rev": "8b2ebf5e623cd024c5afb818dcf9159b6c20d0c7",
         "type": "github"
       }
     },

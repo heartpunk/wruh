@@ -193,7 +193,7 @@
   "moduleExtensions": {
     "@@ifrl+//bazel/wruh/tools:nix_native_deps.bzl%nix_native_deps": {
       "general": {
-        "bzlTransitiveDigest": "iMUxviFMcJhzxOMbAHQSD4TS8zpn/KWAkHYiixtfeUE=",
+        "bzlTransitiveDigest": "OWqoaAImfgMp5avYrs6F9yfNtnFkszDzWcXXZMs+XJs=",
         "usagesDigest": "0l72gwwZJYriR4FFP7dLW7bvt9JuxqPvnvOtQXnV9s4=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
