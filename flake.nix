@@ -2,9 +2,9 @@
   description = "Wruh fresh handler extraction environment";
 
   inputs = {
-    ifrl.url = "github:heartpunk/ifrl/8b2ebf5e623cd024c5afb818dcf9159b6c20d0c7";
+    ifrl.url = "github:heartpunk/ifrl/main";
     ayxg = {
-      url = "github:heartpunk/ayxg/ada7c821a3d7610d9d3cd2d17cd2f1ab48537579";
+      url = "github:heartpunk/ayxg/main";
       inputs.ifrl.follows = "ifrl";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
