@@ -10,8 +10,8 @@ permissions:
   contents: read
 jobs:
   baselines:
-    uses: heartpunk/ifrl/.github/workflows/suite-baselines.yml@2ad24b06ad4c887008e095b40e8101d96ca8894d
+    uses: heartpunk/ifrl/.github/workflows/suite-baselines.yml@main
     with:
-      baseline-ref: 2ad24b06ad4c887008e095b40e8101d96ca8894d
+      baseline-ref: main
       python-nix-shell: '.'
       lean-nix-shell: '.'
