@@ -1,7 +1,6 @@
 .lake
 .dependencies
 .ifrl-ci
-.jj
 result
 result-*
 bazel-*
