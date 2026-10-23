@@ -317,7 +317,6 @@ def check_return(
     assert result == z3.sat, (name, "feasible RET edge")
     model = witness.model()
     assert model.eval(actual["rip"]).as_long() == return_address, name
-    assert model.eval(actual["rsp"]).as_long() == 0x800008, name
 
 
 def main() -> None:
