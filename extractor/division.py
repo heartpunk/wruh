@@ -46,13 +46,16 @@ def unsigned_divide_irsb(block):
 
     if bits == 64:
         high = temporary("Ity_I64", pyvex.expr.Unop("Iop_128HIto64", [dividend]))
-        compare = "Iop_CmpLE64U"
+        compare = "Iop_CmpLT64U"
     else:
         shifted = temporary("Ity_I64", pyvex.expr.Binop(
             "Iop_Shr64", [dividend, pyvex.expr.Const(pyvex.const.U8(bits))]))
         high = temporary("Ity_I32", pyvex.expr.Unop("Iop_64to32", [shifted]))
-        compare = "Iop_CmpLE32U"
-    overflow = temporary("Ity_I1", pyvex.expr.Binop(compare, [divisor, high]))
+        compare = "Iop_CmpLT32U"
+    # This orientation exports ULT/UGE, both admitted by the pinned typed
+    # exporter. Negating divisor <= high would instead produce unsupported UGT.
+    fits = temporary("Ity_I1", pyvex.expr.Binop(compare, [high, divisor]))
+    overflow = temporary("Ity_I1", pyvex.expr.Unop("Iop_Not1", [fits]))
     added.append(pyvex.stmt.Exit(
         overflow, pyvex.const.U64(block.addr), "Ijk_SigFPE_IntDiv", irsb.offsIP))
     index = irsb.statements.index(division)
