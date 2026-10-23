@@ -17,6 +17,7 @@ from pathlib import Path
 
 import z3
 from ayxg.codec import loads
+from ayxg.expr import TermSort
 from ayxg.z3 import declaration_variables, expr_to_z3
 
 from extractor.binary_cfg import build_static_cfg
@@ -33,30 +34,44 @@ BASE = 0x400000
 TEXT_OFFSET = 0x1000
 EXTERNAL = 0x70000000
 FIXTURES = (
-    ("direct_end", 0, b"\xe8" + struct.pack("<i", EXTERNAL - (BASE + TEXT_OFFSET + 5)), True),
-    ("indirect_end", 16, b"\xff\xd0", True),
-    ("direct_in_range", 32, b"\xe8" + struct.pack("<i", EXTERNAL - (BASE + TEXT_OFFSET + 37)) + b"\xc3", True),
-    ("indirect_in_range", 48, b"\xff\xd0\xc3", True),
-    ("strict_boundary", 64, b"\xe8" + struct.pack("<i", BASE + TEXT_OFFSET + 80 - (BASE + TEXT_OFFSET + 69)), True),
-    ("strict_target", 80, b"\xc3", False),
+    ("direct_end", 0, b"\xe8" + struct.pack("<i", EXTERNAL - (BASE + TEXT_OFFSET + 5))),
+    ("indirect_end", 16, b"\xff\xd0"),
+    ("direct_in_range", 32, b"\xe8" + struct.pack("<i", EXTERNAL - (BASE + TEXT_OFFSET + 37)) + b"\xc3"),
+    ("indirect_in_range", 48, b"\xff\xd0\xc3"),
+    ("strict_boundary", 64, b"\xe8" + struct.pack("<i", BASE + TEXT_OFFSET + 80 - (BASE + TEXT_OFFSET + 69))),
+    ("strict_target", 80, b"\xc3"),
 )
 CLI_ROOTS = ("direct_end", "indirect_end", "direct_in_range", "indirect_in_range")
 CALL_SIZES = {"direct": 5, "indirect": 2}
-EXPECTED_STATE_NAMES = frozenset((
-    "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8",
-    "r9", "r10", "r11", "r12", "r13", "r14", "r15", "d", "rip",
-    "ac", "id", "fs", "sseround", "zmm0", "zmm1", "zmm2", "zmm3",
-    "zmm4", "zmm5", "zmm6", "zmm7", "zmm8", "zmm9", "zmm10",
-    "zmm11", "zmm12", "zmm13", "zmm14", "zmm15", "zmm16", "zmm17",
-    "zmm18", "zmm19", "zmm20", "zmm21", "zmm22", "zmm23", "zmm24",
-    "zmm25", "zmm26", "zmm27", "zmm28", "zmm29", "zmm30", "zmm31",
-    "k0", "k1", "k2", "k3", "k4", "k5", "k6", "k7", "ftop", "fpreg",
-    "fptag", "fpround", "fc3210", "emnote", "cmstart", "cmlen", "nraddr",
-    "gs", "ip_at_syscall", "cs_seg", "ds_seg", "es_seg", "fs_seg", "gs_seg",
-    "ss_seg", "cr0", "cr2", "cr3", "cr4", "cr8", "rflags_CF", "rflags_ZF",
-    "rflags_SF", "rflags_OF", "rflags_PF", "rflags_AF", "mem",
-))
-assert len(EXPECTED_STATE_NAMES) == 91
+# Independent sort contract for this pinned AMD64 runtime. Do not derive this
+# oracle from extracted declarations or production architecture helpers.
+AMD64_SORTS = {
+    **dict.fromkeys(
+        (
+            "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
+            "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+            "d", "rip", "ac", "id", "fs", "sseround", "cr0", "cr2",
+            "cr3", "cr4", "cr8", "fptag", "fpround", "fc3210", "cmstart",
+            "cmlen", "nraddr", "gs", "ip_at_syscall",
+        ),
+        TermSort.bv(64),
+    ),
+    **{f"zmm{index}": TermSort.bv(512) for index in range(32)},
+    **{f"k{index}": TermSort.bv(64) for index in range(8)},
+    "ftop": TermSort.bv(32),
+    "emnote": TermSort.bv(32),
+    "fpreg": TermSort.bv(512),
+    **{
+        f"{segment}_seg": TermSort.bv(16)
+        for segment in ("cs", "ds", "es", "fs", "gs", "ss")
+    },
+    **{
+        f"rflags_{flag}": TermSort.bv(1)
+        for flag in ("CF", "ZF", "SF", "OF", "PF", "AF")
+    },
+    "mem": TermSort.array(64, 8),
+}
+assert len(AMD64_SORTS) == 91
 
 
 def write_fixture(path: Path) -> None:
@@ -64,7 +79,7 @@ def write_fixture(path: Path) -> None:
     text = bytearray(b"\x90" * 81)
     strings = bytearray(b"\0")
     symbols = bytearray(24)
-    for name, offset, code, _ in FIXTURES:
+    for name, offset, code in FIXTURES:
         text[offset : offset + len(code)] = code
         name_offset = len(strings)
         strings.extend(name.encode() + b"\0")
@@ -120,11 +135,22 @@ def check_call(
     source_address: int,
     return_pc: int,
     symbolic: bool,
+    expected_instruction_addresses: tuple[int, ...],
 ) -> None:
     function = FreshFunction.from_data(function_data)
     source_edges = [
         edge for edge in function.local_edges if edge.source == source_address
     ]
+    occurrence_addresses = tuple(
+        sorted(item.origin.canonical_address for item in function.occurrences)
+    )
+    edge_sources = tuple(sorted(edge.source for edge in function.local_edges))
+    assert occurrence_addresses == expected_instruction_addresses, (
+        name, "complete occurrence roster", occurrence_addresses,
+    )
+    assert edge_sources == expected_instruction_addresses, (
+        name, "complete edge source roster", edge_sources,
+    )
     assert len(source_edges) == 1, (name, source_edges)
     edge = source_edges[0]
     context = z3.Context()
@@ -151,8 +177,11 @@ def check_call(
         solver.set(timeout=5000)
         assert solver.check() == z3.unsat, (name, detail, solver)
 
-    assert set(variables) == EXPECTED_STATE_NAMES, name
-    assert set(actual) == EXPECTED_STATE_NAMES, name
+    assert len(function.declarations) == 91, (name, "declaration count")
+    assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (
+        name, "AMD64 state contract",
+    )
+    assert set(actual) == set(variables) == set(AMD64_SORTS), name
     assert_unsat(z3.Xor(guard, expected_guard), "exact source guard")
     for variable in variables:
         assert_unsat(z3.And(guard, actual[variable] != expected[variable]), "full poststate: " + variable)
@@ -171,6 +200,88 @@ def check_call(
     assert model.eval(actual["rsp"]).as_long() == 0x800000, name
 
 
+def check_return(
+    function_data: dict,
+    name: str,
+    source_address: int,
+    expected_instruction_addresses: tuple[int, ...],
+) -> None:
+    function = FreshFunction.from_data(function_data)
+    source_edges = [
+        edge for edge in function.local_edges if edge.source == source_address
+    ]
+    occurrence_addresses = tuple(
+        sorted(item.origin.canonical_address for item in function.occurrences)
+    )
+    edge_sources = tuple(sorted(item.source for item in function.local_edges))
+    assert occurrence_addresses == expected_instruction_addresses, (
+        name, "RET occurrence roster", occurrence_addresses,
+    )
+    assert edge_sources == expected_instruction_addresses, (
+        name, "RET edge source roster", edge_sources,
+    )
+    assert len(source_edges) == 1, (name, "RET edge", source_edges)
+    edge = source_edges[0]
+    context = z3.Context()
+    variables = declaration_variables(function.declarations, context)
+    actual = {
+        assignment.name: expr_to_z3(assignment.value, variables, context)
+        for assignment in edge.summary.simultaneous_update
+    }
+    return_address = 0x500123
+    old_rsp = variables["rsp"]
+    target = z3.Concat(*(
+        z3.Select(variables["mem"], old_rsp + offset)
+        for offset in reversed(range(8))
+    ))
+    expected = dict(variables)
+    expected["rip"] = target
+    expected["rsp"] = old_rsp + 8
+    guard = expr_to_z3(edge.summary.guard, variables, context)
+    expected_guard = variables["rip"] == source_address
+
+    def assert_unsat(condition: z3.BoolRef, detail: str) -> None:
+        solver = z3.Solver(ctx=context)
+        solver.set(timeout=5000)
+        solver.add(condition)
+        assert solver.check() == z3.unsat, (name, detail, solver)
+
+    assert len(function.declarations) == 91, (name, "declaration count")
+    assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (
+        name, "AMD64 state contract",
+    )
+    assert set(actual) == set(variables) == set(AMD64_SORTS), name
+    assert_unsat(z3.Xor(guard, expected_guard), "RET source guard")
+    for variable in variables:
+        assert_unsat(
+            z3.And(guard, actual[variable] != expected[variable]),
+            "RET full poststate: " + variable,
+        )
+    assert edge.summary.target.kind == "symbolic", name
+    assert_unsat(
+        expr_to_z3(edge.summary.target.value, variables, context) != target,
+        "RET loads its target from old RSP",
+    )
+    assert_unsat(
+        expr_to_z3(edge.summary.mirrored_pc, variables, context) != target,
+        "RET mirrored PC",
+    )
+    memory = variables["mem"]
+    for offset in range(8):
+        memory = z3.Store(
+            memory,
+            old_rsp + offset,
+            z3.BitVecVal((return_address >> (8 * offset)) & 0xFF, 8, ctx=context),
+        )
+    witness = z3.Solver(ctx=context)
+    witness.set(timeout=5000)
+    witness.add(guard, old_rsp == 0x800000, variables["mem"] == memory)
+    assert witness.check() == z3.sat, (name, "feasible RET edge")
+    model = witness.model()
+    assert model.eval(actual["rip"]).as_long() == return_address, name
+    assert model.eval(actual["rsp"]).as_long() == 0x800008, name
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         directory = Path(temporary)
@@ -184,19 +295,32 @@ def main() -> None:
         subprocess.run(command, check=True)
         bundle = loads(output.read_text(encoding="utf-8"))
         project = load_object_set(artifact)
-        for symbol_name, _, code, _ in FIXTURES:
+        for symbol_name, _, code in FIXTURES:
             symbol = project.loader.main_object.get_symbol(symbol_name)
             assert symbol is not None and symbol.size == len(code), symbol_name
         roots = bundle["cfg"]["roots"]
         functions = {item["function_id"]: item for item in bundle["functions"]}
 
-        for name, offset, code, _ in FIXTURES[:4]:
+        for name, offset, code in FIXTURES[:4]:
             root = roots[name]
             address = BASE + TEXT_OFFSET + offset
             assert root["address"] == address, name
-            instructions = [instruction for block in root["blocks"] for instruction in block["instructions"]]
+            instructions = [
+                instruction
+                for block in root["blocks"]
+                for instruction in block["instructions"]
+            ]
             call = instructions[0]
-            call_size = CALL_SIZES["indirect" if name.startswith("indirect") else "direct"]
+            call_size = CALL_SIZES[
+                "indirect" if name.startswith("indirect") else "direct"
+            ]
+            expected_instruction_addresses = (
+                (address,) if name.endswith("_end")
+                else (address, address + call_size)
+            )
+            assert tuple(item["address"] for item in instructions) == (
+                expected_instruction_addresses
+            ), name
             assert call["address"] == address and call["size"] == call_size
             assert len(root["calls"]) == 1 and root["calls"][0]["kind"] == "open", name
             assert root["calls"][0]["target"] == (None if name.startswith("indirect") else EXTERNAL), name
@@ -211,8 +335,13 @@ def main() -> None:
                 assert root["blocks"][0]["successors"] == [address + call["size"]], name
             check_call(
                 functions[name], name, address, address + call_size,
-                name.startswith("indirect"),
+                name.startswith("indirect"), expected_instruction_addresses,
             )
+            if not name.endswith("_end"):
+                check_return(
+                    functions[name], name, address + call_size,
+                    expected_instruction_addresses,
+                )
 
         # A direct call to a selected local target keeps strict-mode validation
         # of its out-of-extent continuation, while open mode can retain it.
