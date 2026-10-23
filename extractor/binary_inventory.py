@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-from collections import Counter
-from dataclasses import dataclass
-from enum import Enum
 import hashlib
 import json
+from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
 from types import SimpleNamespace
+from typing import Any
 
-import capstone
 import angr
+import capstone
+from cle.backends.elf import ELF
+
+from extractor.elf_symbol_names import SymbolEncodingError, validate_elf_symbol_encoding
 
 
 class InventoryError(RuntimeError):
@@ -130,7 +134,6 @@ def exact_symbol_inventory_policy(
 def _function_symbol_at(project: angr.Project, address: int) -> Any | None:
     """Choose one exact, sized in-object function symbol at an address."""
 
-    image = project.loader.main_object
     candidates = [
         symbol
         for obj in project.loader.all_objects
@@ -180,6 +183,7 @@ def _function_symbol_named(project: angr.Project, name: str) -> Any | None:
     return candidates[0] if candidates else None
 
 
+
 def inventory_project(
     project: angr.Project,
     artifact: Path,
@@ -204,12 +208,21 @@ def inventory_project(
                     key = f"{Path(obj.binary).name}:{symbol.name}"
                 symbols[key] = symbol
 
+    used_symbol_names: dict[Path, set[str]] = {}
+
+    def use_symbol_name(obj: Any, name: str) -> None:
+        if isinstance(obj, ELF):
+            used_symbol_names.setdefault(Path(obj.binary), set()).add(name)
+
+    for primitive in policy.declared_primitives:
+        use_symbol_name(image, primitive)
     roots: dict[str, Any] = {}
     root_at_address: dict[int, tuple[str, str]] = {}
     pending: list[str] = []
     for root in policy.root_names:
         symbol_name = policy.resolve_root_symbol(root, sorted(symbols))
         symbol = symbols[symbol_name]
+        use_symbol_name(symbol.owner, symbol.name)
         if symbol.rebased_addr in root_at_address:
             raise InventoryError(
                 f"selected roots alias address {symbol.rebased_addr:#x}"
@@ -289,6 +302,7 @@ def inventory_project(
                     if local_symbol is not None and not policy.open_transfers and local_symbol.name.startswith("plt:"):
                         local_symbol = None
                     if local_symbol is not None:
+                        use_symbol_name(local_symbol.owner, local_symbol.name)
                         local_id = next((key for key, value in symbols.items() if value is local_symbol), local_symbol.name)
                         symbols.setdefault(local_id, local_symbol)
                         existing = roots.get(local_id)
@@ -317,6 +331,7 @@ def inventory_project(
                 if local is None and len(plt_names) == 1 and policy.discover_direct_targets:
                     self_plt_symbol = _function_symbol_named(project, plt_names[0])
                     if self_plt_symbol is not None:
+                        use_symbol_name(self_plt_symbol.owner, self_plt_symbol.name)
                         local_id = self_plt_symbol.name
                         roots.setdefault(
                             local_id,
@@ -336,6 +351,8 @@ def inventory_project(
                     local_names=(() if local is None else (local[1],)),
                     plt_names=(() if local is not None else plt_names),
                 )
+                for name in resolution.plt_names:
+                    use_symbol_name(image, name)
                 kind, target_name = classify_call(
                     encoded_target=encoded_target,
                     resolution=resolution,
@@ -383,6 +400,12 @@ def inventory_project(
                     "operand": instruction.op_str,
                 }
             )
+
+    for object_path, names in used_symbol_names.items():
+        try:
+            validate_elf_symbol_encoding(object_path, names)
+        except SymbolEncodingError as error:
+            raise InventoryError(str(error)) from error
 
     result = {
         "arch": project.arch.name,
