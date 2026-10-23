@@ -219,7 +219,7 @@ def check_coverage_controls(function):
 
 
 def check_discovery_boundaries():
-    cases = ('shared-tail', 'base-is-index', '32-bit-lea', 'interior-target', 'positive-relative', 'prefixed-jump')
+    cases = ('shared-tail', 'base-is-index', '32-bit-lea', 'interior-target', 'positive-relative', 'prefixed-jump', 'unreadable-table')
     checked = []
     for case in cases:
         with tempfile.TemporaryDirectory() as temporary:
@@ -232,6 +232,19 @@ def check_discovery_boundaries():
                 raw[0x1000] = 0x40  # Neutral REX: LEA writes edx, not rdx.
             elif case == 'interior-target':
                 raw[0x1110:0x1118] = struct.pack('<Q', second + 1)
+            elif case == 'unreadable-table':
+                # Two real PT_LOAD mappings with a page-sized hole through the
+                # object's table extent. Endpoints belong to the ELF but a full
+                # loader-memory read cannot cover the table.
+                shoff = struct.unpack_from('<Q', raw, 40)[0]
+                symoff = struct.unpack_from('<Q', raw, shoff + 3 * 64 + 24)[0]
+                struct.pack_into('<H', raw, 56, 2)
+                struct.pack_into('<QQ', raw, 96, 0x1108, 0x1108)
+                raw[120:176] = struct.pack('<IIQQQQQQ', 1, 4, 0x3100, BASE + 0x3100, BASE + 0x3100, 8, 8, 0x1000)
+                struct.pack_into('<Q', raw, symoff + 48 + 16, 0x2008)
+                struct.pack_into('<Q', raw, shoff + 2 * 64 + 32, 0x2008)
+                raw.extend(bytes(0x3108 - len(raw)))
+                struct.pack_into('<Q', raw, 0x3100, second)
             path.write_bytes(raw)
             policy = exact_symbol_inventory_policy(('dispatch',), open_transfers=True, discover_direct_targets=False)
             manifest = inventory(path, policy)
