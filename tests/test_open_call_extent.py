@@ -398,16 +398,18 @@ def main() -> None:
                 # ensure the full-state and frame checks reject bad summaries.
                 expect_rejection(
                     "full poststate: rbx",
-                    lambda: check_call(
-                        functions[name], name, address, address + call_size,
-                        False, expected_instruction_addresses, ("rbx", "rax"),
+                    lambda function_data=functions[name], call_name=name, call_address=address,
+                    return_pc=address + call_size, instruction_addresses=expected_instruction_addresses: check_call(
+                        function_data, call_name, call_address, return_pc,
+                        False, instruction_addresses, ("rbx", "rax"),
                     ),
                 )
                 expect_rejection(
                     "call frame: mem",
-                    lambda: check_call(
-                        functions[name], name, address, address + call_size,
-                        False, expected_instruction_addresses, ("mem", "mem"),
+                    lambda function_data=functions[name], call_name=name, call_address=address,
+                    return_pc=address + call_size, instruction_addresses=expected_instruction_addresses: check_call(
+                        function_data, call_name, call_address, return_pc,
+                        False, instruction_addresses, ("mem", "mem"),
                     ),
                 )
             if not name.endswith("_end"):
@@ -418,16 +420,18 @@ def main() -> None:
                 if name == "direct_in_range":
                     expect_rejection(
                         "RET full poststate: rbx",
-                        lambda: check_return(
-                            functions[name], name, address + call_size,
-                            expected_instruction_addresses, ("rbx", "rax"),
+                        lambda function_data=functions[name], call_name=name, return_pc=address + call_size,
+                        instruction_addresses=expected_instruction_addresses: check_return(
+                            function_data, call_name, return_pc,
+                            instruction_addresses, ("rbx", "rax"),
                         ),
                     )
                     expect_rejection(
                         "RET frame: rsp",
-                        lambda: check_return(
-                            functions[name], name, address + call_size,
-                            expected_instruction_addresses, ("rsp", "rsp"),
+                        lambda function_data=functions[name], call_name=name, return_pc=address + call_size,
+                        instruction_addresses=expected_instruction_addresses: check_return(
+                            function_data, call_name, return_pc,
+                            instruction_addresses, ("rsp", "rsp"),
                         ),
                     )
 
