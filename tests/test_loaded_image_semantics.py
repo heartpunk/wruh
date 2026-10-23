@@ -175,6 +175,7 @@ class LoadedImageSemantics(unittest.TestCase):
             self.assertEqual(raw[offset : offset + 16], bytes(range(0xA8, 0xB8)))
             self.assertEqual(raw[base + 0x304 - segment["address"]], 0x84)
             self.assertEqual(raw[base + 0x338 - segment["address"]], 0xB8)
+            rejected_masks = 0
             for corrupt in (
                 [],
                 [dict(r, size=r["size"] + 1) for r in obj["undefined_bytes"]],
@@ -183,6 +184,8 @@ class LoadedImageSemantics(unittest.TestCase):
                 damaged["objects"][0]["undefined_bytes"] = corrupt
                 with self.assertRaisesRegex(AssertionError, "exact unknown extents"):
                     self.check_masks(damaged, base, expected)
+                rejected_masks += 1
+            self.assertEqual(rejected_masks, 2, "all mask corruption controls ran")
 
     def test_exact_objects_and_hash_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -243,10 +246,13 @@ class LoadedImageSemantics(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "size mismatch"):
             relocation_write_size(copy)
         copy.resolvedby = None
+        rejected_sizes = 0
         for size in (None, 0, -1, True, "24"):
             symbol.size = size
             with self.assertRaisesRegex(ValueError, "positive extent"):
                 relocation_write_size(copy)
+            rejected_sizes += 1
+        self.assertEqual(rejected_sizes, 5, "all invalid COPY extents checked")
 
         class UnknownRelocation(Relocation):
             def relocate(self):
