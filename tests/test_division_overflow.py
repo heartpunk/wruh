@@ -102,12 +102,16 @@ class DivisionOverflow(unittest.TestCase):
         self.prove(z3.Or(*(convert(edge.summary.guard) for edge in faults)) == error, "exact fault guard")
         self.prove(convert(successes[0].summary.guard) == normal, "exact normal guard")
         checked = []
+        pairs = []
         for index, guard in enumerate(guards):
             self.assertEqual(self.result(guard), z3.sat, "feasible outcome")
-            for other in guards[index + 1:]:
+            for other_index in range(index + 1, len(guards)):
+                other = guards[other_index]
                 self.assertEqual(self.result(z3.And(guard, other)), z3.unsat, "disjoint outcomes")
+                pairs.append((index, other_index))
             checked.append(index)
         self.assertEqual(checked, list(range(len(edges))))
+        self.assertEqual(len(pairs), len(edges) * (len(edges) - 1) // 2)
 
         def state(edge, domain, changes, ignored=frozenset()):
             summary = edge.summary
@@ -147,8 +151,11 @@ class DivisionOverflow(unittest.TestCase):
             observed.append((hi, lo, den))
         self.assertEqual(observed, [(0, 13, 3), (2, mask, 3), (0, 0, mask)])
         # Pin the first overflowing quotient and both ends of the divisor range.
+        checked = []
         for den in (1, mask):
             self.assertEqual(self.result(z3.And(error, high == den, low == 0, divisor == den)), z3.sat)
+            checked.append(den)
+        self.assertEqual(checked, [1, mask])
         self.assertEqual(self.result(z3.And(error, high == 0, low == 13, divisor == 0)), z3.sat)
 
     def test_all_widths_and_operand_kinds(self):
