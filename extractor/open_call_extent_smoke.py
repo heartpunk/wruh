@@ -11,6 +11,9 @@ import subprocess
 import sys
 import tempfile
 
+import z3
+from ayxg.expr import Declaration, TypedExpr
+from ayxg.z3 import declaration_variables, expr_to_z3
 from extractor.binary_cfg import build_static_cfg
 from extractor.binary_inventory import InventoryError, PinnedBinary, exact_symbol_inventory_policy, inventory_project
 from extractor.loaded_image import load_object_set
@@ -70,6 +73,15 @@ def main() -> None:
         bundle = json.loads(output.read_text(encoding="utf-8"))
         roots = bundle["cfg"]["roots"]
         functions = {item["function_id"]: item for item in bundle["functions"]}
+        declarations = tuple(Declaration.from_data(item) for item in functions["direct_root"]["declarations"])
+        context = z3.Context()
+        variables = declaration_variables(declarations, context)
+
+        def assert_feasible(edge: dict) -> None:
+            guard = TypedExpr.from_data(edge["summary"]["guard"])
+            solver = z3.Solver(ctx=context)
+            solver.add(expr_to_z3(guard, variables, context))
+            assert solver.check() == z3.sat, "call edge guard is infeasible"
 
         direct = roots["direct_root"]
         direct_call = direct["calls"][0]
@@ -78,12 +90,14 @@ def main() -> None:
         assert direct["blocks"][-1]["successors"] == []
         direct_edges = [edge for edge in functions["direct_root"]["local_edges"] if edge["source"] == direct_call["address"]]
         assert direct_edges, "direct call has no feasible extracted edge"
+        assert_feasible(direct_edges[0])
 
         indirect = roots["indirect_root"]
         indirect_call = indirect["calls"][0]
         assert indirect_call["kind"] == "open" and indirect_call["target"] is None
         indirect_edges = [edge for edge in functions["indirect_root"]["local_edges"] if edge["source"] == indirect_call["address"]]
         assert indirect_edges, "indirect call has no feasible extracted edge"
+        assert_feasible(indirect_edges[0])
 
         def assert_call_frame(edge: dict, next_pc: int) -> None:
             updates = edge["summary"]["simultaneous_update"]
