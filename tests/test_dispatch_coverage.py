@@ -251,6 +251,9 @@ def check_discovery_boundaries():
             manifest_path = path.with_suffix('.json')
             manifest_path.write_text(json.dumps(manifest))
             pinned = load_pinned_binary(path, manifest_path, policy)
+            if case == 'unreadable-table':
+                assert pinned.project.loader.main_object.contains_addr(BASE + 0x3107)
+                assert len(pinned.project.loader.memory.load(BASE + 0x1100, 0x2008)) < 0x2008
             cfg = build_static_cfg(pinned)
             root = cfg['roots']['dispatch']
             assert root['extraction_coverage']['unresolved_indirect_sites'] == [ENTRY + (14 if case == 'positive-relative' else 7)]
