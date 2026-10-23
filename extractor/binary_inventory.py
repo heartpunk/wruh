@@ -200,13 +200,25 @@ def inventory_project(
         raise InventoryError("extractor artifact must be a PIE")
 
     symbols = {}
+    duplicate_definitions = {}
+    # Reserve every literal spelling before introducing owner-qualified keys.
+    # A literal ELF name may itself contain any delimiter we use in an alias.
     for obj in project.loader.all_objects:
         for symbol in obj.symbols:
             if symbol.name and symbol.size > 0:
                 key = symbol.name
                 if key in symbols and symbols[key].rebased_addr != symbol.rebased_addr:
-                    key = f"{Path(obj.binary).name}:{symbol.name}"
-                symbols[key] = symbol
+                    duplicate_definitions[(key, symbol.rebased_addr)] = (obj, symbol)
+                else:
+                    symbols[key] = symbol
+
+    for obj, symbol in duplicate_definitions.values():
+        key = f"{Path(obj.binary).name}:{symbol.name}"
+        if key in symbols:
+            key = f"{key}@{symbol.rebased_addr:x}"
+        while key in symbols:
+            key += "@"
+        symbols[key] = symbol
 
     used_symbol_names: dict[Path, set[str]] = {}
 

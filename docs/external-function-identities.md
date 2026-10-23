@@ -8,6 +8,12 @@ whitespace, and Unicode are permitted. No stripping, escaping into another ID,
 or Unicode normalization is performed. Ordering and duplicate/reference checks
 continue to compare the exact strings.
 
+Inventory reserves literal ELF names before assigning owner-qualified labels to
+duplicate definitions. A generated label never overwrites a literal name or
+another definition: collisions add the rebased address and, if needed, further
+`@` characters until the label is unused. The underlying symbol spelling and
+owning image remain unchanged.
+
 This does not change the grammar of assignment names, summary/application/run
 IDs, architecture/ABI tags, or primitive model/contract IDs. Existing valid
 artifacts retain their schema and serialization.

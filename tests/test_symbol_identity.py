@@ -1,5 +1,6 @@
 """Exact external identities through real ELF extraction and artifact links."""
 import json
+import struct
 import tempfile
 from dataclasses import replace
 from pathlib import Path
@@ -191,6 +192,72 @@ def check_constructors():
     return count
 
 
+def check_inventory_collisions():
+    """A generated library key must never replace a literal ELF spelling."""
+    from extractor.native_runtime import preload_libstdcxx
+
+    preload_libstdcxx()
+    import angr
+
+    from extractor.binary_cfg import build_static_cfg
+    from extractor.binary_inventory import (
+        PinnedBinary,
+        exact_symbol_inventory_policy,
+        inventory_project,
+    )
+    from extractor.elf_fixture import write_fixture
+    from extractor.fresh import FreshFunction, extract_fresh_function
+
+    with tempfile.TemporaryDirectory() as temporary:
+        directory = Path(temporary)
+        main_path, library_path = directory / 'main.elf', directory / 'lib.so'
+        literal_names = ('lib.so:foo bar', 'lib.so:foo bar@501000',
+                         'lib.so:foo bar@501000@')
+        literal_code = b'\xb8\x11\x00\x00\x00\xc3'
+        library_code = b'\xb8\x22\x00\x00\x00\xc3'
+        call_address, library_address = 0x401040, 0x501000
+        write_fixture(main_path, (
+            ('foo bar', 0, b'\xc3', False, False),
+            (literal_names[0], 16, literal_code, False, False),
+            (literal_names[1], 32, b'\xc3', False, False),
+            (literal_names[2], 48, b'\xc3', False, False),
+            ('caller', 64, b'\xe8' + struct.pack('<i', library_address - call_address - 5)
+             + b'\xc3', False, False),
+        ))
+        write_fixture(library_path, (('foo bar', 0, library_code, False, False),), elf_type=3)
+        project = angr.Project(str(main_path), auto_load_libs=False, load_options={
+            'force_load_libs': [str(library_path)],
+            'lib_opts': {str(library_path): {'base_addr': 0x500000}},
+        })
+        policy = exact_symbol_inventory_policy((*literal_names, 'caller'), open_transfers=True)
+        manifest = inventory_project(project, main_path, policy)
+        alias = 'lib.so:foo bar@501000@@'
+        expected_addresses = {literal_names[0]: 0x401010, literal_names[1]: 0x401020,
+                              literal_names[2]: 0x401030, 'caller': call_address,
+                              alias: library_address}
+        assert {name: root['address'] for name, root in manifest['roots'].items()} == expected_addresses
+        assert {name: manifest['roots'][name]['symbol'] for name in literal_names} == dict(zip(literal_names, literal_names))
+        assert manifest['call_graph']['caller'] == {alias: 1}
+        assert manifest['roots'][alias]['symbol'] == 'foo bar'
+        assert manifest['roots'][alias]['object_path'] == str(library_path)
+        assert manifest['roots'][literal_names[0]]['object_path'] == str(main_path)
+        # Exercise extraction and its serialized owners, not just lookup keys.
+        pinned = PinnedBinary(main_path, manifest, project)
+        cfg = build_static_cfg(pinned)
+        observed = []
+        for name, expected_code, expected_address in (
+            (literal_names[0], literal_code, 0x401010), (alias, library_code, library_address),
+        ):
+            function = extract_fresh_function(pinned, cfg, name)
+            restored = FreshFunction.from_data(json.loads(function.canonical_json()))
+            assert restored.function_id == name
+            assert restored.entry == expected_address
+            assert [item.origin.function_owners for item in restored.occurrences] == [(name,), (name,)]
+            assert ''.join(item.origin.instruction_bytes for item in restored.occurrences) == expected_code.hex()
+            observed.append(restored.entry)
+        assert observed == [0x401010, 0x501000]
+
+
 def main():
     from extractor.native_runtime import preload_libstdcxx
 
@@ -206,6 +273,7 @@ def main():
     from extractor.elf_fixture import write_fixture
     from extractor.fresh import extract_fresh_function
 
+    check_inventory_collisions()
     with tempfile.TemporaryDirectory() as temporary:
         path = Path(temporary) / 'names.elf'
         manifest_path = Path(temporary) / 'manifest.json'
