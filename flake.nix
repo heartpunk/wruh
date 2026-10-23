@@ -13,7 +13,57 @@
   outputs = { nixpkgs, ifrl, ayxg, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
+      censusPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          withSymbols = package: package.overrideAttrs (_: {
+            dontStrip = true;
+            stripAllList = [];
+            stripDebugList = [];
+          });
+          censusTarget = { packageName, package, binaryPattern, buildConfiguration }:
+            let
+              unstripped = withSymbols package;
+              outputs = unstripped.outputs or [ "out" ];
+              searchRoots = pkgs.lib.concatMapStringsSep " " (output:
+                "'${builtins.toString (unstripped.${output})}'"
+              ) outputs;
+            in pkgs.runCommand "wruh-census-${packageName}" {} ''
+              set -euo pipefail
+              mkdir -p "$out"
+              binary="$(find -L ${searchRoots} -type f -path '${binaryPattern}' -print -quit)"
+              if [[ -z "$binary" ]]; then
+                echo "could not locate ${binaryPattern} in ${packageName} outputs" >&2
+                exit 1
+              fi
+              ln -s "$binary" "$out/binary"
+              printf '%s\n' '${package.version}' > "$out/version"
+              printf '%s\n' '${packageName}' > "$out/package"
+              printf '%s\n' '${buildConfiguration}' > "$out/build-configuration"
+              printf '%s\n' '${unstripped.drvPath}' > "$out/package-derivation"
+            '';
+        in {
+          censusLua = censusTarget {
+            packageName = "lua5_5";
+            package = pkgs.lua5_5;
+            binaryPattern = "*/lib/liblua5.5.so*";
+            buildConfiguration = "lua5_5 shared library, dontStrip=true";
+          };
+          censusQuickjs = censusTarget {
+            packageName = "quickjs";
+            package = pkgs.quickjs;
+            binaryPattern = "*/bin/qjs";
+            buildConfiguration = "QuickJS qjs executable, dontStrip=true";
+          };
+          censusCpython = censusTarget {
+            packageName = "python312";
+            package = pkgs.python312;
+            binaryPattern = "*/lib/libpython3.12.so*";
+            buildConfiguration = "CPython 3.12 shared library, dontStrip=true";
+          };
+        });
     in {
+      packages = censusPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
         in {

@@ -20,3 +20,4 @@ build:reapi --remote_download_outputs=toplevel
 build:reapi --jobs=48
 
 common --repo_env=IFRL_ANGR_ENVIRONMENT
+common --repo_env=WRUH_AYXG_SOURCE

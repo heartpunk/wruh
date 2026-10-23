@@ -1,5 +1,6 @@
 exports_files([
     "ghot_inputs.bzl",
+    "nix_native_deps.bzl",
 ])
 
 platform(

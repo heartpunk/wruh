@@ -30,6 +30,11 @@ CANONICAL_NAMES = REGISTER_NAMES + tuple(f"rflags_{n}" for n in FLAG_NAMES) + (M
 
 LTS_EXTRACTION_CONTEXT = z3.Context()
 _SMT_CACHE: dict[tuple[type, int], tuple[Any, z3.ExprRef]] = {}
+
+
+def clear_smt_translation_cache() -> None:
+    """Drop memoized Claripy-to-Z3 AST pairs between independent roots."""
+    _SMT_CACHE.clear()
 _U64_MAX = (1 << 64) - 1
 
 _angr = runtime.angr

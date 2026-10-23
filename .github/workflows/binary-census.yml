@@ -1,0 +1,187 @@
+name: Binary function census
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: binary-census-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lua:
+    name: Lua function census
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+        with:
+          github_access_token: ${{ github.token }}
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: wruh
+          extraPullNames: ifrl,ayxg
+      - name: Prepare report directory
+        run: mkdir -p "$RUNNER_TEMP/wruh-census-lua"
+      - name: Build symbol-preserving Lua target
+        run: |
+          target="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.censusLua)"
+          printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+      - name: Run generic binary census
+        run: |
+          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
+          nix_version="$(nix --version)"
+          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
+            --binary "$WRUH_CENSUS_BINARY" \
+            --target-id lua \
+            --target-kind interpreter \
+            --target-implementation Lua \
+            --target-version "$WRUH_CENSUS_VERSION" \
+            --target-platform x86_64-linux \
+            --build-package "$WRUH_CENSUS_PACKAGE" \
+            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
+            --build-output "$WRUH_CENSUS_DERIVATION" \
+            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
+            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
+            --wruh-revision "$GITHUB_SHA" \
+            --bazel-version "$bazel_version" \
+            --nix-version "$nix_version" \
+            --output-dir "$RUNNER_TEMP/wruh-census-lua"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: binary-census-lua
+          path: ${{ runner.temp }}/wruh-census-lua
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: warn
+
+  quickjs:
+    name: QuickJS function census
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+        with:
+          github_access_token: ${{ github.token }}
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: wruh
+          extraPullNames: ifrl,ayxg
+      - name: Prepare report directory
+        run: mkdir -p "$RUNNER_TEMP/wruh-census-quickjs"
+      - name: Build symbol-preserving QuickJS target
+        run: |
+          target="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.censusQuickjs)"
+          printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+      - name: Run generic binary census
+        run: |
+          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
+          nix_version="$(nix --version)"
+          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
+            --binary "$WRUH_CENSUS_BINARY" \
+            --target-id quickjs \
+            --target-kind interpreter \
+            --target-implementation QuickJS \
+            --target-version "$WRUH_CENSUS_VERSION" \
+            --target-platform x86_64-linux \
+            --build-package "$WRUH_CENSUS_PACKAGE" \
+            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
+            --build-output "$WRUH_CENSUS_DERIVATION" \
+            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
+            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
+            --wruh-revision "$GITHUB_SHA" \
+            --bazel-version "$bazel_version" \
+            --nix-version "$nix_version" \
+            --output-dir "$RUNNER_TEMP/wruh-census-quickjs"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: binary-census-quickjs
+          path: ${{ runner.temp }}/wruh-census-quickjs
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: warn
+
+  cpython:
+    name: CPython function census
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+        with:
+          github_access_token: ${{ github.token }}
+          extra_nix_config: |
+            accept-flake-config = true
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: wruh
+          extraPullNames: ifrl,ayxg
+      - name: Prepare report directory
+        run: mkdir -p "$RUNNER_TEMP/wruh-census-cpython"
+      - name: Build symbol-preserving CPython target
+        run: |
+          target="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.censusCpython)"
+          printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+          printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+      - name: Run generic binary census
+        run: |
+          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
+          nix_version="$(nix --version)"
+          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
+            --binary "$WRUH_CENSUS_BINARY" \
+            --target-id cpython \
+            --target-kind interpreter \
+            --target-implementation CPython \
+            --target-version "$WRUH_CENSUS_VERSION" \
+            --target-platform x86_64-linux \
+            --build-package "$WRUH_CENSUS_PACKAGE" \
+            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
+            --build-output "$WRUH_CENSUS_DERIVATION" \
+            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
+            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
+            --wruh-revision "$GITHUB_SHA" \
+            --bazel-version "$bazel_version" \
+            --nix-version "$nix_version" \
+            --output-dir "$RUNNER_TEMP/wruh-census-cpython"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: binary-census-cpython
+          path: ${{ runner.temp }}/wruh-census-cpython
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: warn
+
