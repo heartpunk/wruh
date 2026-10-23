@@ -286,8 +286,12 @@ class MemorySemantics(unittest.TestCase):
         p = runtime.claripy.BVS("rdi", 64, explicit_name=True)
         q = runtime.claripy.BVS("rsi", 64, explicit_name=True)
         before = state.memory.load(p, 2, endness="Iend_LE")
-        state.memory.store(p, runtime.claripy.BVV(0xDE42A713, 32), endness="Iend_LE")
-        state.memory.store(p + 1, runtime.claripy.BVV(0xBC81, 16), endness="Iend_LE")
+        state.memory.store(
+            p, runtime.claripy.BVV(0xDE42A713, 32), size=4, endness="Iend_LE"
+        )
+        state.memory.store(
+            p + 1, runtime.claripy.BVV(0xBC81, 16), size=2, endness="Iend_LE"
+        )
         after = state.memory.load(q, 4, endness="Iend_LE")
         nested = state.memory.load(before.zero_extend(48), 1)
         reads = state.globals["_ghot_memory_reads"]
