@@ -141,6 +141,24 @@ class LoadedImageSemantics(unittest.TestCase):
             elf_fixture(
                 path, ((0, 2, 1, 0), (8, 1, 1, 0), (24, 37, 0, 0x200), (40, 36, 1, 0))
             )
+            self.assertEqual(
+                [
+                    struct.unpack_from("<qQ", path.read_bytes(), 0x600 + index * 16)
+                    for index in range(9)
+                ],
+                [
+                    (5, 0x580),
+                    (6, 0x500),
+                    (7, 0x400),
+                    (8, 96),
+                    (9, 24),
+                    (10, 18),
+                    (11, 24),
+                    (0, 0),
+                    (0, 0),
+                ],
+                "fixture dynamic inventory must be present even when CLE can use sections",
+            )
             project = load_object_set(path)
             base = project.loader.main_object.mapped_base
             image = json.loads(json.dumps(loaded_image_data(project)))
