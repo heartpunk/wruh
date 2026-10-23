@@ -14,6 +14,8 @@ import tarfile
 import uuid
 from collections import Counter
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -81,7 +83,10 @@ DISPOSITION_IRIS = {
     "extracted": BFE + "Extracted",
     "failed": BFE + "Failed",
     "incomplete": BFE + "Incomplete",
+    "not_attempted": BFE + "NotAttempted",
 }
+
+SAMPLE_POLICY = "sha256-rank-round-half-up-v1"
 
 
 def _now() -> str:
@@ -147,6 +152,55 @@ def _function_candidates(project: Any) -> list[dict[str, Any]]:
     return candidates
 
 
+def _sample_percentage(value: str) -> Decimal:
+    try:
+        percentage = Decimal(value)
+    except InvalidOperation as error:
+        raise argparse.ArgumentTypeError("sample percentage must be a decimal number") from error
+    if not percentage.is_finite() or percentage < 0 or percentage > 100:
+        raise argparse.ArgumentTypeError("sample percentage must be finite and between 0 and 100, inclusive")
+    return percentage
+
+
+def _select_candidates(
+    candidates: list[dict[str, Any]],
+    binary_digest: str,
+    seed: str | None,
+    percentage: Decimal | None,
+) -> tuple[set[str], dict[str, Any]]:
+    if seed is None or percentage is None:
+        return {candidate["id"] for candidate in candidates}, {
+            "seed": None,
+            "requestedPercentage": None,
+            "selectedCount": len(candidates),
+            "samplingPolicy": "full-census-v1",
+        }
+
+    exact_count = Fraction(len(candidates)) * Fraction(percentage) / 100
+    selected_count = (2 * exact_count.numerator + exact_count.denominator) // (2 * exact_count.denominator)
+    seed_bytes = seed.encode("utf-8")
+    binary_bytes = bytes.fromhex(binary_digest)
+    ranked: list[tuple[bytes, str]] = []
+    for candidate in candidates:
+        candidate_id = candidate["id"]
+        candidate_bytes = candidate_id.encode("utf-8")
+        payload = bytearray(b"wruh-binary-census-sample-v1\0")
+        payload.extend(len(seed_bytes).to_bytes(8, "big"))
+        payload.extend(seed_bytes)
+        payload.extend(binary_bytes)
+        payload.extend(len(candidate_bytes).to_bytes(8, "big"))
+        payload.extend(candidate_bytes)
+        ranked.append((hashlib.sha256(payload).digest(), candidate_id))
+
+    selected_ids = {candidate_id for _, candidate_id in sorted(ranked)[:selected_count]}
+    return selected_ids, {
+        "seed": seed,
+        "requestedPercentage": str(percentage),
+        "selectedCount": selected_count,
+        "samplingPolicy": SAMPLE_POLICY,
+    }
+
+
 def _candidate_manifest(
     project: Any,
     binary_digest: str,
@@ -182,9 +236,9 @@ def _entry_nodes(
     candidate: dict[str, Any],
     binary_id: str,
     disposition: str,
-    attempt_id: str,
-    started: str,
-    ended: str,
+    attempt_id: str | None,
+    started: str | None,
+    ended: str | None,
     tool_release_ids: list[str],
     failure: dict[str, str] | None = None,
     artifact_member: str | None = None,
@@ -205,23 +259,30 @@ def _entry_nodes(
         "bfe:candidateAddressValue": candidate["relative_address"],
         "bfe:declaredExtentBytes": candidate["size"],
         "bfe:candidateAliasIdentifier": candidate["aliases"],
-    }, {
-        "@id": attempt_id,
-        "@type": "bfe:FunctionExtractionAttempt",
-        "bfe:attemptsCandidate": {"@id": candidate_id},
-        "bfe:activityUsesToolRelease": [{"@id": identifier} for identifier in tool_release_ids],
-        "prov:startedAtTime": started,
-        "prov:endedAtTime": ended,
     }]
+    attempt_node: dict[str, Any] | None = None
+    if attempt_id is not None:
+        attempt_node = {
+            "@id": attempt_id,
+            "@type": "bfe:FunctionExtractionAttempt",
+            "bfe:attemptsCandidate": {"@id": candidate_id},
+            "bfe:activityUsesToolRelease": [{"@id": identifier} for identifier in tool_release_ids],
+            "prov:startedAtTime": started,
+            "prov:endedAtTime": ended,
+        }
+        nodes.append(attempt_node)
     entry: dict[str, Any] = {
         "@id": entry_id,
         "@type": "bfe:CensusEntry",
         "bfe:entryRecordsCandidate": {"@id": candidate_id},
-        "bfe:entryHasAttempt": {"@id": attempt_id},
         "bfe:entryDisposition": {"@id": DISPOSITION_IRIS[disposition]},
     }
+    if attempt_id is not None:
+        entry["bfe:entryHasAttempt"] = {"@id": attempt_id}
 
     if failure is not None:
+        if attempt_node is None or attempt_id is None:
+            raise ValueError("failure observations require an extraction attempt")
         observation_id = f"{attempt_id}/observation"
         if disposition == "incomplete":
             node = {
@@ -230,7 +291,7 @@ def _entry_nodes(
                 "bfe:interruptionKind": f"{failure['code']} during {failure['stage']}",
                 "bfe:diagnosticText": failure["message"],
             }
-            nodes[1]["bfe:observesInterruption"] = {"@id": observation_id}
+            attempt_node["bfe:observesInterruption"] = {"@id": observation_id}
             entry["bfe:entryFirstInterruption"] = {"@id": observation_id}
         else:
             node = {
@@ -240,11 +301,13 @@ def _entry_nodes(
                 "bfe:failureCode": failure["code"],
                 "bfe:diagnosticText": failure["message"],
             }
-            nodes[1]["bfe:observesFailure"] = {"@id": observation_id}
+            attempt_node["bfe:observesFailure"] = {"@id": observation_id}
             entry["bfe:entryFirstFailure"] = {"@id": observation_id}
         nodes.append(node)
 
     if artifact_member is not None and artifact_digest is not None:
+        if attempt_node is None or attempt_id is None:
+            raise ValueError("extraction artifacts require an extraction attempt")
         artifact_id = f"{census_id}/artifact/{candidate['id']}"
         nodes.append({
             "@id": artifact_id,
@@ -253,7 +316,7 @@ def _entry_nodes(
             "bfe:contentDigest": f"sha256:{artifact_digest}",
             "prov:wasGeneratedBy": {"@id": attempt_id},
         })
-        nodes[1]["bfe:generatesArtifact"] = {"@id": artifact_id}
+        attempt_node["bfe:generatesArtifact"] = {"@id": artifact_id}
 
         for index, call in enumerate(open_calls or []):
             observation_id = f"{attempt_id}/open-boundary/{index}"
@@ -264,7 +327,7 @@ def _entry_nodes(
                 "bfe:boundaryTarget": call.get("name", "unknown"),
                 "bfe:boundaryInArtifact": {"@id": artifact_id},
             })
-            nodes[1].setdefault("bfe:observesOpenBoundary", []).append({"@id": observation_id})
+            attempt_node.setdefault("bfe:observesOpenBoundary", []).append({"@id": observation_id})
     return nodes, entry
 
 
@@ -282,6 +345,7 @@ def _write_report(
     ended: str,
     artifact_path: Path,
     interrupted: bool,
+    sampling: dict[str, Any],
 ) -> None:
     census_node = next(node for node in graph if node.get("@id") == census_id)
     census_node["prov:endedAtTime"] = ended
@@ -298,8 +362,9 @@ def _write_report(
         "startedAt": started,
         "endedAt": ended,
         "inventoryCandidates": total,
-        "attempted": sum(counts.values()),
+        "attempted": sum(count for disposition, count in counts.items() if disposition != "not_attempted"),
         "dispositions": dict(sorted(counts.items())),
+        "sampling": sampling,
         "failureCategories": dict(sorted(failures.items())),
         "artifactArchive": str(artifact_path.name),
         "artifactArchiveSha256": artifact_digest,
@@ -321,6 +386,7 @@ def _write_progress(
     completed: int,
     counts: Counter[str],
     failures: Counter[str],
+    sampling: dict[str, Any],
     interrupted: bool = False,
 ) -> None:
     payload = {
@@ -331,6 +397,7 @@ def _write_progress(
         "completed": completed,
         "dispositions": dict(sorted(counts.items())),
         "failureCategories": dict(sorted(failures.items())),
+        "sampling": sampling,
         "interrupted": interrupted,
         "updatedAt": _now(),
     }
@@ -386,6 +453,13 @@ def run(arguments: argparse.Namespace) -> int:
         _write_global_failure(output_dir, arguments.target_id, binary, "inventory-generation", error)
         print(f"inventory-generation failed: {type(error).__name__}: {error}")
         return 2
+
+    selected_candidate_ids, sampling = _select_candidates(
+        candidates,
+        binary_digest,
+        arguments.sample_seed,
+        arguments.sample_percentage,
+    )
 
     run_id = uuid.uuid4().hex
     census_id = f"urn:wruh:census:{_slug(arguments.target_id)}:{binary_digest[:16]}:{run_id}"
@@ -498,6 +572,7 @@ def run(arguments: argparse.Namespace) -> int:
         completed=0,
         counts=counts,
         failures=failure_categories,
+        sampling=sampling,
     )
 
     with (
@@ -509,61 +584,63 @@ def run(arguments: argparse.Namespace) -> int:
         for index, candidate in enumerate(candidates):
             candidate_id = f"{census_id}/candidate/{candidate['id']}"
             entry_id = f"{census_id}/entry/{candidate['id']}"
-            attempt_id = f"{census_id}/attempt/{candidate['id']}/1"
-            attempt_started = _now()
-            disposition = "failed"
+            selected = candidate["id"] in selected_candidate_ids
+            attempt_id = f"{census_id}/attempt/{candidate['id']}/1" if selected else None
+            attempt_started = _now() if selected else None
+            disposition = "failed" if selected else "not_attempted"
             failure: dict[str, str] | None = None
             artifact_member: str | None = None
             artifact_digest: str | None = None
             open_calls: list[dict[str, Any]] = []
             stage = "inventory"
-            try:
-                manifest = _candidate_manifest(
-                    project, binary_digest, object_path, object_digest, candidate
-                )
-                pinned = PinnedBinary(binary, manifest, project)
-                stage = "cfg"
-                cfg = build_static_cfg(pinned)
-                stage = "extraction"
-                fresh = extract_fresh_function(pinned, cfg, candidate["id"])
-                model = fresh.canonical_json()
-                artifact_digest = hashlib.sha256(model).hexdigest()
-                artifact_member = f"functions/{candidate['relative_address']:016x}.json"
-                info = tarfile.TarInfo(artifact_member)
-                info.size = len(model)
-                info.mtime = 0
-                info.uid = info.gid = 0
-                info.uname = info.gname = ""
-                archive.addfile(info, io.BytesIO(model))
-                open_calls = [
-                    call for call in cfg["roots"][candidate["id"]].get("calls", [])
-                    if call.get("kind") == "open"
-                ]
-                disposition = "extracted"
-            except (MemoryError, TimeoutError) as error:
-                disposition = "incomplete"
-                failure = {
-                    "stage": stage,
-                    "code": type(error).__name__,
-                    "message": str(error)[:2000],
-                }
-            except Exception as error:  # noqa: BLE001 -- record this candidate failure and continue
-                disposition = "failed"
-                failure = {
-                    "stage": stage,
-                    "code": type(error).__name__,
-                    "message": str(error)[:2000],
-                }
-            except KeyboardInterrupt:
-                disposition = "incomplete"
-                interrupted = True
-                failure = {
-                    "stage": stage,
-                    "code": "KeyboardInterrupt",
-                    "message": "census interrupted by user or runner",
-                }
+            if selected:
+                try:
+                    manifest = _candidate_manifest(
+                        project, binary_digest, object_path, object_digest, candidate
+                    )
+                    pinned = PinnedBinary(binary, manifest, project)
+                    stage = "cfg"
+                    cfg = build_static_cfg(pinned)
+                    stage = "extraction"
+                    fresh = extract_fresh_function(pinned, cfg, candidate["id"])
+                    model = fresh.canonical_json()
+                    artifact_digest = hashlib.sha256(model).hexdigest()
+                    artifact_member = f"functions/{candidate['relative_address']:016x}.json"
+                    info = tarfile.TarInfo(artifact_member)
+                    info.size = len(model)
+                    info.mtime = 0
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ""
+                    archive.addfile(info, io.BytesIO(model))
+                    open_calls = [
+                        call for call in cfg["roots"][candidate["id"]].get("calls", [])
+                        if call.get("kind") == "open"
+                    ]
+                    disposition = "extracted"
+                except (MemoryError, TimeoutError) as error:
+                    disposition = "incomplete"
+                    failure = {
+                        "stage": stage,
+                        "code": type(error).__name__,
+                        "message": str(error)[:2000],
+                    }
+                except Exception as error:  # noqa: BLE001 -- record this candidate failure and continue
+                    disposition = "failed"
+                    failure = {
+                        "stage": stage,
+                        "code": type(error).__name__,
+                        "message": str(error)[:2000],
+                    }
+                except KeyboardInterrupt:
+                    disposition = "incomplete"
+                    interrupted = True
+                    failure = {
+                        "stage": stage,
+                        "code": "KeyboardInterrupt",
+                        "message": "census interrupted by user or runner",
+                    }
 
-            attempt_ended = _now()
+            attempt_ended = _now() if selected else None
             counts[disposition] += 1
             if failure:
                 failure_categories[f"{failure['stage']}:{failure['code']}"] += 1
@@ -590,6 +667,7 @@ def run(arguments: argparse.Namespace) -> int:
                 "entry": entry_id,
                 "symbol": candidate["symbol"],
                 "relativeAddress": candidate["relative_address"],
+                "attempt": attempt_id,
                 "disposition": disposition,
                 "failureStage": failure["stage"] if failure else None,
                 "failureCode": failure["code"] if failure else None,
@@ -606,6 +684,7 @@ def run(arguments: argparse.Namespace) -> int:
                     completed=index + 1,
                     counts=counts,
                     failures=failure_categories,
+                    sampling=sampling,
                 )
             # The extractor keeps an unbounded Angr-to-Z3 AST memo.
             # Its entries are local to one function and must not make
@@ -625,6 +704,7 @@ def run(arguments: argparse.Namespace) -> int:
         completed=sum(counts.values()),
         counts=counts,
         failures=failure_categories,
+        sampling=sampling,
         interrupted=interrupted,
     )
     _write_report(
@@ -640,12 +720,14 @@ def run(arguments: argparse.Namespace) -> int:
         ended=ended,
         artifact_path=archive_path,
         interrupted=interrupted,
+        sampling=sampling,
     )
     print(json.dumps({
         "target": arguments.target_id,
         "binarySha256": binary_digest,
         "inventoryCandidates": len(candidates),
         "dispositions": dict(sorted(counts.items())),
+        "sampling": sampling,
         "failureCategories": dict(sorted(failure_categories.items())),
         "report": str(output_dir / "census.jsonld"),
         "summary": str(output_dir / "summary.json"),
@@ -670,7 +752,15 @@ def main() -> int:
     parser.add_argument("--bazel-version", default="unknown")
     parser.add_argument("--nix-version", default="unknown")
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--sample-seed", help="explicit seed for deterministic candidate sampling")
+    parser.add_argument(
+        "--sample-percentage",
+        type=_sample_percentage,
+        help="percentage of candidates to sample (0 through 100; requires --sample-seed)",
+    )
     arguments = parser.parse_args()
+    if (arguments.sample_seed is None) != (arguments.sample_percentage is None):
+        parser.error("--sample-seed and --sample-percentage must be provided together")
     if arguments.target_kind == "interpreter" and not arguments.target_implementation:
         parser.error("--target-implementation is required for interpreter targets")
     if arguments.build_package == "unknown":

@@ -13,6 +13,25 @@ nix develop --command bazel run //extractor:binary_census -- \
 
 For an interpreter, set `--target-kind interpreter` and `--target-implementation`. Run it in the repository's Nix development shell so Bazel can resolve the pinned angr and AYXG sources.
 
+## Deterministic sampling
+
+By default the runner attempts every candidate in the inventory. To opt into sampling, pass both `--sample-seed` and `--sample-percentage`:
+
+```sh
+nix develop --command bazel run //extractor:binary_census -- \
+  --binary /nix/store/.../libexample.so \
+  --target-id example \
+  --target-kind generic \
+  --target-version 1.2.3 \
+  --output-dir /tmp/example-census \
+  --sample-seed release-check-2026 \
+  --sample-percentage 5
+```
+
+The percentage is a finite decimal from 0 through 100, inclusive. The selected count is `floor(candidate_count * percentage / 100 + 0.5)`, so exact half-candidate ties round upward; 0 selects none, 100 selects all, and an empty inventory selects zero. The runner ranks candidates by the SHA-256 digest of the versioned domain prefix `wruh-binary-census-sample-v1\0` followed by length-prefixed UTF-8 seed bytes, the raw 32-byte binary SHA-256 digest, and length-prefixed UTF-8 candidate ID bytes. It selects the requested count with the lowest digest bytes, breaking digest ties by candidate ID. This does not depend on Python's random implementation.
+
+Sampling metadata (`seed`, the requested decimal percentage, selected count, and policy identifier) is recorded in `summary.json` and `progress.json`. The full inventory is still recorded. Each unsampled candidate has a `bfe:CensusEntry` with `bfe:NotAttempted` and no extraction attempt; it is not removed from the inventory or reported as excluded.
+
 ## Inventory boundary
 
 The initial policy enumerates defined, sized ELF `STT_FUNC` symbols in the main object loaded by angr. Symbols sharing one entry address are one candidate; the largest declared extent wins, then the lexically first symbol name, while all aliases are retained. Candidate identifiers use the object's relative virtual address. The runner currently targets AMD64 ELF and records unsupported architectures as a census-level inventory failure.
