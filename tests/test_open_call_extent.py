@@ -43,15 +43,20 @@ FIXTURES = (
 )
 CLI_ROOTS = ("direct_end", "indirect_end", "direct_in_range", "indirect_in_range")
 CALL_SIZES = {"direct": 5, "indirect": 2}
-EXPECTED_STATE_NAMES = frozenset("""
-    rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15 d rip ac id fs
-    sseround zmm0 zmm1 zmm2 zmm3 zmm4 zmm5 zmm6 zmm7 zmm8 zmm9 zmm10 zmm11
-    zmm12 zmm13 zmm14 zmm15 zmm16 zmm17 zmm18 zmm19 zmm20 zmm21 zmm22 zmm23
-    zmm24 zmm25 zmm26 zmm27 zmm28 zmm29 zmm30 zmm31 k0 k1 k2 k3 k4 k5 k6 k7
-    ftop fpreg fptag fpround fc3210 emnote cmstart cmlen nraddr gs ip_at_syscall
-    cs_seg ds_seg es_seg fs_seg gs_seg ss_seg cr0 cr2 cr3 cr4 cr8 rflags_CF
-    rflags_ZF rflags_SF rflags_OF rflags_PF rflags_AF mem
-""".split())
+EXPECTED_STATE_NAMES = frozenset((
+    "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8",
+    "r9", "r10", "r11", "r12", "r13", "r14", "r15", "d", "rip",
+    "ac", "id", "fs", "sseround", "zmm0", "zmm1", "zmm2", "zmm3",
+    "zmm4", "zmm5", "zmm6", "zmm7", "zmm8", "zmm9", "zmm10",
+    "zmm11", "zmm12", "zmm13", "zmm14", "zmm15", "zmm16", "zmm17",
+    "zmm18", "zmm19", "zmm20", "zmm21", "zmm22", "zmm23", "zmm24",
+    "zmm25", "zmm26", "zmm27", "zmm28", "zmm29", "zmm30", "zmm31",
+    "k0", "k1", "k2", "k3", "k4", "k5", "k6", "k7", "ftop", "fpreg",
+    "fptag", "fpround", "fc3210", "emnote", "cmstart", "cmlen", "nraddr",
+    "gs", "ip_at_syscall", "cs_seg", "ds_seg", "es_seg", "fs_seg", "gs_seg",
+    "ss_seg", "cr0", "cr2", "cr3", "cr4", "cr8", "rflags_CF", "rflags_ZF",
+    "rflags_SF", "rflags_OF", "rflags_PF", "rflags_AF", "mem",
+))
 assert len(EXPECTED_STATE_NAMES) == 91
 
 
@@ -231,7 +236,7 @@ def main() -> None:
         try:
             build_static_cfg(PinnedBinary(artifact, truncated_manifest, project))
         except InventoryError as error:
-            assert "incomplete static block decode" in str(error), error
+            assert "block at 0x401000 leaves its extent" in str(error), error
         else:
             raise AssertionError("a truncated call instruction was accepted")
 
