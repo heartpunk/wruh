@@ -12,6 +12,12 @@
     ],
     [
       "extractor/angr_smt_smoke.py"
+    ],
+    [
+      "extractor/architecture_checks.py"
+    ],
+    [
+      "extractor/open_transfers_smoke.py"
     ]
   ]
 }
