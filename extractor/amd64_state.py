@@ -11,6 +11,7 @@ from functools import cache
 from typing import Any
 
 from extractor import runtime
+from extractor.division import unsigned_divide_irsb
 
 archinfo = importlib.import_module("archinfo")
 z3 = importlib.import_module("z3")
@@ -768,6 +769,8 @@ def step_instruction_outcomes(
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
+    guarded_division = unsigned_divide_irsb(block)
+    execution = {} if guarded_division is None else {"irsb": guarded_division}
     pending: list[dict[str, int]] = [{}]
     successors = []
     while pending:
@@ -778,7 +781,7 @@ def step_instruction_outcomes(
         logger.addHandler(capture)
         try:
             try:
-                selected_successors = project.factory.successors(state, num_inst=1).all_successors
+                selected_successors = project.factory.successors(state, num_inst=1, **execution).all_successors
             except _SelectorSplitRequired as split:
                 pending[0:0] = [dict(assignments, **{split.name: value})
                                 for value in _SELECTOR_DOMAINS[split.name]]
