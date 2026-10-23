@@ -175,7 +175,12 @@ def check_call(
         solver = z3.Solver(ctx=context)
         solver.add(condition)
         solver.set(timeout=5000)
-        assert solver.check() == z3.unsat, (name, detail, solver)
+        result = solver.check()
+        if result == z3.unknown:
+            raise RuntimeError(
+                f"INCOMPLETE: {name} {detail}: {solver.reason_unknown()}"
+            )
+        assert result == z3.unsat, (name, detail, solver)
 
     assert len(function.declarations) == 91, (name, "declaration count")
     assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (
@@ -183,7 +188,12 @@ def check_call(
     )
     assert set(actual) == set(variables) == set(AMD64_SORTS), name
     assert_unsat(z3.Xor(guard, expected_guard), "exact source guard")
-    for variable in variables:
+    for variable in ("rip", "rsp", "mem"):
+        assert_unsat(
+            z3.And(guard, actual[variable] != expected[variable]),
+            "call frame: " + variable,
+        )
+    for variable in set(variables) - {"rip", "rsp", "mem"}:
         assert_unsat(z3.And(guard, actual[variable] != expected[variable]), "full poststate: " + variable)
     assert edge.summary.target.kind == ("symbolic" if symbolic else "address"), name
     if symbolic:
@@ -194,7 +204,12 @@ def check_call(
     witness = z3.Solver(ctx=context)
     witness.set(timeout=5000)
     witness.add(guard, variables["rsp"] == 0x800008, variables["rax"] == EXTERNAL)
-    assert witness.check() == z3.sat, (name, "feasible call edge")
+    result = witness.check()
+    if result == z3.unknown:
+        raise RuntimeError(
+            f"INCOMPLETE: {name} feasible call edge: {witness.reason_unknown()}"
+        )
+    assert result == z3.sat, (name, "feasible call edge")
     model = witness.model()
     assert model.eval(actual["rip"]).as_long() == EXTERNAL, name
     assert model.eval(actual["rsp"]).as_long() == 0x800000, name
@@ -244,7 +259,12 @@ def check_return(
         solver = z3.Solver(ctx=context)
         solver.set(timeout=5000)
         solver.add(condition)
-        assert solver.check() == z3.unsat, (name, detail, solver)
+        result = solver.check()
+        if result == z3.unknown:
+            raise RuntimeError(
+                f"INCOMPLETE: {name} {detail}: {solver.reason_unknown()}"
+            )
+        assert result == z3.unsat, (name, detail, solver)
 
     assert len(function.declarations) == 91, (name, "declaration count")
     assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (
@@ -252,7 +272,12 @@ def check_return(
     )
     assert set(actual) == set(variables) == set(AMD64_SORTS), name
     assert_unsat(z3.Xor(guard, expected_guard), "RET source guard")
-    for variable in variables:
+    for variable in ("rip", "rsp", "mem"):
+        assert_unsat(
+            z3.And(guard, actual[variable] != expected[variable]),
+            "RET frame: " + variable,
+        )
+    for variable in set(variables) - {"rip", "rsp", "mem"}:
         assert_unsat(
             z3.And(guard, actual[variable] != expected[variable]),
             "RET full poststate: " + variable,
@@ -276,7 +301,12 @@ def check_return(
     witness = z3.Solver(ctx=context)
     witness.set(timeout=5000)
     witness.add(guard, old_rsp == 0x800000, variables["mem"] == memory)
-    assert witness.check() == z3.sat, (name, "feasible RET edge")
+    result = witness.check()
+    if result == z3.unknown:
+        raise RuntimeError(
+            f"INCOMPLETE: {name} feasible RET edge: {witness.reason_unknown()}"
+        )
+    assert result == z3.sat, (name, "feasible RET edge")
     model = witness.model()
     assert model.eval(actual["rip"]).as_long() == return_address, name
     assert model.eval(actual["rsp"]).as_long() == 0x800008, name
