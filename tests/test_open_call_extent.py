@@ -9,11 +9,11 @@ preload_libstdcxx()
 
 import hashlib
 import json
-from pathlib import Path
 import struct
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import z3
 from ayxg.codec import loads
