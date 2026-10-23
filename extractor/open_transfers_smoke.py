@@ -16,11 +16,14 @@ import hashlib
 import json
 import struct
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 
 import z3
+from ayxg.expr import TermSort, TypedExpr
 from ayxg.z3 import declaration_variables, expr_to_z3
 
+from extractor.artifact import Target
 from extractor.binary_cfg import build_static_cfg
 from extractor.binary_inventory import (
     exact_symbol_inventory_policy,
@@ -40,6 +43,24 @@ FIXTURES = (
     ('direct_tail', 32, b'\xe9' + struct.pack('<i', EXTERNAL - (BASE + TEXT_OFFSET + 32 + 5)), False, False),
     ('indirect_tail', 48, b'\xff\xe0', False, True),  # jmp rax
 )
+
+
+# An independent contract for this pinned AMD64 runtime, deliberately not read
+# from the extractor's architecture/declaration helpers or extracted output.
+AMD64_SORTS = {
+    **dict.fromkeys([
+        'rax', 'rcx', 'rdx', 'rbx', 'rsp', 'rbp', 'rsi', 'rdi',
+        'r8', 'r9', 'r10', 'r11', 'r12', 'r13', 'r14', 'r15',
+        'd', 'rip', 'ac', 'id', 'fs', 'sseround', 'cr0', 'cr2', 'cr3', 'cr4', 'cr8',
+        'fptag', 'fpround', 'fc3210', 'cmstart', 'cmlen', 'nraddr', 'gs', 'ip_at_syscall',
+    ], TermSort.bv(64)),
+    **{f'zmm{index}': TermSort.bv(512) for index in range(32)},
+    **{f'k{index}': TermSort.bv(64) for index in range(8)},
+    'ftop': TermSort.bv(32), 'emnote': TermSort.bv(32), 'fpreg': TermSort.bv(512),
+    **{f'{segment}_seg': TermSort.bv(16) for segment in ('cs', 'ds', 'es', 'fs', 'gs', 'ss')},
+    **{f'rflags_{flag}': TermSort.bv(1) for flag in ('CF', 'ZF', 'SF', 'OF', 'PF', 'AF')},
+    'mem': TermSort.array(64, 8),
+}
 
 
 def write_fixture(path):
@@ -89,6 +110,8 @@ def check_transfer(function, name, address, code, is_call, symbolic):
     # Check the serialized consumer representation, not Python-only state.
     function = FreshFunction.from_data(json.loads(function.canonical_json()))
     assert function.canonical_json() == FreshFunction.from_data(function.to_data()).canonical_json()
+    assert len(function.declarations) == 91, (name, 'declaration count')
+    assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (name, 'AMD64 state contract')
     occurrence = next(item for item in function.occurrences
                       if item.origin.canonical_address == address)
     assert occurrence.origin.instruction_bytes == code[:2 if symbolic else 5].hex(), name
@@ -117,6 +140,7 @@ def check_transfer(function, name, address, code, is_call, symbolic):
 
     def unsat(condition, label):
         solver = z3.Solver(ctx=ctx)
+        solver.set(timeout=5000)
         solver.add(condition)
         assert solver.check() == z3.unsat, (name, label, solver)
 
@@ -134,6 +158,7 @@ def check_transfer(function, name, address, code, is_call, symbolic):
     # Explicit witnesses prevent vacuous UNSAT checks and constrain the target
     # outside the loaded image: no return from that boundary is synthesized.
     solver = z3.Solver(ctx=ctx)
+    solver.set(timeout=5000)
     solver.add(guard, variables['rsp'] == 0x800008, variables['rax'] == EXTERNAL)
     assert solver.check() == z3.sat, (name, 'reachable open transfer')
     model = solver.model()
@@ -146,10 +171,52 @@ def check_transfer(function, name, address, code, is_call, symbolic):
             'stack': 'push exact return address' if is_call else 'preserved'}
 
 
+def check_rejection_controls(function, fixture):
+    """Small corruptions of real extracted output must fail the same oracle."""
+    name, offset, code, is_call, symbolic = fixture
+    address = BASE + TEXT_OFFSET + offset
+    edge = next(item for item in function.local_edges if item.source == address)
+    summary = edge.summary
+
+    def changed_summary(**fields):
+        changed = replace(edge, summary=replace(summary, **fields))
+        return replace(function, local_edges=tuple(
+            changed if item == edge else item for item in function.local_edges))
+
+    def changed_assignment(variable, value):
+        return changed_summary(simultaneous_update=tuple(
+            replace(item, value=value) if item.name == variable else item
+            for item in summary.simultaneous_update))
+
+    missing_rbx = changed_summary(simultaneous_update=tuple(
+        item for item in summary.simultaneous_update if item.name != 'rbx'))
+    missing_rbx = replace(missing_rbx, declarations=tuple(
+        item for item in function.declarations if item.name != 'rbx'))
+    corruptions = {
+        'missing rbx and assignment': missing_rbx,
+        'guard': changed_summary(guard=TypedExpr.equal(
+            TypedExpr.var('rip', TermSort.bv(64)), TypedExpr.bv_lit(64, address + 1))),
+        'memory': changed_assignment('mem', TypedExpr.var('mem', TermSort.array(64, 8))),
+        'preserved register': changed_assignment('rbx', TypedExpr.bv_lit(64, 0)),
+        'target': changed_summary(target=Target('address', EXTERNAL + 1)),
+    }
+    for label, corrupted in corruptions.items():
+        try:
+            check_transfer(corrupted, name, address, code, is_call, symbolic)
+        except AssertionError:
+            continue
+        raise AssertionError(f'oracle accepted corrupted {label}')
+    return list(corruptions)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    assert tuple((name, is_call, symbolic) for name, _, _, is_call, symbolic in FIXTURES) == (
+        ('direct_call', True, False), ('indirect_call', True, True),
+        ('direct_tail', False, False), ('indirect_tail', False, True),
+    ), 'fixed four-case transfer roster'
     roots = tuple(item[0] for item in FIXTURES)
     with tempfile.TemporaryDirectory() as temp:
         artifact = Path(temp) / 'open-transfers.elf'
@@ -164,6 +231,7 @@ def main():
         cfg = build_static_cfg(pinned)
         assert set(cfg['roots']) == set(roots)
         results = {}
+        rejection_controls = None
         for name, offset, code, is_call, symbolic in FIXTURES:
             address = BASE + TEXT_OFFSET + offset
             if is_call:
@@ -178,9 +246,12 @@ def main():
             assert all(item.origin.image_sha256 == manifest['image_sha256']
                        for item in function.occurrences)
             results[name] = check_transfer(function, name, address, code, is_call, symbolic)
+            if name == 'direct_call':
+                rejection_controls = check_rejection_controls(function, (name, offset, code, is_call, symbolic))
         result = {'pipeline': 'ELF / pinned inventory / CFG / fresh extraction / JSON roundtrip',
                   'image_sha256': hashlib.sha256(artifact.read_bytes()).hexdigest(),
-                  'native_execution': False, 'transfers': results}
+                  'native_execution': False, 'transfers': results,
+                  'rejection_controls': rejection_controls}
     rendered = json.dumps(result, sort_keys=True) + '\n'
     if args.output:
         args.output.write_text(rendered)
