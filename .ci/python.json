@@ -18,6 +18,9 @@
     ],
     [
       "extractor/open_transfers_smoke.py"
+    ],
+    [
+      "extractor/open_call_extent_smoke.py"
     ]
   ]
 }
