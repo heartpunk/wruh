@@ -18,9 +18,11 @@ from extractor.native_runtime import preload_libstdcxx
 
 preload_libstdcxx()
 import z3
-from ayxg.z3 import declaration_variables, expr_to_z3
+from ayxg.expr import TermSort, TypedExpr
+from ayxg.z3 import declaration_variables, expr_from_z3, expr_to_z3
 
 from extractor import runtime
+from extractor.artifact import Target
 from extractor.binary_cfg import build_static_cfg
 from extractor.binary_inventory import PinnedBinary
 from extractor.fresh import FreshFunction, extract_fresh_function
@@ -29,12 +31,18 @@ PC = 0x400000
 
 
 class InstructionOutcomesTest(unittest.TestCase):
+    def solver_result(self, solver):
+        result = solver.check()
+        if result == z3.unknown:
+            raise RuntimeError(f"INCOMPLETE solver result: {solver.reason_unknown()}")
+        return result
+
     def assert_unsat(self, expression, label):
         solver = z3.Solver(ctx=expression.ctx)
         solver.set(timeout=5000)
         solver.add(expression)
-        result = solver.check()
-        detail = solver.model() if result == z3.sat else solver.reason_unknown()
+        result = self.solver_result(solver)
+        detail = solver.model() if result == z3.sat else ""
         self.assertEqual(result, z3.unsat, f"{label}: {result}: {detail}")
 
     def extract(self, code, offsets):
@@ -98,30 +106,39 @@ class InstructionOutcomesTest(unittest.TestCase):
                        domain=None, ignored=frozenset()):
         """Expected tuples are (guard, target, changed state); all else is identity.
 
-        Guards include the source PC. Their union is exact, each expected case
-        must have a SAT witness, and state equality holds throughout the stated
-        domain. No expected guard or state is calculated from extracted output.
+        Guards include the source PC. Within the stated domain their union is
+        exact, each expected case has a SAT witness, and state equality holds.
+        Outcomes feasible only outside that domain are not prescribed here.
+        No expected guard or state is calculated from extracted output.
         """
         self.assert_state_contract(variables, ctx)
         domain = z3.BoolVal(True, ctx=ctx) if domain is None else domain
         convert = lambda expression: expr_to_z3(expression, variables, ctx)
-        guards = [convert(edge.summary.guard) for edge in edges]
-        self.assertEqual(len(edges), len(expected), "missing or extra outcome")
-        self.assert_unsat(z3.Xor(z3.Or(*guards), z3.Or(*(case[0] for case in expected))),
-                          "exact guard coverage")
+        feasible = []
+        for edge in edges:
+            guard = convert(edge.summary.guard)
+            solver = z3.Solver(ctx=ctx)
+            solver.set(timeout=5000)
+            solver.add(guard, domain)
+            if self.solver_result(solver) == z3.sat:
+                feasible.append((edge, guard))
+        guards = [guard for _, guard in feasible]
+        self.assertEqual(len(feasible), len(expected), "missing or extra outcome")
+        self.assert_unsat(z3.And(domain, z3.Xor(
+            z3.Or(*guards), z3.Or(*(case[0] for case in expected)))), "exact guard coverage")
         for left, right in itertools.combinations(guards, 2):
-            self.assert_unsat(z3.And(left, right), "overlapping outcomes")
+            self.assert_unsat(z3.And(domain, left, right), "overlapping outcomes")
         for guard, target, changes in expected:
             witness = z3.Solver(ctx=ctx)
             witness.set(timeout=5000)
             witness.add(guard, domain)
-            self.assertEqual(witness.check(), z3.sat, "expected outcome has no witness")
+            self.assertEqual(self.solver_result(witness), z3.sat, "expected outcome has no witness")
             matching = []
-            for edge, actual_guard in zip(edges, guards):
+            for edge, actual_guard in feasible:
                 solver = z3.Solver(ctx=ctx)
                 solver.set(timeout=5000)
-                solver.add(z3.Xor(guard, actual_guard))
-                if solver.check() == z3.unsat:
+                solver.add(domain, z3.Xor(guard, actual_guard))
+                if self.solver_result(solver) == z3.unsat:
                     matching.append(edge)
             self.assertEqual(len(matching), 1, "missing exact expected guard")
             summary = matching[0].summary
@@ -130,10 +147,10 @@ class InstructionOutcomesTest(unittest.TestCase):
             self.assertEqual(set(assignments), set(variables), "incomplete state update")
             expected_pc = PC if target == "error" else target
             if target == "error":
-                self.assertEqual(summary.target.kind, "error")
+                self.assertEqual(summary.target.kind, "error", "wrong target kind")
             else:
-                self.assertEqual(summary.target.kind, "address")
-                self.assertEqual(summary.target.value, target)
+                self.assertEqual(summary.target.kind, "address", "wrong target kind")
+                self.assertEqual(summary.target.value, target, "wrong target address")
             self.assert_unsat(z3.And(guard, domain, convert(summary.mirrored_pc) != expected_pc),
                               "wrong mirrored PC")
             expected_state = {**variables, **changes, "rip": expected_pc}
@@ -161,6 +178,53 @@ class InstructionOutcomesTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "state declaration contract"):
             self.check_relation(corrupted, edges, variables, ctx,
                                 [(variables["rip"] == PC, PC + 5, {"rax": 0x12345678})])
+
+    def test_oracle_rejects_corrupted_semantics(self):
+        function, edges, v, ctx = self.extract("a4c3", [0, 1])
+        memory = z3.Store(v["mem"], v["rdi"], z3.Select(v["mem"], v["rsi"]))
+        expected = [
+            (z3.And(v["rip"] == PC, v["d"] == direction), PC + 1,
+             {"rsi": v["rsi"] + direction, "rdi": v["rdi"] + direction, "mem": memory})
+            for direction in (1, -1)
+        ]
+        original = edges[0]
+
+        def changed_update(name, value):
+            return replace(original.summary, simultaneous_update=tuple(
+                replace(item, value=value) if item.name == name else item
+                for item in original.summary.simultaneous_update))
+
+        corruptions = [
+            ("wrong target address", replace(original.summary, target=Target("address", PC + 2))),
+            # Both sides catch a mistaken one-sided comparison in the checker.
+            ("wrong mirrored PC", replace(original.summary, mirrored_pc=TypedExpr.bv_lit(64, PC))),
+            ("wrong mirrored PC", replace(original.summary, mirrored_pc=TypedExpr.bv_lit(64, PC + 2))),
+            ("wrong rbx update", changed_update("rbx", TypedExpr.bv_lit(64, 0))),
+            ("wrong mem update", changed_update("mem", TypedExpr.var("mem", TermSort.array(64, 8)))),
+        ]
+        for label, summary in corruptions:
+            with self.subTest(corruption=label):
+                corrupted = replace(function, local_edges=tuple(
+                    replace(edge, summary=summary) if edge.id == original.id else edge
+                    for edge in function.local_edges))
+                corrupted = FreshFunction.from_data(json.loads(corrupted.canonical_json()))
+                actual = [edge for edge in corrupted.local_edges if edge.source == PC]
+                with self.assertRaisesRegex(AssertionError, label):
+                    self.check_relation(corrupted, actual, v, ctx, expected)
+
+    def test_oracle_scopes_guards_and_outcome_count_to_domain(self):
+        function, edges, v, ctx = self.extract("b878563412c3", [0, 5])
+        outside = v["rbx"] != 0
+        original = edges[0]
+        # A hypothetical provider may have different guards and extra outcomes
+        # outside our supported domain. Neither constrains this bounded oracle.
+        widened = replace(original, summary=replace(original.summary,
+            guard=expr_from_z3(z3.Or(v["rip"] == PC, outside))))
+        extra = replace(original, id=replace(original.id, outcome=replace(original.id.outcome, value=1)),
+            summary=replace(original.summary, guard=expr_from_z3(outside)))
+        self.check_relation(function, [widened, extra], v, ctx,
+                            [(v["rip"] == PC, PC + 5, {"rax": 0x12345678})],
+                            domain=v["rbx"] == 0)
 
     def test_eax_write_zero_extends_and_preserves_other_state(self):
         function, edges, v, ctx = self.extract("b878563412c3", [0, 5])
