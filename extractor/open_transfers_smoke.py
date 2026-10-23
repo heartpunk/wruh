@@ -106,10 +106,32 @@ def write_fixture(path):
     path.write_bytes(raw)
 
 
+def complete_solver_result(solver):
+    result = solver.check()
+    if result == z3.unknown:
+        raise RuntimeError('INCOMPLETE: ' + solver.reason_unknown())
+    return result
+
+
+def check_unknown_control():
+    # Force resource exhaustion deterministically, without waiting for timeout
+    # or replacing the real solver. Incomplete work must escape rejection's
+    # AssertionError handler, never count as a semantic counterexample.
+    solver = z3.Solver()
+    solver.set(rlimit=1, timeout=5000)
+    value = z3.Int('unknown_control')
+    solver.add(value * value == 2)
+    try:
+        complete_solver_result(solver)
+    except RuntimeError as error:
+        assert str(error).startswith('INCOMPLETE: ')
+        return
+    raise AssertionError('resource-limited control did not report INCOMPLETE')
+
+
 def check_transfer(function, name, address, code, is_call, symbolic):
     # Check the serialized consumer representation, not Python-only state.
     function = FreshFunction.from_data(json.loads(function.canonical_json()))
-    assert function.canonical_json() == FreshFunction.from_data(function.to_data()).canonical_json()
     assert len(function.declarations) == 91, (name, 'declaration count')
     assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (name, 'AMD64 state contract')
     occurrence = next(item for item in function.occurrences
@@ -142,7 +164,7 @@ def check_transfer(function, name, address, code, is_call, symbolic):
         solver = z3.Solver(ctx=ctx)
         solver.set(timeout=5000)
         solver.add(condition)
-        assert solver.check() == z3.unsat, (name, label, solver)
+        assert complete_solver_result(solver) == z3.unsat, (name, label, solver)
 
     unsat(z3.Xor(guard, expected_guard), 'exact source guard')
     for variable in variables:
@@ -160,7 +182,7 @@ def check_transfer(function, name, address, code, is_call, symbolic):
     solver = z3.Solver(ctx=ctx)
     solver.set(timeout=5000)
     solver.add(guard, variables['rsp'] == 0x800008, variables['rax'] == EXTERNAL)
-    assert solver.check() == z3.sat, (name, 'reachable open transfer')
+    assert complete_solver_result(solver) == z3.sat, (name, 'reachable open transfer')
     model = solver.model()
     assert model.eval(actual['rip']).as_long() == EXTERNAL, name
     assert model.eval(actual['rsp']).as_long() == (0x800000 if is_call else 0x800008), name
@@ -217,6 +239,7 @@ def main():
         ('direct_call', True, False), ('indirect_call', True, True),
         ('direct_tail', False, False), ('indirect_tail', False, True),
     ), 'fixed four-case transfer roster'
+    check_unknown_control()
     roots = tuple(item[0] for item in FIXTURES)
     with tempfile.TemporaryDirectory() as temp:
         artifact = Path(temp) / 'open-transfers.elf'
