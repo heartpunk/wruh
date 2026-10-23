@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
-from datetime import datetime, timezone
-import gzip
 import gc
+import gzip
 import hashlib
 import importlib.metadata
 import io
 import json
-from pathlib import Path
 import platform
 import tarfile
-from typing import Any
 import uuid
-
+from collections import Counter
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 BFE = "https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-function-extraction.ttl#"
 PROV = "http://www.w3.org/ns/prov#"
@@ -86,7 +85,7 @@ DISPOSITION_IRIS = {
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def _sha256(path: Path) -> str:
@@ -364,10 +363,11 @@ def run(arguments: argparse.Namespace) -> int:
     preload_libstdcxx()
 
     import angr
+
+    from extractor.amd64_state import clear_smt_translation_cache
     from extractor.binary_cfg import build_static_cfg
     from extractor.binary_inventory import PinnedBinary
     from extractor.fresh import extract_fresh_function
-    from extractor.amd64_state import clear_smt_translation_cache
 
     binary = arguments.binary.resolve(strict=True)
     output_dir = arguments.output_dir.resolve()
@@ -382,7 +382,7 @@ def run(arguments: argparse.Namespace) -> int:
         image = project.loader.main_object
         object_path = Path(str(image.binary)).resolve()
         candidates = _function_candidates(project)
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 -- record an inventory-generation failure in the report
         _write_global_failure(output_dir, arguments.target_id, binary, "inventory-generation", error)
         print(f"inventory-generation failed: {type(error).__name__}: {error}")
         return 2
@@ -500,119 +500,121 @@ def run(arguments: argparse.Namespace) -> int:
         failures=failure_categories,
     )
 
-    with entries_path.open("w", encoding="utf-8") as ledger, archive_path.open("wb") as raw_archive:
-        with gzip.GzipFile(filename="", mode="wb", fileobj=raw_archive, mtime=0) as compressed:
-            with tarfile.open(fileobj=compressed, mode="w|") as archive:
-                for index, candidate in enumerate(candidates):
-                    candidate_id = f"{census_id}/candidate/{candidate['id']}"
-                    entry_id = f"{census_id}/entry/{candidate['id']}"
-                    attempt_id = f"{census_id}/attempt/{candidate['id']}/1"
-                    attempt_started = _now()
-                    disposition = "failed"
-                    failure: dict[str, str] | None = None
-                    artifact_member: str | None = None
-                    artifact_digest: str | None = None
-                    open_calls: list[dict[str, Any]] = []
-                    stage = "inventory"
-                    try:
-                        manifest = _candidate_manifest(
-                            project, binary_digest, object_path, object_digest, candidate
-                        )
-                        pinned = PinnedBinary(binary, manifest, project)
-                        stage = "cfg"
-                        cfg = build_static_cfg(pinned)
-                        stage = "extraction"
-                        fresh = extract_fresh_function(pinned, cfg, candidate["id"])
-                        model = fresh.canonical_json()
-                        artifact_digest = hashlib.sha256(model).hexdigest()
-                        artifact_member = f"functions/{candidate['relative_address']:016x}.json"
-                        info = tarfile.TarInfo(artifact_member)
-                        info.size = len(model)
-                        info.mtime = 0
-                        info.uid = info.gid = 0
-                        info.uname = info.gname = ""
-                        archive.addfile(info, io.BytesIO(model))
-                        open_calls = [
-                            call for call in cfg["roots"][candidate["id"]].get("calls", [])
-                            if call.get("kind") == "open"
-                        ]
-                        disposition = "extracted"
-                    except (MemoryError, TimeoutError) as error:
-                        disposition = "incomplete"
-                        failure = {
-                            "stage": stage,
-                            "code": type(error).__name__,
-                            "message": str(error)[:2000],
-                        }
-                    except Exception as error:
-                        disposition = "failed"
-                        failure = {
-                            "stage": stage,
-                            "code": type(error).__name__,
-                            "message": str(error)[:2000],
-                        }
-                    except KeyboardInterrupt:
-                        disposition = "incomplete"
-                        interrupted = True
-                        failure = {
-                            "stage": stage,
-                            "code": "KeyboardInterrupt",
-                            "message": "census interrupted by user or runner",
-                        }
+    with (
+        entries_path.open("w", encoding="utf-8") as ledger,
+        archive_path.open("wb") as raw_archive,
+        gzip.GzipFile(filename="", mode="wb", fileobj=raw_archive, mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w|") as archive,
+    ):
+        for index, candidate in enumerate(candidates):
+            candidate_id = f"{census_id}/candidate/{candidate['id']}"
+            entry_id = f"{census_id}/entry/{candidate['id']}"
+            attempt_id = f"{census_id}/attempt/{candidate['id']}/1"
+            attempt_started = _now()
+            disposition = "failed"
+            failure: dict[str, str] | None = None
+            artifact_member: str | None = None
+            artifact_digest: str | None = None
+            open_calls: list[dict[str, Any]] = []
+            stage = "inventory"
+            try:
+                manifest = _candidate_manifest(
+                    project, binary_digest, object_path, object_digest, candidate
+                )
+                pinned = PinnedBinary(binary, manifest, project)
+                stage = "cfg"
+                cfg = build_static_cfg(pinned)
+                stage = "extraction"
+                fresh = extract_fresh_function(pinned, cfg, candidate["id"])
+                model = fresh.canonical_json()
+                artifact_digest = hashlib.sha256(model).hexdigest()
+                artifact_member = f"functions/{candidate['relative_address']:016x}.json"
+                info = tarfile.TarInfo(artifact_member)
+                info.size = len(model)
+                info.mtime = 0
+                info.uid = info.gid = 0
+                info.uname = info.gname = ""
+                archive.addfile(info, io.BytesIO(model))
+                open_calls = [
+                    call for call in cfg["roots"][candidate["id"]].get("calls", [])
+                    if call.get("kind") == "open"
+                ]
+                disposition = "extracted"
+            except (MemoryError, TimeoutError) as error:
+                disposition = "incomplete"
+                failure = {
+                    "stage": stage,
+                    "code": type(error).__name__,
+                    "message": str(error)[:2000],
+                }
+            except Exception as error:  # noqa: BLE001 -- record this candidate failure and continue
+                disposition = "failed"
+                failure = {
+                    "stage": stage,
+                    "code": type(error).__name__,
+                    "message": str(error)[:2000],
+                }
+            except KeyboardInterrupt:
+                disposition = "incomplete"
+                interrupted = True
+                failure = {
+                    "stage": stage,
+                    "code": "KeyboardInterrupt",
+                    "message": "census interrupted by user or runner",
+                }
 
-                    attempt_ended = _now()
-                    counts[disposition] += 1
-                    if failure:
-                        failure_categories[f"{failure['stage']}:{failure['code']}"] += 1
-                    nodes, entry = _entry_nodes(
-                        census_id=census_id,
-                        candidate=candidate,
-                        binary_id=binary_id,
-                        disposition=disposition,
-                        attempt_id=attempt_id,
-                        started=attempt_started,
-                        ended=attempt_ended,
-                        tool_release_ids=tool_ids[:7],
-                        failure=failure,
-                        artifact_member=artifact_member,
-                        artifact_digest=artifact_digest,
-                        open_calls=open_calls,
-                    )
-                    graph.extend(nodes)
-                    graph.append(entry)
-                    census_node["bfe:censusGeneratesEntry"].append({"@id": entry_id})
-                    ledger.write(json.dumps({
-                        "index": index,
-                        "candidate": candidate_id,
-                        "entry": entry_id,
-                        "symbol": candidate["symbol"],
-                        "relativeAddress": candidate["relative_address"],
-                        "disposition": disposition,
-                        "failureStage": failure["stage"] if failure else None,
-                        "failureCode": failure["code"] if failure else None,
-                        "artifact": artifact_member,
-                    }, sort_keys=True) + "\n")
-                    ledger.flush()
-                    if (index + 1) % 100 == 0:
-                        print(f"census progress: {index + 1}/{len(candidates)} candidates")
-                        _write_progress(
-                            output_dir,
-                            target_id=arguments.target_id,
-                            binary_digest=binary_digest,
-                            total=len(candidates),
-                            completed=index + 1,
-                            counts=counts,
-                            failures=failure_categories,
-                        )
-                    # The extractor keeps an unbounded Angr-to-Z3 AST memo.
-                    # Its entries are local to one function and must not make
-                    # a long census grow with the number of candidates.
-                    clear_smt_translation_cache()
-                    if (index + 1) % 100 == 0:
-                        gc.collect()
-                    if interrupted:
-                        break
-
+            attempt_ended = _now()
+            counts[disposition] += 1
+            if failure:
+                failure_categories[f"{failure['stage']}:{failure['code']}"] += 1
+            nodes, entry = _entry_nodes(
+                census_id=census_id,
+                candidate=candidate,
+                binary_id=binary_id,
+                disposition=disposition,
+                attempt_id=attempt_id,
+                started=attempt_started,
+                ended=attempt_ended,
+                tool_release_ids=tool_ids[:7],
+                failure=failure,
+                artifact_member=artifact_member,
+                artifact_digest=artifact_digest,
+                open_calls=open_calls,
+            )
+            graph.extend(nodes)
+            graph.append(entry)
+            census_node["bfe:censusGeneratesEntry"].append({"@id": entry_id})
+            ledger.write(json.dumps({
+                "index": index,
+                "candidate": candidate_id,
+                "entry": entry_id,
+                "symbol": candidate["symbol"],
+                "relativeAddress": candidate["relative_address"],
+                "disposition": disposition,
+                "failureStage": failure["stage"] if failure else None,
+                "failureCode": failure["code"] if failure else None,
+                "artifact": artifact_member,
+            }, sort_keys=True) + "\n")
+            ledger.flush()
+            if (index + 1) % 100 == 0:
+                print(f"census progress: {index + 1}/{len(candidates)} candidates")
+                _write_progress(
+                    output_dir,
+                    target_id=arguments.target_id,
+                    binary_digest=binary_digest,
+                    total=len(candidates),
+                    completed=index + 1,
+                    counts=counts,
+                    failures=failure_categories,
+                )
+            # The extractor keeps an unbounded Angr-to-Z3 AST memo.
+            # Its entries are local to one function and must not make
+            # a long census grow with the number of candidates.
+            clear_smt_translation_cache()
+            if (index + 1) % 100 == 0:
+                gc.collect()
+            if interrupted:
+                break
     ended = _now()
     inventory_activity_node["prov:endedAtTime"] = ended
     _write_progress(
