@@ -33,13 +33,15 @@ jobs:
       - name: Build symbol-preserving Lua target
         run: |
           target="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.censusLua)"
-          printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+          {
+            printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")"
+            printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")"
+            printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")"
+            printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")"
+            printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")"
+            printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)"
+            printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)"
+          } >> "$GITHUB_ENV"
       - name: Run generic binary census
         run: |
           bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
@@ -91,13 +93,15 @@ jobs:
       - name: Build symbol-preserving QuickJS target
         run: |
           target="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.censusQuickjs)"
-          printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+          {
+            printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")"
+            printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")"
+            printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")"
+            printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")"
+            printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")"
+            printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)"
+            printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)"
+          } >> "$GITHUB_ENV"
       - name: Run generic binary census
         run: |
           bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
@@ -149,13 +153,15 @@ jobs:
       - name: Build symbol-preserving CPython target
         run: |
           target="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.censusCpython)"
-          printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)" >> "$GITHUB_ENV"
-          printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)" >> "$GITHUB_ENV"
+          {
+            printf 'WRUH_CENSUS_BINARY=%s\n' "$(readlink -f "$target/binary")"
+            printf 'WRUH_CENSUS_VERSION=%s\n' "$(cat "$target/version")"
+            printf 'WRUH_CENSUS_PACKAGE=%s\n' "$(cat "$target/package")"
+            printf 'WRUH_CENSUS_CONFIGURATION=%s\n' "$(cat "$target/build-configuration")"
+            printf 'WRUH_CENSUS_DERIVATION=%s\n' "$(cat "$target/package-derivation")"
+            printf 'WRUH_CENSUS_NIXPKGS_REVISION=%s\n' "$(jq -r '.nodes.nixpkgs.locked.rev' flake.lock)"
+            printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)"
+          } >> "$GITHUB_ENV"
       - name: Run generic binary census
         run: |
           bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"

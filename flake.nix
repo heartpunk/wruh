@@ -46,7 +46,7 @@
           censusLua = censusTarget {
             packageName = "lua5_5";
             package = pkgs.lua5_5;
-            binaryPattern = "*/lib/liblua5.5.so*";
+            binaryPattern = "*/lib/liblua.so*";
             buildConfiguration = "lua5_5 shared library, dontStrip=true";
           };
           censusQuickjs = censusTarget {
