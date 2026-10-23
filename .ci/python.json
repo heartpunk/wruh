@@ -1,5 +1,5 @@
 {
   "sources": ["extractor", "corpus"],
   "pythonpath": ["."],
-  "tests": [["-m", "pytest", "tests"]]
+  "tests": [["-m", "pytest", "tests"], ["extractor/open_call_extent_smoke.py"]]
 }
