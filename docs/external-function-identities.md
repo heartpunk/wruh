@@ -27,6 +27,11 @@ symbol or a literal U+FFFD name. Unrelated non-UTF-8 names do not prevent
 extracting a valid selected root. This is an explicit limitation of the current
 string provider, not a claim that ELF forbids those byte names.
 
+The audit also handles sectionless images through `PT_DYNAMIC`: it reads symbol
+entries and name bytes before applying the selected-name filter. Both section
+tables and dynamic segments use the same replacement-spelling filter followed
+by strict UTF-8 validation of only the selected spellings.
+
 ELF names end at NUL. A provider's JSON string ID can contain NUL, but a byte
 sequence after an ELF string's terminating NUL is not part of that ELF name.
 Supporting arbitrary non-UTF-8 ELF names requires an explicit byte-preserving

@@ -189,7 +189,64 @@ def check_constructors():
             assert 'replacement decoding would lose its identity' in str(error)
         else:
             raise AssertionError('lossy ELF names were silently accepted')
+    check_sectionless_symbol_names()
     return count
+
+
+def check_sectionless_symbol_names():
+    """PT_DYNAMIC auditing must filter raw names before strict decoding."""
+    from elftools.elf.dynamic import DynamicSegment
+    from elftools.elf.elffile import ELFFile
+
+    from extractor.elf_symbol_names import (
+        SymbolEncodingError,
+        validate_elf_symbol_encoding,
+    )
+
+    # ELF64 with no section headers: one load segment, PT_DYNAMIC, a SysV
+    # hash table declaring four dynsym entries, and their raw string table.
+    raw = bytearray(0x400)
+    raw[:64] = struct.pack('<16sHHIQQQIHHHHHH', b'\x7fELF\x02\x01\x01' + bytes(9),
+                          3, 62, 1, 0, 64, 0, 0, 64, 56, 2, 64, 0, 0)
+    raw[64:120] = struct.pack('<IIQQQQQQ', 1, 4, 0, BASE, BASE, len(raw), len(raw), 0x1000)
+    raw[120:176] = struct.pack('<IIQQQQQQ', 2, 4, 0x200, BASE + 0x200,
+                              BASE + 0x200, 6 * 16, 6 * 16, 8)
+    raw[0x200:0x260] = b''.join(struct.pack('<qQ', tag, value) for tag, value in (
+        (4, BASE + 0x300), (5, BASE + 0x340), (6, BASE + 0x280),
+        (10, 16), (11, 24), (0, 0),
+    ))
+    raw[0x300:0x31c] = struct.pack('<7I', 1, 4, 1, 0, 2, 3, 0)
+    raw[0x340:0x350] = b'\0valid\0\xffbad\0\xef\xbf\xbd\0'
+    for index, name_offset in enumerate((1, 7, 12), 1):
+        start = 0x280 + index * 24
+        raw[start:start + 24] = struct.pack('<IBBHQQ', name_offset, 0x12, 0, 1,
+                                          BASE + 0x380 + index, 1)
+    raw[0x381:0x384] = b'\xc3\xc3\xc3'
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / 'sectionless.elf'
+        path.write_bytes(raw)
+        with path.open('rb') as stream:
+            elf = ELFFile(stream)
+            assert elf.num_sections() == 0
+            tables = [segment for segment in elf.iter_segments() if isinstance(segment, DynamicSegment)]
+            assert len(tables) == 1
+            assert tables[0].num_symbols() == 4
+            assert tables[0].get_table_offset('DT_SYMTAB') == (BASE + 0x280, 0x280)
+        validate_elf_symbol_encoding(path, {'valid'})
+        validate_elf_symbol_encoding(path, {'�'})  # literal U+FFFD remains valid
+        validate_elf_symbol_encoding(path, set())
+        checked = []
+        for names in (None, {'�bad'}):
+            try:
+                validate_elf_symbol_encoding(path, names)
+            except SymbolEncodingError as error:
+                assert 'bytes=ff626164' in str(error)
+                assert 'at 0x347' in str(error)
+                assert 'replacement decoding would lose its identity' in str(error)
+                checked.append(names)
+            else:
+                raise AssertionError('lossy sectionless ELF name was silently accepted')
+        assert checked == [None, {'�bad'}]
 
 
 def check_inventory_collisions():
