@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from collections import OrderedDict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
@@ -30,12 +31,23 @@ REGISTER_NAMES = tuple(s.name for s in AMD64_LAYOUT.storage
 CANONICAL_NAMES = REGISTER_NAMES + tuple(f"rflags_{n}" for n in FLAG_NAMES) + (MEMORY_NAME,)
 
 LTS_EXTRACTION_CONTEXT = z3.Context()
-_SMT_CACHE: dict[tuple[type, int], tuple[Any, z3.ExprRef]] = {}
+# Bound memory while retaining translations reused across nearby extraction roots.
+_SMT_CACHE_CAPACITY = 4096
+_SMT_CACHE: OrderedDict[tuple[type, int], tuple[Any, z3.ExprRef]] = OrderedDict()
 
 
 def clear_smt_translation_cache() -> None:
     """Drop memoized Claripy-to-Z3 AST pairs between independent roots."""
     _SMT_CACHE.clear()
+
+
+def _remember_smt_translation(
+    key: tuple[type, int], ast: Any, expression: z3.ExprRef
+) -> None:
+    _SMT_CACHE[key] = (ast, expression)
+    _SMT_CACHE.move_to_end(key)
+    if len(_SMT_CACHE) > _SMT_CACHE_CAPACITY:
+        _SMT_CACHE.popitem(last=False)
 _U64_MAX = (1 << 64) - 1
 
 _angr = runtime.angr
@@ -164,10 +176,11 @@ def claripy_to_z3(ast: Any) -> z3.ExprRef:
     key = (type(ast), ast.hash())
     cached = _SMT_CACHE.get(key)
     if cached is not None and ast.identical(cached[0]):
+        _SMT_CACHE.move_to_end(key)
         return cached[1]
     if ast.op == "BoolV":
         expression = z3.BoolVal(_claripy.is_true(ast), ctx=LTS_EXTRACTION_CONTEXT)
-        _SMT_CACHE[key] = (ast, expression)
+        _remember_smt_translation(key, ast, expression)
         return expression
     # Public self-contained SMT export supplies declarations and preserves
     # symbol names; Z3 parses it directly into the extraction context.
@@ -190,7 +203,7 @@ def claripy_to_z3(ast: Any) -> z3.ExprRef:
     expression = rhs if str(lhs) == result_name else lhs
     if str(lhs) != result_name and str(rhs) != result_name:
         raise Amd64AdapterError("Angr SMT export lost the result symbol")
-    _SMT_CACHE[key] = (ast, expression)
+    _remember_smt_translation(key, ast, expression)
     return expression
 
 
