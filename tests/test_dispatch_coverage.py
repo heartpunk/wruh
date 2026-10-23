@@ -30,11 +30,13 @@ ENTRY = BASE + 0x1000
 EXTERNAL = 0x70000000
 
 
-def write_fixture(path, relative=False, sized=True, shared=False, table_before=False):
+def write_fixture(path, relative=False, sized=True, shared=False, table_before=False, prefixed=False):
     table_offset = 0x800 if table_before else 0x1100
     table = BASE + table_offset
     lea = b'\x48\x8d\x15' + struct.pack('<i', table - (ENTRY + 7))
     dispatch = (b'\x48\x63\x04\xba\x48\x01\xd0\xff\xe0' if relative else b'\xff\x24\xfa')
+    if prefixed:
+        dispatch = b"\x3e" + dispatch
     prefix = lea + dispatch
     first = ENTRY + len(prefix)
     second = first + (1 if shared else 6)
@@ -64,6 +66,8 @@ def write_fixture(path, relative=False, sized=True, shared=False, table_before=F
         raw[shoff + index * 64:shoff + (index + 1) * 64] = struct.pack('<IIQQQQIIQQ', *section)
     path.write_bytes(raw)
     sizes = [7, 4, 3, 2, 5, 1, 5, 1] if relative else [7, 3, 5, 1, 5, 1]
+    if prefixed:
+        sizes[1] += 1
     if shared:
         sizes = sizes[:-4] + [1, 5, 1]
     return code, sizes, first, second
@@ -163,7 +167,7 @@ def check_relation(function, address, operation, value=None):
             solver.add(target == destination)
         assert complete_solver_result(solver) == z3.sat
         if destination is not None:
-            assert solver.model().eval(actual['rip']).as_long() == destination
+            assert z3.simplify(solver.model().eval(actual['rip'], model_completion=True)).as_long() == destination
         witnessed.append(destination)
     assert witnessed == list(witnesses)
 
@@ -215,12 +219,12 @@ def check_coverage_controls(function):
 
 
 def check_discovery_boundaries():
-    cases = ('shared-tail', 'base-is-index', '32-bit-lea', 'interior-target', 'positive-relative')
+    cases = ('shared-tail', 'base-is-index', '32-bit-lea', 'interior-target', 'positive-relative', 'prefixed-jump')
     checked = []
     for case in cases:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / 'boundary.elf'
-            code, sizes, first, second = write_fixture(path, shared=case == 'shared-tail', relative=case == 'positive-relative', table_before=case == 'positive-relative')
+            code, sizes, first, second = write_fixture(path, shared=case == 'shared-tail', relative=case == 'positive-relative', table_before=case == 'positive-relative', prefixed=case == 'prefixed-jump')
             raw = bytearray(path.read_bytes())
             if case == 'base-is-index':
                 raw[0x1009] = 0xd2  # jmp [rdx+rdx*8]: index cannot select each table entry.
@@ -251,6 +255,10 @@ def check_discovery_boundaries():
             elif case == 'interior-target':
                 assert root['blocks'][0]['successors'] == [first]
                 assert [block['address'] for block in root['blocks']] == [ENTRY, first]
+            elif case == 'prefixed-jump':
+                function = extract_fresh_function(pinned, cfg, 'dispatch')
+                roundtrip = FreshFunction.from_data(json.loads(function.canonical_json()))
+                assert roundtrip.extraction_coverage.unresolved_indirect_sites == (ENTRY + 7,)
             else:
                 assert root['blocks'][0]['successors'] == []
                 assert len(root['blocks']) == 1

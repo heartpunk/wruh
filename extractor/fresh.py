@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+import capstone
 import z3
 from ayxg.expr import Declaration, TermSort
 
@@ -99,10 +100,20 @@ class FreshFunction:
         if result.extraction_coverage is not None:
             symbolic_sources = {edge.source for edge in result.local_edges
                                 if edge.summary.target.kind == "symbolic"}
-            expected = sorted({item.origin.canonical_address for item in result.occurrences
-                               if isinstance(item.origin, DecodedInstructionEvidence)
-                               and item.origin.instruction_identity.partition(" ")[0].startswith("j")
-                               and item.origin.canonical_address in symbolic_sources})
+            decoder = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+            decoder.detail = True
+            expected = []
+            for item in result.occurrences:
+                if (not isinstance(item.origin, DecodedInstructionEvidence)
+                        or item.origin.canonical_address not in symbolic_sources):
+                    continue
+                raw = bytes.fromhex(item.origin.instruction_bytes)
+                decoded = list(decoder.disasm(raw, item.origin.canonical_address))
+                if len(decoded) != 1 or decoded[0].size != len(raw):
+                    raise FreshExtractionError("invalid decoded symbolic transfer evidence")
+                if decoded[0].group(capstone.CS_GRP_JUMP):
+                    expected.append(item.origin.canonical_address)
+            expected = sorted(set(expected))
             if list(result.extraction_coverage.unresolved_indirect_sites) != expected:
                 raise FreshExtractionError("coverage sites disagree with symbolic jump occurrences")
         return result
