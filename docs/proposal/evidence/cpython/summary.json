@@ -1,0 +1,1506 @@
+{
+  "revision": "aa9a5d8124d7ad183ccdbee1e58b294fcdcd9cdb",
+  "host": "nixos frontend; configured REAPI workers",
+  "exit": 0,
+  "bazel_elapsed_seconds": 53.243,
+  "native_candidate_execution": false,
+  "functions": [
+    {
+      "root": "PyFloat_AsDouble",
+      "edges": 191,
+      "occurrences": 168,
+      "dag_nodes": 1926,
+      "calls": [
+        {
+          "address": 6589524,
+          "kind": "open",
+          "name": "indirect",
+          "target": null
+        },
+        {
+          "address": 6589557,
+          "kind": "open",
+          "name": "address:0x5375b0",
+          "target": 5469616
+        },
+        {
+          "address": 6589612,
+          "kind": "open",
+          "name": "address:0x56c3c0",
+          "target": 5686208
+        },
+        {
+          "address": 6589640,
+          "kind": "open",
+          "name": "address:0x534430",
+          "target": 5456944
+        },
+        {
+          "address": 6589697,
+          "kind": "open",
+          "name": "address:0x5cbd90",
+          "target": 6077840
+        },
+        {
+          "address": 6589714,
+          "kind": "open",
+          "name": "address:0x61dcd0",
+          "target": 6413520
+        },
+        {
+          "address": 6589755,
+          "kind": "open",
+          "name": "address:0x534430",
+          "target": 5456944
+        },
+        {
+          "address": 6589792,
+          "kind": "open",
+          "name": "address:0x6464b0",
+          "target": 6579376
+        },
+        {
+          "address": 6589894,
+          "kind": "open",
+          "name": "address:0x534430",
+          "target": 5456944
+        },
+        {
+          "address": 6589952,
+          "kind": "open",
+          "name": "address:0x5a8a50",
+          "target": 5933648
+        },
+        {
+          "address": 6590007,
+          "kind": "open",
+          "name": "address:0x56c3c0",
+          "target": 5686208
+        }
+      ],
+      "undefined_ranges": [
+        {
+          "sha256": "bd44b32a9c3e5c02b2abfc66761490718150a0c8abe7e1b5ef8f964d69d35248",
+          "undefined_bytes": [
+            {
+              "address": 10451040,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451056,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451072,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451360,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10451696,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10451832,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10449040,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10450928,
+              "reason": "unresolved-relocation",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "35c6a09b52908df5bb50d3c38ee63320fa038eb105f210b3e745f02791e84c65",
+          "undefined_bytes": [
+            {
+              "address": 268661352,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "4b6b7a9379b38cb5f6531a7edc4d108391e45221d5b08f171f19460c141f1551",
+          "undefined_bytes": [
+            {
+              "address": 538944592,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538951008,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950992,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950976,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950960,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950952,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950944,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950928,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950912,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950904,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950888,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950880,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950872,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950856,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950848,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950840,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950824,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950816,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950792,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950784,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950768,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950760,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950752,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950744,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950728,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950720,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950712,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950704,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950680,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950672,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950664,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950656,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950648,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950640,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950624,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950616,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950608,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950600,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950592,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950584,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950576,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950568,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950552,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950544,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950536,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950520,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "793d585cf6ddd7ad6adaa7a0142b75f2077fa87487c852ef45516dd7fd7bde42",
+          "undefined_bytes": [
+            {
+              "address": 806318000,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806318024,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806318056,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806317992,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317984,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317976,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317968,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317952,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317944,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317936,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317928,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317920,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317904,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317896,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317888,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317880,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317872,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317864,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317856,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317848,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317840,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317832,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317824,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317808,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317800,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317752,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317744,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317736,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317720,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317712,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317696,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317688,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "root": "PyObject_Call",
+      "edges": 82,
+      "occurrences": 75,
+      "dag_nodes": 1090,
+      "calls": [
+        {
+          "address": 7143456,
+          "kind": "open",
+          "name": "indirect",
+          "target": null
+        },
+        {
+          "address": 7143523,
+          "kind": "open",
+          "name": "indirect",
+          "target": null
+        },
+        {
+          "address": 7143597,
+          "kind": "open",
+          "name": "address:0x599a00",
+          "target": 5872128
+        },
+        {
+          "address": 7143649,
+          "kind": "open",
+          "name": "address:0x5a8b70",
+          "target": 5933936
+        },
+        {
+          "address": 7143710,
+          "kind": "open",
+          "name": "address:0x65e880",
+          "target": 6678656
+        }
+      ],
+      "undefined_ranges": [
+        {
+          "sha256": "bd44b32a9c3e5c02b2abfc66761490718150a0c8abe7e1b5ef8f964d69d35248",
+          "undefined_bytes": [
+            {
+              "address": 10451040,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451056,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451072,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451360,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10451696,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10451832,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10449040,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10450928,
+              "reason": "unresolved-relocation",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "35c6a09b52908df5bb50d3c38ee63320fa038eb105f210b3e745f02791e84c65",
+          "undefined_bytes": [
+            {
+              "address": 268661352,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "4b6b7a9379b38cb5f6531a7edc4d108391e45221d5b08f171f19460c141f1551",
+          "undefined_bytes": [
+            {
+              "address": 538944592,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538951008,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950992,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950976,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950960,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950952,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950944,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950928,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950912,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950904,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950888,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950880,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950872,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950856,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950848,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950840,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950824,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950816,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950792,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950784,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950768,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950760,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950752,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950744,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950728,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950720,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950712,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950704,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950680,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950672,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950664,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950656,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950648,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950640,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950624,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950616,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950608,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950600,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950592,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950584,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950576,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950568,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950552,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950544,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950536,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950520,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "793d585cf6ddd7ad6adaa7a0142b75f2077fa87487c852ef45516dd7fd7bde42",
+          "undefined_bytes": [
+            {
+              "address": 806318000,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806318024,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806318056,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806317992,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317984,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317976,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317968,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317952,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317944,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317936,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317928,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317920,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317904,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317896,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317888,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317880,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317872,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317864,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317856,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317848,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317840,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317832,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317824,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317808,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317800,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317752,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317744,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317736,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317720,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317712,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317696,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317688,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "root": "PyBytes_Size",
+      "edges": 23,
+      "occurrences": 22,
+      "dag_nodes": 382,
+      "calls": [
+        {
+          "address": 5696739,
+          "kind": "open",
+          "name": "address:0x56c3c0",
+          "target": 5686208
+        }
+      ],
+      "undefined_ranges": [
+        {
+          "sha256": "bd44b32a9c3e5c02b2abfc66761490718150a0c8abe7e1b5ef8f964d69d35248",
+          "undefined_bytes": [
+            {
+              "address": 10451040,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451056,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451072,
+              "reason": "unsupported-tls-descriptor",
+              "size": 16
+            },
+            {
+              "address": 10451360,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10451696,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10451832,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10449040,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 10450928,
+              "reason": "unresolved-relocation",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "35c6a09b52908df5bb50d3c38ee63320fa038eb105f210b3e745f02791e84c65",
+          "undefined_bytes": [
+            {
+              "address": 268661352,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "4b6b7a9379b38cb5f6531a7edc4d108391e45221d5b08f171f19460c141f1551",
+          "undefined_bytes": [
+            {
+              "address": 538944592,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538951008,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950992,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950976,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950960,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950952,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950944,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950928,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950912,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950904,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950888,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950880,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950872,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950856,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950848,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950840,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950824,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950816,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950792,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950784,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950768,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950760,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950752,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950744,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950728,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950720,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950712,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950704,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950680,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950672,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950664,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950656,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950648,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950640,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950624,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950616,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950608,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950600,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950592,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950584,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950576,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950568,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950552,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950544,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950536,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 538950520,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        },
+        {
+          "sha256": "793d585cf6ddd7ad6adaa7a0142b75f2077fa87487c852ef45516dd7fd7bde42",
+          "undefined_bytes": [
+            {
+              "address": 806318000,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806318024,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806318056,
+              "reason": "unresolved-relocation",
+              "size": 8
+            },
+            {
+              "address": 806317992,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317984,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317976,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317968,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317952,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317944,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317936,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317928,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317920,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317904,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317896,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317888,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317880,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317872,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317864,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317856,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317848,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317840,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317832,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317824,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317808,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317800,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317752,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317744,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317736,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317720,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317712,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317696,
+              "reason": "pending-resolver",
+              "size": 8
+            },
+            {
+              "address": 806317688,
+              "reason": "pending-resolver",
+              "size": 8
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
