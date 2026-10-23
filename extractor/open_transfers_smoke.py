@@ -37,9 +37,11 @@ TEXT_OFFSET = 0x1000
 EXTERNAL = 0x70000000
 # Calls have ordinary in-range continuations; this does not exercise the
 # separate policy question of calls at the very end of a symbol extent.
+# Call addresses also force a carry when computing their return addresses,
+# distinguishing addition from bitwise OR/XOR in the independent oracle.
 FIXTURES = (
-    ('direct_call', 0, b'\xe8' + struct.pack('<i', EXTERNAL - (BASE + TEXT_OFFSET + 5)) + b'\xc3', True, False),
-    ('indirect_call', 16, b'\xff\xd0\xc3', True, True),  # call rax; ret
+    ('direct_call', 3, b'\xe8' + struct.pack('<i', EXTERNAL - (BASE + TEXT_OFFSET + 3 + 5)) + b'\xc3', True, False),
+    ('indirect_call', 18, b'\xff\xd0\xc3', True, True),  # call rax; ret
     ('direct_tail', 32, b'\xe9' + struct.pack('<i', EXTERNAL - (BASE + TEXT_OFFSET + 32 + 5)), False, False),
     ('indirect_tail', 48, b'\xff\xe0', False, True),  # jmp rax
 )
