@@ -54,3 +54,9 @@ with two indirect-only handlers, duplicate entries, signed negative offsets, and
 an external entry between local entries. It also covers a shared tail and rejected
 recognition/alignment cases. It does not establish how often the pattern occurs in
 CPython, nor explain the historical 1,170 overlapping-block census failures.
+
+A table base hoisted into a persistent register far from the indirect jump is
+outside this contiguous-pattern recognizer. A follow-on measurement should locate
+the dispatcher in the pinned libpython image, retain its bytes/bounds/CFG trace,
+and determine whether a bounded dataflow extension is justified. Synthetic success
+does not establish coverage of that real interpreter pattern.
