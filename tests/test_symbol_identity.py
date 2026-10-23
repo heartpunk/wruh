@@ -203,8 +203,8 @@ def main():
         inventory_project,
         load_pinned_binary,
     )
+    from extractor.elf_fixture import write_fixture
     from extractor.fresh import extract_fresh_function
-    from extractor.open_transfers_smoke import write_fixture
 
     with tempfile.TemporaryDirectory() as temporary:
         path = Path(temporary) / 'names.elf'
@@ -227,7 +227,7 @@ def main():
         else:
             raise AssertionError('lossy ELF names were silently accepted')
         write_fixture(invalid_path, ((b'\xff', 0, b'\xc3', False, False),
-                                     ('valid', 16, b'\xc3', False, False)))
+                                     ('valid', 16, b'\xc3', False, False)), elf_type=3)
         unrelated = inventory(invalid_path, exact_symbol_inventory_policy(('valid',)))
         assert tuple(unrelated['roots']) == ('valid',)
         # Equal decoded spellings in an unrelated object are a separate name

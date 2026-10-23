@@ -5,7 +5,7 @@ BASE = 0x400000
 TEXT_OFFSET = 0x1000
 
 
-def write_fixture(path, fixtures):
+def write_fixture(path, fixtures, *, elf_type=2):
     """Write ELF64 headers, one RX segment, .text and a real symbol table.
 
     Encoding the fixed bytes directly avoids a compiler/linker dependency in
@@ -27,7 +27,7 @@ def write_fixture(path, fixtures):
     sections_offset = (names_offset + len(section_names) + 7) & ~7
     raw = bytearray(sections_offset + 5 * 64)
     ident = b'\x7fELF\x02\x01\x01' + bytes(9)
-    raw[:64] = struct.pack('<16sHHIQQQIHHHHHH', ident, 2, 62, 1,
+    raw[:64] = struct.pack('<16sHHIQQQIHHHHHH', ident, elf_type, 62, 1,
                           BASE + TEXT_OFFSET, 64, sections_offset, 0,
                           64, 56, 1, 64, 5, 4)
     raw[64:120] = struct.pack('<IIQQQQQQ', 1, 5, 0, BASE, BASE,
