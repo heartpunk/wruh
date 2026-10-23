@@ -163,10 +163,10 @@ def main() -> None:
             instructions = [instruction for block in root["blocks"] for instruction in block["instructions"]]
             call = instructions[0]
             assert call["address"] == address and call["size"] == (2 if name.startswith("indirect") else 5)
-            assert call["address"] + call["size"] == address + root["size"], name
             assert len(root["calls"]) == 1 and root["calls"][0]["kind"] == "open", name
             assert root["calls"][0]["target"] == (None if name.startswith("indirect") else EXTERNAL), name
             if name.endswith("_end"):
+                assert call["address"] + call["size"] == address + root["size"], name
                 assert root["blocks"][-1]["successors"] == [], name
             else:
                 assert any(
