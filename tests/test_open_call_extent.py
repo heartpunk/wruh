@@ -29,7 +29,6 @@ from extractor.binary_inventory import (
 from extractor.fresh import FreshFunction
 from extractor.loaded_image import load_object_set
 
-
 BASE = 0x400000
 TEXT_OFFSET = 0x1000
 EXTERNAL = 0x70000000
