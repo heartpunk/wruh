@@ -5,25 +5,29 @@ CLE, inventory, CFG recovery and fresh extraction all run without mocks. The
 fixture is loaded as data and is never executed natively.
 """
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
 
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import struct
 import tempfile
+from pathlib import Path
 
 import z3
 from ayxg.z3 import declaration_variables, expr_to_z3
-from extractor.binary_inventory import (
-    exact_symbol_inventory_policy, inventory, load_pinned_binary,
-)
-from extractor.binary_cfg import build_static_cfg
-from extractor.fresh import FreshFunction, extract_fresh_function
 
+from extractor.binary_cfg import build_static_cfg
+from extractor.binary_inventory import (
+    exact_symbol_inventory_policy,
+    inventory,
+    load_pinned_binary,
+)
+from extractor.fresh import FreshFunction, extract_fresh_function
 
 BASE = 0x400000
 TEXT_OFFSET = 0x1000
