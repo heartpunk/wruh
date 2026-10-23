@@ -36,6 +36,35 @@ class FreshExtractionError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class ExtractionCoverage:
+    """Immutable traversal evidence; no status claims general closure."""
+
+    unresolved_indirect_sites: tuple[int, ...]
+
+    def to_data(self) -> dict[str, Any]:
+        return {
+            "scope": "intraprocedural-jumps-only",
+            "status": "partial-indirect" if self.unresolved_indirect_sites else "direct-cfg",
+            "unresolved_indirect_sites": list(self.unresolved_indirect_sites),
+            "discovery": "loaded-table-seeds-do-not-bound-symbolic-targets",
+        }
+
+    @classmethod
+    def from_data(cls, value: dict[str, Any]) -> ExtractionCoverage:
+        if not isinstance(value, dict):
+            raise FreshExtractionError("invalid extraction coverage")
+        sites = value.get("unresolved_indirect_sites")
+        if (not isinstance(sites, list)
+                or any(type(site) is not int or site < 0 for site in sites)
+                or sites != sorted(set(sites))):
+            raise FreshExtractionError("invalid unresolved indirect sites")
+        result = cls(tuple(sites))
+        if value != result.to_data():
+            raise FreshExtractionError("contradictory extraction coverage")
+        return result
+
+
+@dataclass(frozen=True)
 class FreshFunction:
     function_id: str
     entry: int
@@ -43,6 +72,7 @@ class FreshFunction:
     occurrences: tuple[Occurrence, ...]
     local_edges: tuple[LocalEdge, ...]
     architecture: ArchitectureLayout | None = None
+    extraction_coverage: ExtractionCoverage | None = None
 
     schema = "ghot-fresh-function-v1"
 
@@ -54,6 +84,7 @@ class FreshFunction:
             "declarations": [item.to_data() for item in self.declarations],
             "occurrences": [item.to_data() for item in self.occurrences],
             "local_edges": [item.to_data() for item in self.local_edges],
+            **({"extraction_coverage": self.extraction_coverage.to_data()} if self.extraction_coverage is not None else {}),
             **({"architecture": self.architecture.to_data()} if self.architecture is not None else {}),
         }
 
@@ -61,13 +92,24 @@ class FreshFunction:
     def from_data(cls, value: dict[str, Any]) -> FreshFunction:
         if value.get("schema") != cls.schema:
             raise FreshExtractionError("unknown fresh function schema")
-        return cls(
+        result = cls(
             value["function_id"], value["entry"],
             tuple(Declaration.from_data(item) for item in value["declarations"]),
             tuple(Occurrence.from_data(item) for item in value["occurrences"]),
             tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
             ArchitectureLayout.from_data(value["architecture"]) if "architecture" in value else None,
+            ExtractionCoverage.from_data(value["extraction_coverage"]) if "extraction_coverage" in value else None,
         )
+        if result.extraction_coverage is not None:
+            symbolic_sources = {edge.source for edge in result.local_edges
+                                if edge.summary.target.kind == "symbolic"}
+            expected = sorted({item.origin.canonical_address for item in result.occurrences
+                               if isinstance(item.origin, DecodedInstructionEvidence)
+                               and item.origin.instruction_identity.partition(" ")[0].startswith("j")
+                               and item.origin.canonical_address in symbolic_sources})
+            if list(result.extraction_coverage.unresolved_indirect_sites) != expected:
+                raise FreshExtractionError("coverage sites disagree with symbolic jump occurrences")
+        return result
 
     def canonical_json(self) -> bytes:
         return json.dumps(
@@ -235,4 +277,5 @@ def extract_fresh_function(
         occurrences=tuple(occurrences),
         local_edges=tuple(edges),
         architecture=architecture_layout(pinned.project.arch),
+        extraction_coverage=ExtractionCoverage.from_data(root["extraction_coverage"]) if "extraction_coverage" in root else None,
     )
