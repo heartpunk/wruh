@@ -11,6 +11,7 @@ import itertools
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from extractor.native_runtime import preload_libstdcxx
@@ -70,6 +71,29 @@ class InstructionOutcomesTest(unittest.TestCase):
         edges = [edge for edge in function.local_edges if edge.source == PC]
         return function, edges, variables, ctx
 
+    def assert_state_contract(self, variables, ctx):
+        # Frozen AMD64 backing-state contract, independently of the extractor's
+        # declaration builder. A missing untouched register must not shrink both
+        # the emitted assignments and this test's expected state unnoticed.
+        bv64 = [
+            "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9",
+            "r10", "r11", "r12", "r13", "r14", "r15", "d", "rip", "ac", "id", "fs",
+            "sseround", "cr0", "cr2", "cr3", "cr4", "cr8", "k0", "k1", "k2", "k3",
+            "k4", "k5", "k6", "k7", "fptag", "fpround", "fc3210", "cmstart", "cmlen",
+            "nraddr", "gs", "ip_at_syscall",
+        ]
+        expected = {name: z3.BitVecSort(64, ctx) for name in bv64}
+        expected.update({f"zmm{index}": z3.BitVecSort(512, ctx) for index in range(32)})
+        expected["fpreg"] = z3.BitVecSort(512, ctx)
+        expected.update({name: z3.BitVecSort(32, ctx) for name in ("ftop", "emnote")})
+        expected.update({name: z3.BitVecSort(16, ctx) for name in
+                         ("cs_seg", "ds_seg", "es_seg", "fs_seg", "gs_seg", "ss_seg")})
+        expected.update({f"rflags_{name}": z3.BitVecSort(1, ctx) for name in
+                         ("CF", "ZF", "SF", "OF", "PF", "AF")})
+        expected["mem"] = z3.ArraySort(z3.BitVecSort(64, ctx), z3.BitVecSort(8, ctx))
+        self.assertEqual({name: value.sort() for name, value in variables.items()},
+                         expected, "state declaration contract")
+
     def check_relation(self, function, edges, variables, ctx, expected, *,
                        domain=None, ignored=frozenset()):
         """Expected tuples are (guard, target, changed state); all else is identity.
@@ -78,6 +102,7 @@ class InstructionOutcomesTest(unittest.TestCase):
         must have a SAT witness, and state equality holds throughout the stated
         domain. No expected guard or state is calculated from extracted output.
         """
+        self.assert_state_contract(variables, ctx)
         domain = z3.BoolVal(True, ctx=ctx) if domain is None else domain
         convert = lambda expression: expr_to_z3(expression, variables, ctx)
         guards = [convert(edge.summary.guard) for edge in edges]
@@ -116,6 +141,26 @@ class InstructionOutcomesTest(unittest.TestCase):
                 if name not in ignored:
                     self.assert_unsat(z3.And(guard, domain, actual != expected_state[name]),
                                       f"wrong {name} update")
+
+    def test_oracle_rejects_missing_untouched_state(self):
+        function, _, _, ctx = self.extract("b878563412c3", [0, 5])
+        # Simulate a self-consistent but incomplete artifact: RBX is absent both
+        # from declarations and from every update, and this instruction never
+        # otherwise references it. The independent contract must reject it.
+        corrupted = replace(
+            function,
+            declarations=tuple(d for d in function.declarations if d.name != "rbx"),
+            local_edges=tuple(replace(edge, summary=replace(
+                edge.summary, simultaneous_update=tuple(
+                    item for item in edge.summary.simultaneous_update if item.name != "rbx")))
+                for edge in function.local_edges),
+        )
+        corrupted = FreshFunction.from_data(json.loads(corrupted.canonical_json()))
+        variables = declaration_variables(corrupted.declarations, ctx)
+        edges = [edge for edge in corrupted.local_edges if edge.source == PC]
+        with self.assertRaisesRegex(AssertionError, "state declaration contract"):
+            self.check_relation(corrupted, edges, variables, ctx,
+                                [(variables["rip"] == PC, PC + 5, {"rax": 0x12345678})])
 
     def test_eax_write_zero_extends_and_preserves_other_state(self):
         function, edges, v, ctx = self.extract("b878563412c3", [0, 5])
