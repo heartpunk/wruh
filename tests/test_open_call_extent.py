@@ -136,6 +136,7 @@ def check_call(
     return_pc: int,
     symbolic: bool,
     expected_instruction_addresses: tuple[int, ...],
+    corruption: tuple[str, str] | None = None,
 ) -> None:
     function = FreshFunction.from_data(function_data)
     source_edges = [
@@ -159,6 +160,9 @@ def check_call(
         assignment.name: expr_to_z3(assignment.value, variables, context)
         for assignment in edge.summary.simultaneous_update
     }
+    if corruption is not None:
+        output, source = corruption
+        actual[output] = variables[source]
     expected = dict(variables)
     target = variables["rax"] if symbolic else z3.BitVecVal(EXTERNAL, 64, ctx=context)
     expected["rip"] = target
@@ -220,6 +224,7 @@ def check_return(
     name: str,
     source_address: int,
     expected_instruction_addresses: tuple[int, ...],
+    corruption: tuple[str, str] | None = None,
 ) -> None:
     function = FreshFunction.from_data(function_data)
     source_edges = [
@@ -243,6 +248,9 @@ def check_return(
         assignment.name: expr_to_z3(assignment.value, variables, context)
         for assignment in edge.summary.simultaneous_update
     }
+    if corruption is not None:
+        output, source = corruption
+        actual[output] = variables[source]
     return_address = 0x500123
     old_rsp = variables["rsp"]
     target = z3.Concat(*(
@@ -331,6 +339,24 @@ def main() -> None:
         roots = bundle["cfg"]["roots"]
         functions = {item["function_id"]: item for item in bundle["functions"]}
 
+        def expect_rejection(label: str, check) -> None:
+            try:
+                check()
+            except AssertionError as error:
+                assert label in str(error), ("wrong corruption rejection", label, error)
+            else:
+                raise AssertionError(f"corruption escaped checker: {label}")
+
+        def incomplete_check() -> None:
+            raise RuntimeError("INCOMPLETE: injected solver unknown")
+
+        try:
+            expect_rejection("INCOMPLETE", incomplete_check)
+        except RuntimeError as error:
+            assert "INCOMPLETE:" in str(error), error
+        else:
+            raise AssertionError("rejection control swallowed solver unknown")
+
         for name, offset, code in FIXTURES[:4]:
             root = roots[name]
             address = BASE + TEXT_OFFSET + offset
@@ -367,11 +393,43 @@ def main() -> None:
                 functions[name], name, address, address + call_size,
                 name.startswith("indirect"), expected_instruction_addresses,
             )
+            if name == "direct_end":
+                # Deliberately corrupt otherwise-preserved state. These controls
+                # ensure the full-state and frame checks reject bad summaries.
+                expect_rejection(
+                    "full poststate: rbx",
+                    lambda: check_call(
+                        functions[name], name, address, address + call_size,
+                        False, expected_instruction_addresses, ("rbx", "rax"),
+                    ),
+                )
+                expect_rejection(
+                    "call frame: mem",
+                    lambda: check_call(
+                        functions[name], name, address, address + call_size,
+                        False, expected_instruction_addresses, ("mem", "mem"),
+                    ),
+                )
             if not name.endswith("_end"):
                 check_return(
                     functions[name], name, address + call_size,
                     expected_instruction_addresses,
                 )
+                if name == "direct_in_range":
+                    expect_rejection(
+                        "RET full poststate: rbx",
+                        lambda: check_return(
+                            functions[name], name, address + call_size,
+                            expected_instruction_addresses, ("rbx", "rax"),
+                        ),
+                    )
+                    expect_rejection(
+                        "RET frame: rsp",
+                        lambda: check_return(
+                            functions[name], name, address + call_size,
+                            expected_instruction_addresses, ("rsp", "rsp"),
+                        ),
+                    )
 
         # A direct call to a selected local target keeps strict-mode validation
         # of its out-of-extent continuation, while open mode can retain it.
