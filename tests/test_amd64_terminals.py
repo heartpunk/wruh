@@ -1,8 +1,11 @@
-import json
 import hashlib
+import json
 from pathlib import Path
 import unittest
 
+import angr
+
+from extractor.amd64_state import step_instruction_outcomes
 from extractor.amd64_terminals import (
     is_ud2_instruction,
     is_ud2_no_decode_terminal,
@@ -10,6 +13,22 @@ from extractor.amd64_terminals import (
 
 
 class Ud2TerminalTests(unittest.TestCase):
+    def test_instruction_adapter_emits_one_unchanged_state_ud2_fault(self):
+        address = 0x400000
+        project = angr.load_shellcode(
+            b"\x0f\x0b", arch="amd64", load_address=address
+        )
+
+        family = step_instruction_outcomes(project, address)
+
+        self.assertEqual(family.source, address)
+        self.assertEqual(len(family.outcomes), 1)
+        outcome = family.outcomes[0]
+        self.assertEqual(outcome.jumpkind, "Ijk_SigILL")
+        self.assertEqual(outcome.target_value, address)
+        self.assertEqual(outcome.updates, {})
+        self.assertEqual(outcome.writes, ())
+
     def test_minimized_synthetic_ud2_is_a_valid_terminal(self):
         code = b"\x0f\x0b"
         instruction = {
@@ -19,10 +38,14 @@ class Ud2TerminalTests(unittest.TestCase):
             "address": 0x1000,
         }
         self.assertTrue(is_ud2_instruction(instruction))
-        self.assertTrue(is_ud2_no_decode_terminal(
-            "Ijk_NoDecode", [instruction], block_end=0x1002,
-            has_zero_length_imark=False,
-        ))
+        self.assertTrue(
+            is_ud2_no_decode_terminal(
+                "Ijk_NoDecode",
+                [instruction],
+                block_end=0x1002,
+                has_zero_length_imark=False,
+            )
+        )
 
     def test_pinned_apache_cold_symbol_fixtures_end_in_ud2(self):
         fixture_dir = Path(__file__).parent / "fixtures" / "apache-httpd-2.4.69"
@@ -34,12 +57,15 @@ class Ud2TerminalTests(unittest.TestCase):
                     (fixture_dir / f"{name}.json").read_text(encoding="utf-8")
                 )
                 self.assertEqual(record["version"], "2.4.69")
-                self.assertEqual(record["binary_sha256"],
-                                 "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9")
+                self.assertEqual(
+                    record["binary_sha256"],
+                    "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9",
+                )
                 code = (fixture_dir / record["fixture_file"]).read_bytes()
                 self.assertEqual(len(code), record["size"])
-                self.assertEqual(hashlib.sha256(code).hexdigest(),
-                                 record["fixture_sha256"])
+                self.assertEqual(
+                    hashlib.sha256(code).hexdigest(), record["fixture_sha256"]
+                )
                 self.assertTrue(code.endswith(b"\x0f\x0b"))
                 instruction = {"mnemonic": "ud2", "bytes": code[-2:].hex(),
                                "size": 2, "address": record["address"] + len(code) - 2}
