@@ -35,10 +35,10 @@ class SigtrapAdapterTest(unittest.TestCase):
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
-        self.assertEqual(outcome.target_value, 0x400001)
+        self.assertEqual(outcome.target_value, 0x400000)
         self.assertEqual(set(outcome.updates), {AMD64_LAYOUT.ip_view})
         self.assertEqual(
-            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400001
+            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400000
         )
         self.assertEqual(outcome.writes, ())
 
