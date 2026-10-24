@@ -57,8 +57,9 @@ def _validate_block_partition(
         raise InventoryError(f"{root_name}: duplicate static block address")
     address_set = set(addresses)
 
-    instruction_addresses: set[int] = set()
-    previous_end = entry
+    # AMD64 control flow can enter the middle of another instruction, so
+    # distinct block decodings may legitimately cover the same bytes.
+    instruction_by_address: dict[int, dict[str, Any]] = {}
     for block in blocks:
         block_start = block["address"]
         block_end = block_start + block["size"]
@@ -71,11 +72,6 @@ def _validate_block_partition(
                 f"{root_name}: block [{block_start:#x}, {block_end:#x}) "
                 f"leaves [{entry:#x}, {extent_end:#x})"
             )
-        if block_start < previous_end:
-            raise InventoryError(
-                f"{root_name}: overlapping static block at {block_start:#x}"
-            )
-        previous_end = block_end
         records = block["instructions"]
         if not records or records[0]["address"] != block_start:
             raise InventoryError(
@@ -88,12 +84,13 @@ def _validate_block_partition(
                     f"{root_name}: noncontiguous instruction roster in "
                     f"block {block_start:#x}"
                 )
-            if instruction["address"] in instruction_addresses:
+            previous = instruction_by_address.get(instruction["address"])
+            if previous is not None and previous != instruction:
                 raise InventoryError(
-                    f"{root_name}: instruction {instruction['address']:#x} "
-                    "belongs to multiple blocks"
+                    f"{root_name}: conflicting instruction decode at "
+                    f"{instruction['address']:#x}"
                 )
-            instruction_addresses.add(instruction["address"])
+            instruction_by_address[instruction["address"]] = instruction
             cursor += instruction["size"]
         if cursor != block_end:
             raise InventoryError(
@@ -279,7 +276,7 @@ def _walk_function(
     queue = [entry]
     seen: set[int] = set()
     blocks: list[dict[str, Any]] = []
-    calls: list[dict[str, int]] = []
+    calls_by_address: dict[int, dict[str, int]] = {}
     walked_indirect_sites: set[int] = set()
 
     code = pinned.project.loader.memory.load(entry, root["size"])
@@ -390,13 +387,23 @@ def _walk_function(
                     f"{root_name}: encoded and VEX call targets disagree "
                     f"at {call_instruction['address']:#x}"
                 )
-            calls.append(
-                {
-                    "address": call_instruction["address"],
-                    "block": block_address,
-                    "target": target,
-                }
-            )
+            call_record = {
+                "address": call_instruction["address"],
+                "block": block_address,
+                "target": target,
+            }
+            previous_call = calls_by_address.get(call_record["address"])
+            if previous_call is not None:
+                if previous_call["target"] != target:
+                    raise InventoryError(
+                        f"{root_name}: conflicting call target at "
+                        f"{call_record['address']:#x}"
+                    )
+                previous_call["block"] = min(
+                    previous_call["block"], block_address
+                )
+            else:
+                calls_by_address[call_record["address"]] = call_record
             fallthrough = block_address + block.size
             if not (entry <= fallthrough < extent_end):
                 raise InventoryError(
@@ -438,7 +445,9 @@ def _walk_function(
                 queue.append(successor)
 
     blocks.sort(key=lambda record: record["address"])
-    calls.sort(key=lambda call: call["address"])
+    calls = sorted(
+        calls_by_address.values(), key=lambda call: call["address"]
+    )
     _validate_block_partition(
         root_name=root_name,
         entry=entry,

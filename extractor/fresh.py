@@ -135,19 +135,17 @@ def occurrence_catalog(
 
 
 def _instruction_records(root: dict[str, Any]) -> tuple[dict[str, Any], ...]:
-    records = tuple(
-        instruction
-        for block in root["blocks"]
-        for instruction in block["instructions"]
-    )
-    addresses = tuple(record["address"] for record in records)
-    if addresses != tuple(sorted(addresses)) or len(set(addresses)) != len(
-        addresses
-    ):
-        raise FreshExtractionError(
-            "root instructions are not unique and canonically ordered"
-        )
-    return records
+    records: dict[int, dict[str, Any]] = {}
+    for block in root["blocks"]:
+        for instruction in block["instructions"]:
+            address = instruction["address"]
+            previous = records.get(address)
+            if previous is not None and previous != instruction:
+                raise FreshExtractionError(
+                    f"conflicting instruction decode at {address:#x}"
+                )
+            records[address] = instruction
+    return tuple(records[address] for address in sorted(records))
 
 
 def _local_edges(
