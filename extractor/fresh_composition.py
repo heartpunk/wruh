@@ -139,16 +139,31 @@ def compose_fresh_paths(
         if name in selected_roots
     }
     instruction_at: dict[int, dict[str, Any]] = {}
-    successors_at: dict[int, tuple[int, ...]] = {}
+    successor_sets: dict[int, set[int]] = defaultdict(set)
     call_at: dict[int, dict[str, Any]] = {}
     for function_id in selected_roots:
         root = roots[function_id]
         for block in root["blocks"]:
             for instruction in block["instructions"]:
-                instruction_at[instruction["address"]] = instruction
-                successors_at[instruction["address"]] = tuple(block["successors"])
+                address = instruction["address"]
+                previous = instruction_at.get(address)
+                if previous is not None and previous != instruction:
+                    raise FreshCompositionError(
+                        f"conflicting instruction decode at {address:#x}"
+                    )
+                instruction_at[address] = instruction
+                successor_sets[address].update(block["successors"])
         for call in root.get("calls", ()):
+            previous_call = call_at.get(call["address"])
+            if previous_call is not None and previous_call != call:
+                raise FreshCompositionError(
+                    f"conflicting call record at {call['address']:#x}"
+                )
             call_at[call["address"]] = call
+    successors_at = {
+        address: tuple(sorted(successors))
+        for address, successors in successor_sets.items()
+    }
 
     initial = {
         name: TypedExpr.var(name, declaration.sort)
