@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import re
-from typing import Any, Callable, Mapping, TypeVar
-
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from typing import Any, TypeVar
 
 from ayxg.expr import ArtifactError, Declaration, TermSort, TypedExpr
 
