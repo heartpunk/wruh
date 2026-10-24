@@ -10,7 +10,20 @@ open Lean Ayxg.QfAbv Ayxg.QfAbv.JsonCodec Wruh.Observation Wruh.FreshExtraction
 
 inductive FaultKind where
   | integerDivision
+  | invalidOpcode
   deriving DecidableEq, Repr
+
+private def faultKindOfJumpkind (jumpkind : String) : Option FaultKind :=
+  if jumpkind == "Ijk_SigFPE_IntDiv" then
+    some .integerDivision
+  else if jumpkind == "Ijk_SigILL" then
+    some .invalidOpcode
+  else
+    none
+
+example : faultKindOfJumpkind "Ijk_SigFPE_IntDiv" = some .integerDivision := rfl
+example : faultKindOfJumpkind "Ijk_SigILL" = some .invalidOpcode := rfl
+example : faultKindOfJumpkind "Ijk_NoDecode" = none := rfl
 
 structure Metadata (Γ : Ctx) where
   occurrenceId : Nat
@@ -60,11 +73,9 @@ private def parseOutcome (Γ : Ctx) (sourceGuard : Expr Γ .bool)
   let targetValue ← if targetValue? == Json.null then pure none else some <$> targetValue?.getNat?
   let outcomeId ← natField item "outcome_id"
   let jumpkind ← (← field item "jumpkind").getStr?
-  let kind : OutcomeKind Γ FaultKind :=
-    if jumpkind == "Ijk_SigFPE_IntDiv" then
-      .fault ⟨.integerDivision, .boolAnd sourceGuard guard⟩
-    else
-      .ordinary
+  let kind : OutcomeKind Γ FaultKind := match faultKindOfJumpkind jumpkind with
+    | some faultKind => .fault ⟨faultKind, .boolAnd sourceGuard guard⟩
+    | none => .ordinary
   let metadata : Metadata Γ := {
     occurrenceId
     outcomeId
