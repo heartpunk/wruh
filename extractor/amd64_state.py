@@ -11,11 +11,11 @@ from functools import cache
 from typing import Any
 
 from extractor import runtime
+from extractor.amd64_terminals import is_ud2_instruction
+from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
 
 archinfo = importlib.import_module("archinfo")
 z3 = importlib.import_module("z3")
-from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
-from extractor.amd64_terminals import is_ud2_instruction
 
 
 class Amd64AdapterError(RuntimeError):

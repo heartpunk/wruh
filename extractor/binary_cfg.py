@@ -8,11 +8,11 @@ from typing import Any
 import capstone
 import pyvex
 
+from extractor.amd64_terminals import is_ud2_no_decode_terminal
 from extractor.binary_inventory import (
     InventoryError,
     PinnedBinary,
 )
-from extractor.amd64_terminals import is_ud2_no_decode_terminal
 
 
 def _instruction_records(
