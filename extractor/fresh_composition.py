@@ -11,6 +11,11 @@ from typing import Any, Mapping
 import z3
 
 from extractor.artifact import LocalEdge, Target
+from extractor.cfg_blocks import (
+    CfgBlockValidationError,
+    instruction_index,
+    successor_index,
+)
 from extractor.fresh import FreshFunction
 from ayxg.z3 import declaration_variables, expr_to_z3
 from ayxg.substitution import substitute_exprs
@@ -138,21 +143,19 @@ def compose_fresh_paths(
         for name, value in roots.items()
         if name in selected_roots
     }
-    instruction_at: dict[int, dict[str, Any]] = {}
-    successor_sets: dict[int, set[int]] = defaultdict(set)
+    selected_blocks = [
+        block
+        for function_id in selected_roots
+        for block in roots[function_id]["blocks"]
+    ]
+    try:
+        instruction_at = instruction_index(selected_blocks)
+        successors_at = successor_index(selected_blocks)
+    except CfgBlockValidationError as error:
+        raise FreshCompositionError(str(error)) from error
     call_at: dict[int, dict[str, Any]] = {}
     for function_id in selected_roots:
         root = roots[function_id]
-        for block in root["blocks"]:
-            for instruction in block["instructions"]:
-                address = instruction["address"]
-                previous = instruction_at.get(address)
-                if previous is not None and previous != instruction:
-                    raise FreshCompositionError(
-                        f"conflicting instruction decode at {address:#x}"
-                    )
-                instruction_at[address] = instruction
-                successor_sets[address].update(block["successors"])
         for call in root.get("calls", ()):
             previous_call = call_at.get(call["address"])
             if previous_call is not None and previous_call != call:
@@ -160,10 +163,6 @@ def compose_fresh_paths(
                     f"conflicting call record at {call['address']:#x}"
                 )
             call_at[call["address"]] = call
-    successors_at = {
-        address: tuple(sorted(successors))
-        for address, successors in successor_sets.items()
-    }
 
     initial = {
         name: TypedExpr.var(name, declaration.sort)
