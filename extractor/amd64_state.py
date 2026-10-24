@@ -792,6 +792,23 @@ def step_instruction_outcomes(
             post.globals["_wruh_capture_selectors"] = False
         successors.extend(selected_successors)
     if not successors:
+        if block.vex.jumpkind == "Ijk_SigTRAP":
+            # VEX has no post-state for HLT/other unconditional traps. Preserve
+            # the unchanged pre-state and report a guarded terminal error.
+            next_rip = (source + block.size) & _U64_MAX
+            target = z3.BitVecVal(next_rip, 64, ctx=LTS_EXTRACTION_CONTEXT)
+            outcome = InstructionOutcome(
+                outcome_id=0,
+                guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
+                updates={AMD64_LAYOUT.ip_view: target},
+                target=target,
+                target_value=next_rip,
+                jumpkind=block.vex.jumpkind,
+                writes=(),
+            )
+            return InstructionOutcomeFamily(
+                source, source_rip_guard(source), (outcome,)
+            )
         raise Amd64AdapterError(f"instruction at {source:#x} has no outcomes")
     outcomes = []
     for outcome_id, post in enumerate(successors):
