@@ -92,6 +92,7 @@ class InstructionOutcome:
     target_value: int | None
     jumpkind: str
     writes: tuple[MemoryWrite, ...]
+    fault_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -759,6 +760,16 @@ class _EngineFallbackCapture(logging.Handler):
             self.messages.append(message)
 
 
+def _architectural_fault_kind(mnemonic: str, jumpkind: str) -> str | None:
+    if jumpkind == "Ijk_SigFPE_IntDiv":
+        return "integer_division"
+    if jumpkind == "Ijk_SigTRAP":
+        if mnemonic == "hlt":
+            return "general_protection"
+        return "signal_trap"
+    return None
+
+
 def step_instruction_outcomes(
     project: Any,
     source: int,
@@ -783,6 +794,7 @@ def step_instruction_outcomes(
             target_value=source,
             jumpkind=block.vex.jumpkind,
             writes=(),
+            fault_kind="general_protection",
         )
         return InstructionOutcomeFamily(
             source, source_rip_guard(source), (outcome,)
@@ -836,5 +848,9 @@ def step_instruction_outcomes(
             target_value=target_value,
             jumpkind=post.history.jumpkind,
             writes=writes,
+            fault_kind=_architectural_fault_kind(
+                block.capstone.insns[0].mnemonic,
+                post.history.jumpkind,
+            ),
         ))
     return InstructionOutcomeFamily(source, source_rip_guard(source), tuple(outcomes))
