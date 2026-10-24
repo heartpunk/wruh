@@ -768,6 +768,22 @@ def step_instruction_outcomes(
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
+    if block.vex.jumpkind == "Ijk_SigTRAP":
+        # VEX may return an engine successor for a trap, but SIGTRAP is a
+        # terminal fault edge. Faults retain the address of the faulting IP.
+        target = z3.BitVecVal(source, 64, ctx=LTS_EXTRACTION_CONTEXT)
+        outcome = InstructionOutcome(
+            outcome_id=0,
+            guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
+            updates={AMD64_LAYOUT.ip_view: target},
+            target=target,
+            target_value=source,
+            jumpkind=block.vex.jumpkind,
+            writes=(),
+        )
+        return InstructionOutcomeFamily(
+            source, source_rip_guard(source), (outcome,)
+        )
     pending: list[dict[str, int]] = [{}]
     successors = []
     while pending:
@@ -792,24 +808,6 @@ def step_instruction_outcomes(
             post.globals["_wruh_capture_selectors"] = False
         successors.extend(selected_successors)
     if not successors:
-        if block.vex.jumpkind == "Ijk_SigTRAP":
-            # VEX has no post-state for HLT/other unconditional traps. Preserve
-            # the unchanged pre-state and report a guarded terminal error.
-            # Faults retain the address of the faulting instruction.
-            next_rip = source
-            target = z3.BitVecVal(next_rip, 64, ctx=LTS_EXTRACTION_CONTEXT)
-            outcome = InstructionOutcome(
-                outcome_id=0,
-                guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
-                updates={AMD64_LAYOUT.ip_view: target},
-                target=target,
-                target_value=next_rip,
-                jumpkind=block.vex.jumpkind,
-                writes=(),
-            )
-            return InstructionOutcomeFamily(
-                source, source_rip_guard(source), (outcome,)
-            )
         raise Amd64AdapterError(f"instruction at {source:#x} has no outcomes")
     outcomes = []
     for outcome_id, post in enumerate(successors):
