@@ -1,3 +1,4 @@
+import hashlib
 import os
 import unittest
 from pathlib import Path
@@ -16,6 +17,12 @@ from extractor.fresh import _local_edges, artifact_declarations
 
 
 class SigtrapAdapterTest(unittest.TestCase):
+    # Nixpkgs Apache 2.4.69 from flake.lock; inspect the installed binary without
+    # copying its glibc CRT startup bytes into this repository.
+    APACHE_HTTPD_SHA256 = (
+        "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9"
+    )
+
     def test_decoded_evidence_accepts_elf_entry_symbol_owner(self):
         evidence = DecodedInstructionEvidence(
             image_sha256="0" * 64,
@@ -123,9 +130,13 @@ class SigtrapAdapterTest(unittest.TestCase):
         "WRUH_APACHE_HTTPD must point to the pinned Apache httpd binary",
     )
     def test_apache_start_hlt_keeps_sigtrap_provenance_and_gp_fault(self):
-        project = runtime.angr.Project(
-            os.environ["WRUH_APACHE_HTTPD"], auto_load_libs=False
+        binary = Path(os.environ["WRUH_APACHE_HTTPD"])
+        self.assertEqual(
+            hashlib.sha256(binary.read_bytes()).hexdigest(),
+            self.APACHE_HTTPD_SHA256,
+            "WRUH_APACHE_HTTPD must be the pinned Nixpkgs Apache 2.4.69 binary",
         )
+        project = runtime.angr.Project(binary, auto_load_libs=False)
         start_symbol = project.loader.main_object.get_symbol("_start")
         self.assertIsNotNone(start_symbol)
 
