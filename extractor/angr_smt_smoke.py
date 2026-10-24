@@ -12,6 +12,12 @@ cases = [
     ('bv_symbol', x, xz),
     ('add', x + y, xz + yz),
     ('udiv', c.UDiv(x, y), z3.UDiv(xz, yz)),
+    ('sdiv', c.SDiv(x, y), xz / yz),
+    # SMT-LIB bit-vector signed division defines divide-by-zero and the
+    # minimum-signed-value / -1 overflow case; preserve those edge semantics.
+    ('sdiv_by_zero_positive', c.SDiv(c.BVV(7, 8), c.BVV(0, 8)), z3.BitVecVal(127, 8, ctx=LTS_EXTRACTION_CONTEXT)),
+    ('sdiv_by_zero_negative', c.SDiv(c.BVV(0xF9, 8), c.BVV(0, 8)), z3.BitVecVal(0xFF, 8, ctx=LTS_EXTRACTION_CONTEXT)),
+    ('sdiv_min_overflow', c.SDiv(c.BVV(0x80, 8), c.BVV(0xFF, 8)), z3.BitVecVal(0x80, 8, ctx=LTS_EXTRACTION_CONTEXT)),
     ('urem', c.UMod(x, y), z3.URem(xz, yz)),
     ('shift', c.LShR(x, y), z3.LShR(xz, yz)),
     ('extract', c.Extract(7, 0, x), z3.Extract(7, 0, xz)),
