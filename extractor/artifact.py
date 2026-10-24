@@ -10,7 +10,6 @@ from typing import Any, TypeVar
 
 from ayxg.expr import ArtifactError, Declaration, TermSort, TypedExpr
 
-
 _ID_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._:-]*\Z")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 _HEX_BYTES_RE = re.compile(r"(?:[0-9a-f]{2})+\Z")
