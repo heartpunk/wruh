@@ -795,7 +795,8 @@ def step_instruction_outcomes(
         if block.vex.jumpkind == "Ijk_SigTRAP":
             # VEX has no post-state for HLT/other unconditional traps. Preserve
             # the unchanged pre-state and report a guarded terminal error.
-            next_rip = (source + block.size) & _U64_MAX
+            # Faults retain the address of the faulting instruction.
+            next_rip = source
             target = z3.BitVecVal(next_rip, 64, ctx=LTS_EXTRACTION_CONTEXT)
             outcome = InstructionOutcome(
                 outcome_id=0,
