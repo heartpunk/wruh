@@ -50,5 +50,5 @@ jobs:
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor
 
-      - name: Run the minimal CLI smoke test through unittest
-        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Run Python tests in the pinned development shell
+        run: nix develop --no-write-lock-file --command python3 -m unittest discover -s tests -p 'test_*.py' -v
