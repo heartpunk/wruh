@@ -159,6 +159,57 @@ def _tool_release(name: str, revision: str) -> tuple[str, dict[str, Any]]:
     }
 
 
+def _explicit_build_value(arguments: argparse.Namespace, name: str) -> str | None:
+    value = getattr(arguments, name, None)
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized if normalized and normalized.lower() != "unknown" else None
+
+
+def _build_provenance(
+    arguments: argparse.Namespace,
+    *,
+    census_id: str,
+    image_id: str,
+    binary_id: str,
+    target_release_id: str,
+) -> tuple[dict[str, str], list[tuple[str, dict[str, Any]]], dict[str, Any] | None]:
+    build_package = _explicit_build_value(arguments, "build_package")
+    build_output = _explicit_build_value(arguments, "build_output")
+    nixpkgs_revision = _explicit_build_value(arguments, "nixpkgs_revision")
+    nix_version = _explicit_build_value(arguments, "nix_version")
+    build_configuration = _explicit_build_value(arguments, "build_configuration")
+
+    image_properties: dict[str, str] = {}
+    if nixpkgs_revision:
+        image_properties["bfe:distributionRevision"] = nixpkgs_revision
+    if build_configuration:
+        image_properties["bfe:targetBuildConfiguration"] = build_configuration
+
+    build_tool_releases: list[tuple[str, dict[str, Any]]] = []
+    build_node = None
+    if build_package and build_output:
+        build_node = {
+            "@id": f"{census_id}/build",
+            "@type": "bfe:BuildActivity",
+            "bfe:buildGeneratesBinaryObject": {"@id": binary_id},
+            "bfe:buildGeneratesImage": {"@id": image_id},
+            "bfe:buildGeneratesToolRelease": {"@id": target_release_id},
+            "bfe:identifier": [build_package, build_output],
+        }
+        if nixpkgs_revision:
+            nixpkgs_id, nixpkgs_node = _tool_release("Nixpkgs", nixpkgs_revision)
+            build_tool_releases.append((nixpkgs_id, nixpkgs_node))
+            build_node["bfe:buildUsesInput"] = [{"@id": nixpkgs_id}]
+        if nix_version:
+            nix_id, nix_node = _tool_release("Nix", nix_version)
+            build_tool_releases.append((nix_id, nix_node))
+            build_node["bfe:activityUsesToolRelease"] = {"@id": nix_id}
+
+    return image_properties, build_tool_releases, build_node
+
+
 def _function_candidates(project: Any) -> list[dict[str, Any]]:
     image = project.loader.main_object
     grouped: dict[int, list[Any]] = {}
@@ -522,17 +573,22 @@ def run(arguments: argparse.Namespace) -> int:
         _tool_release("capstone", _safe_version("capstone")),
         _tool_release("pyvex", _safe_version("pyvex")),
         _tool_release("Bazel", arguments.bazel_version),
-        _tool_release("Nix", arguments.nix_version),
-        _tool_release("Nixpkgs", arguments.nixpkgs_revision),
     ]
     target_release_id, target_release = _tool_release(
         arguments.target_implementation or arguments.target_id,
         arguments.target_version,
     )
+    build_image_properties, build_tool_releases, build_node = _build_provenance(
+        arguments,
+        census_id=census_id,
+        image_id=image_id,
+        binary_id=binary_id,
+        target_release_id=target_release_id,
+    )
+    tool_releases.extend(build_tool_releases)
     graph.extend(node for _, node in tool_releases)
     graph.append(target_release)
     tool_ids = [identifier for identifier, _ in tool_releases]
-    build_id = f"{census_id}/build"
     census_node = {
         "@id": census_id,
         "@type": "bfe:ExtractionCensus",
@@ -563,21 +619,11 @@ def run(arguments: argparse.Namespace) -> int:
             "@type": "bfe:InterpreterImage" if arguments.target_kind == "interpreter" else "bfe:AnalyzedImage",
             "bfe:hasBinaryObject": {"@id": binary_id},
             "bfe:targetVersion": arguments.target_version,
-            "bfe:distributionRevision": arguments.nixpkgs_revision,
-            "bfe:targetBuildConfiguration": arguments.build_configuration,
             "bfe:targetPlatform": arguments.target_platform,
+            **build_image_properties,
             **({"bfe:interpreterImplementation": arguments.target_implementation} if arguments.target_kind == "interpreter" else {}),
         },
-        {
-            "@id": build_id,
-            "@type": "bfe:BuildActivity",
-            "bfe:buildUsesInput": [{"@id": tool_ids[-1]}],
-            "bfe:buildGeneratesBinaryObject": {"@id": binary_id},
-            "bfe:buildGeneratesImage": {"@id": image_id},
-            "bfe:buildGeneratesToolRelease": {"@id": target_release_id},
-            "bfe:activityUsesToolRelease": {"@id": tool_ids[-2]},
-            "bfe:identifier": [arguments.build_package, arguments.build_output],
-        },
+        *([build_node] if build_node is not None else []),
         {
             "@id": policy_id,
             "@type": "bfe:InventoryPolicy",
@@ -789,14 +835,14 @@ def main() -> int:
     parser.add_argument("--target-implementation")
     parser.add_argument("--target-version", required=True)
     parser.add_argument("--target-platform", default="x86_64-linux")
-    parser.add_argument("--build-package", default="unknown")
-    parser.add_argument("--build-configuration", default="unknown")
-    parser.add_argument("--build-output", default="unknown")
-    parser.add_argument("--nixpkgs-revision", default="unknown")
+    parser.add_argument("--build-package")
+    parser.add_argument("--build-configuration")
+    parser.add_argument("--build-output")
+    parser.add_argument("--nixpkgs-revision")
     parser.add_argument("--wruh-revision", default="unknown")
     parser.add_argument("--ayxg-revision", default="unknown")
     parser.add_argument("--bazel-version", default="unknown")
-    parser.add_argument("--nix-version", default="unknown")
+    parser.add_argument("--nix-version")
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--sample-seed", help="explicit seed for deterministic candidate sampling")
     parser.add_argument(
@@ -809,10 +855,6 @@ def main() -> int:
         parser.error("--sample-seed and --sample-percentage must be provided together")
     if arguments.target_kind == "interpreter" and not arguments.target_implementation:
         parser.error("--target-implementation is required for interpreter targets")
-    if arguments.build_package == "unknown":
-        arguments.build_package = arguments.target_id
-    if arguments.build_configuration == "unknown":
-        arguments.build_configuration = "Nix package built with symbol tables retained (dontStrip=true)"
     _configure_logging()
     return run(arguments)
 
