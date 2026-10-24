@@ -3,7 +3,12 @@ from pathlib import Path
 
 from extractor import runtime
 from extractor.amd64_state import AMD64_LAYOUT, step_instruction_outcomes
-from extractor.artifact import DecodedInstructionEvidence, StaticOccurrenceId
+from extractor.artifact import (
+    DecodedInstructionEvidence,
+    LocalEdge,
+    StaticOccurrenceId,
+)
+from extractor.lean_angr_worker import _step
 from extractor.binary_cfg import _walk_function
 from extractor.binary_inventory import PinnedBinary
 from extractor.fresh import _local_edges, artifact_declarations
@@ -31,10 +36,19 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
 
         family = step_instruction_outcomes(project, 0x400000)
+        pinned = PinnedBinary(
+            artifact=Path("<synthetic-hlt>"),
+            manifest={"open_transfers": False},
+            project=project,
+        )
 
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(outcome.fault_kind, "general_protection")
+        emitted = _step(pinned, 0x400000)["outcomes"][0]
+        self.assertEqual(emitted["jumpkind"], "Ijk_SigTRAP")
+        self.assertEqual(emitted["fault_kind"], "general_protection")
         self.assertEqual(outcome.target_value, 0x400000)
         self.assertEqual(set(outcome.updates), {AMD64_LAYOUT.ip_view})
         self.assertEqual(
@@ -42,11 +56,6 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
         self.assertEqual(outcome.writes, ())
 
-        pinned = PinnedBinary(
-            artifact=Path("<synthetic-hlt>"),
-            manifest={"open_transfers": False},
-            project=project,
-        )
         blocks, calls, indirect_sites = _walk_function(
             pinned,
             root_name="synthetic_hlt",
@@ -66,6 +75,11 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
         self.assertEqual(len(edges), 1)
         self.assertEqual(edges[0].summary.target.kind, "error")
+        self.assertEqual(edges[0].jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(edges[0].fault_kind, "general_protection")
+        restored = LocalEdge.from_data(edges[0].to_data())
+        self.assertEqual(restored.jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(restored.fault_kind, "general_protection")
 
     def test_int3_sigtrap_keeps_post_instruction_rip(self):
         project = runtime.angr.load_shellcode(
@@ -73,10 +87,19 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
 
         family = step_instruction_outcomes(project, 0x400000)
+        pinned = PinnedBinary(
+            artifact=Path("<synthetic-int3>"),
+            manifest={"open_transfers": False},
+            project=project,
+        )
 
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(outcome.fault_kind, "signal_trap")
+        emitted = _step(pinned, 0x400000)["outcomes"][0]
+        self.assertEqual(emitted["jumpkind"], "Ijk_SigTRAP")
+        self.assertEqual(emitted["fault_kind"], "signal_trap")
         self.assertEqual(outcome.target_value, 0x400001)
         self.assertEqual(
             outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400001
@@ -88,6 +111,11 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
         self.assertEqual(len(edges), 1)
         self.assertEqual(edges[0].summary.target.kind, "error")
+        self.assertEqual(edges[0].jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(edges[0].fault_kind, "signal_trap")
+        restored = LocalEdge.from_data(edges[0].to_data())
+        self.assertEqual(restored.jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(restored.fault_kind, "signal_trap")
 
 
 if __name__ == "__main__":
