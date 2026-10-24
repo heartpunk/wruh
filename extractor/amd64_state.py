@@ -2,22 +2,24 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import lru_cache
+import importlib
 import logging
-from typing import Any, Mapping
+from collections import OrderedDict
+from collections.abc import Mapping
+from dataclasses import dataclass
+from functools import cache
+from typing import Any
 
 from extractor import runtime
 
-import z3
+archinfo = importlib.import_module("archinfo")
+z3 = importlib.import_module("z3")
+from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
 
 
 class Amd64AdapterError(RuntimeError):
     """The exact instruction does not satisfy the E5 adapter contract."""
 
-
-from extractor.architecture import architecture_layout, NORMALIZED_AMD64_FLAGS
-import archinfo
 
 FLAG_NAMES = ("CF", "ZF", "SF", "OF", "PF", "AF")
 MEMORY_NAME = "mem"
@@ -29,12 +31,28 @@ REGISTER_NAMES = tuple(s.name for s in AMD64_LAYOUT.storage
 CANONICAL_NAMES = REGISTER_NAMES + tuple(f"rflags_{n}" for n in FLAG_NAMES) + (MEMORY_NAME,)
 
 LTS_EXTRACTION_CONTEXT = z3.Context()
-_SMT_CACHE: dict[tuple[type, int], tuple[Any, z3.ExprRef]] = {}
+# Bound memory while retaining translations reused across nearby extraction roots.
+_SMT_CACHE_CAPACITY = 4096
+_SMT_CACHE: OrderedDict[tuple[type, int], tuple[Any, z3.ExprRef]] = OrderedDict()
+
+
+def clear_smt_translation_cache() -> None:
+    """Drop memoized Claripy-to-Z3 AST pairs between independent roots."""
+    _SMT_CACHE.clear()
+
+
+def _remember_smt_translation(
+    key: tuple[type, int], ast: Any, expression: z3.ExprRef
+) -> None:
+    _SMT_CACHE[key] = (ast, expression)
+    _SMT_CACHE.move_to_end(key)
+    if len(_SMT_CACHE) > _SMT_CACHE_CAPACITY:
+        _SMT_CACHE.popitem(last=False)
 _U64_MAX = (1 << 64) - 1
 
 _angr = runtime.angr
 _claripy = runtime.claripy
-from angr.engines.vex.claripy import ccall as _angr_ccall  # noqa: E402
+_angr_ccall = importlib.import_module("angr.engines.vex.claripy.ccall")
 
 
 _AMD64_OP_COPY: int = _angr_ccall.data["AMD64"]["OpTypes"][
@@ -111,14 +129,14 @@ def declaration(name: str) -> CanonicalDeclaration:
     raise Amd64AdapterError(f"unknown canonical AMD64 declaration {name!r}")
 
 
-@lru_cache(maxsize=None)
+@cache
 def canonical_register(name: str) -> z3.BitVecRef:
     if name not in REGISTER_NAMES:
         raise Amd64AdapterError(f"unknown canonical AMD64 register {name!r}")
     return z3.BitVec(name, AMD64_LAYOUT.register(name).bits, ctx=LTS_EXTRACTION_CONTEXT)
 
 
-@lru_cache(maxsize=None)
+@cache
 def canonical_register_view(name: str) -> z3.BitVecRef:
     """Read a metadata-derived alias without introducing independent state."""
     try:
@@ -134,7 +152,7 @@ def canonical_register_view(name: str) -> z3.BitVecRef:
     return z3.Extract(low + view.size_bytes * 8 - 1, low, backing)
 
 
-@lru_cache(maxsize=None)
+@cache
 def canonical_flag(name: str) -> z3.BitVecRef:
     if name not in FLAG_NAMES:
         raise Amd64AdapterError(f"unknown canonical AMD64 flag {name!r}")
@@ -145,7 +163,7 @@ def canonical_flag(name: str) -> z3.BitVecRef:
     )
 
 
-@lru_cache(maxsize=None)
+@cache
 def canonical_memory() -> z3.ArrayRef:
     address = z3.BitVecSort(AMD64_LAYOUT.address_bits, ctx=LTS_EXTRACTION_CONTEXT)
     byte = z3.BitVecSort(8, ctx=LTS_EXTRACTION_CONTEXT)
@@ -158,10 +176,11 @@ def claripy_to_z3(ast: Any) -> z3.ExprRef:
     key = (type(ast), ast.hash())
     cached = _SMT_CACHE.get(key)
     if cached is not None and ast.identical(cached[0]):
+        _SMT_CACHE.move_to_end(key)
         return cached[1]
     if ast.op == "BoolV":
         expression = z3.BoolVal(_claripy.is_true(ast), ctx=LTS_EXTRACTION_CONTEXT)
-        _SMT_CACHE[key] = (ast, expression)
+        _remember_smt_translation(key, ast, expression)
         return expression
     # Public self-contained SMT export supplies declarations and preserves
     # symbol names; Z3 parses it directly into the extraction context.
@@ -184,7 +203,7 @@ def claripy_to_z3(ast: Any) -> z3.ExprRef:
     expression = rhs if str(lhs) == result_name else lhs
     if str(lhs) != result_name and str(rhs) != result_name:
         raise Amd64AdapterError("Angr SMT export lost the result symbol")
-    _SMT_CACHE[key] = (ast, expression)
+    _remember_smt_translation(key, ast, expression)
     return expression
 
 

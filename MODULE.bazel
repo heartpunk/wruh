@@ -37,3 +37,10 @@ use_repo(nix_native_deps, "nix_native_deps")
 
 angr_environment_repository = use_repo_rule("@ifrl//bazel/angr:repository.bzl", "angr_environment_repository")
 angr_environment_repository(name = "shared_angr")
+
+
+ayxg_python_repository = use_repo_rule(
+    "//tools:nix_native_deps.bzl",
+    "ayxg_python_repository",
+)
+ayxg_python_repository(name = "wruh_ayxg")

@@ -51,4 +51,4 @@ jobs:
         run: python3 -m compileall -q extractor
 
       - name: Run the minimal CLI smoke test through unittest
-        run: python3 -m unittest discover -s tests -p test_cli_smoke.py -v
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v

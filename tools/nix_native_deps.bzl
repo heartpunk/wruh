@@ -94,3 +94,39 @@ def _angr_extension_impl(_module_ctx):
 
 
 nix_angr = module_extension(implementation = _angr_extension_impl)
+
+
+_AYXG_SOURCE_ENV = "WRUH_AYXG_SOURCE"
+
+
+def _ayxg_repository_impl(ctx):
+    root = ctx.os.environ.get(_AYXG_SOURCE_ENV)
+    if not root or not root.startswith("/nix/store/"):
+        fail("{} must name an immutable Nix store source".format(_AYXG_SOURCE_ENV))
+    package = ctx.path(root + "/python/ayxg")
+    if not package.get_child("__init__.py").exists:
+        fail("{} lacks python/ayxg/__init__.py".format(_AYXG_SOURCE_ENV))
+    ctx.symlink(ctx.path(root + "/python"), "python")
+    ctx.file("BUILD.bazel", """load("@rules_python//python:defs.bzl", "py_library")
+package(default_visibility = ["//visibility:public"])
+py_library(
+    name = "ayxg",
+    srcs = glob(["python/ayxg/*.py"], exclude = ["python/ayxg/z3.py", "python/ayxg/fp_z3.py"]),
+    data = ["python/ayxg/py.typed"],
+    imports = ["python"],
+)
+py_library(
+    name = "z3",
+    srcs = ["python/ayxg/z3.py", "python/ayxg/fp_z3.py"],
+    imports = ["python"],
+    deps = [":ayxg", "@shared_angr//:pkg"],
+)
+""")
+
+
+ayxg_python_repository = repository_rule(
+    implementation = _ayxg_repository_impl,
+    configure = True,
+    environ = [_AYXG_SOURCE_ENV],
+    local = True,
+)

@@ -1,10 +1,10 @@
-load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 
 package(default_visibility = ["//visibility:private"])
 
 py_test(
     name = "angr_runtime_smoke",
-    srcs = glob(["*.py"]),
+    srcs = glob(["*.py"], exclude = ["binary_census.py"]),
     main = "angr_smt_smoke.py",
     data = ["@nix_native_deps//:libstdcxx"],
     env = {
@@ -13,5 +13,29 @@ py_test(
         "PYTHONSAFEPATH": "1",
     },
     deps = ["@shared_angr//:pkg"],
+    target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+)
+
+
+py_library(
+    name = "binary_census_runtime",
+    srcs = glob(["*.py"], exclude = ["binary_census.py"]),
+    deps = [
+        "@shared_angr//:pkg",
+        "@wruh_ayxg//:z3",
+    ],
+)
+
+py_binary(
+    name = "binary_census",
+    srcs = ["binary_census.py"],
+    main = "binary_census.py",
+    data = ["@nix_native_deps//:libstdcxx"],
+    env = {
+        "GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)",
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONSAFEPATH": "1",
+    },
+    deps = [":binary_census_runtime"],
     target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
 )
