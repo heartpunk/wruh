@@ -1,3 +1,4 @@
+import os
 import unittest
 from pathlib import Path
 
@@ -116,6 +117,38 @@ class SigtrapAdapterTest(unittest.TestCase):
         restored = LocalEdge.from_data(edges[0].to_data())
         self.assertEqual(restored.jumpkind, "Ijk_SigTRAP")
         self.assertEqual(restored.fault_kind, "signal_trap")
+
+    @unittest.skipUnless(
+        os.environ.get("WRUH_APACHE_HTTPD"),
+        "WRUH_APACHE_HTTPD must point to the pinned Apache httpd binary",
+    )
+    def test_apache_start_hlt_keeps_sigtrap_provenance_and_gp_fault(self):
+        project = runtime.angr.Project(
+            os.environ["WRUH_APACHE_HTTPD"], auto_load_libs=False
+        )
+        start_symbol = project.loader.main_object.get_symbol("_start")
+        self.assertIsNotNone(start_symbol)
+
+        start_block = project.factory.block(
+            start_symbol.rebased_addr, num_inst=64
+        )
+        hlt_instructions = [
+            instruction
+            for instruction in start_block.capstone.insns
+            if instruction.mnemonic == "hlt"
+        ]
+        self.assertEqual(len(hlt_instructions), 1)
+        hlt_address = hlt_instructions[0].address
+
+        family = step_instruction_outcomes(project, hlt_address)
+        self.assertEqual(len(family.outcomes), 1)
+        outcome = family.outcomes[0]
+        self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(outcome.fault_kind, "general_protection")
+        self.assertEqual(outcome.target_value, hlt_address)
+        self.assertEqual(
+            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), hlt_address
+        )
 
 
 if __name__ == "__main__":
