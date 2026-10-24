@@ -10,6 +10,7 @@ open Lean Ayxg.QfAbv Ayxg.QfAbv.JsonCodec Wruh.Observation Wruh.FreshExtraction
 
 inductive FaultKind where
   | integerDivision
+  | signalTrap
   deriving DecidableEq, Repr
 
 structure Metadata (Γ : Ctx) where
@@ -63,6 +64,8 @@ private def parseOutcome (Γ : Ctx) (sourceGuard : Expr Γ .bool)
   let kind : OutcomeKind Γ FaultKind :=
     if jumpkind == "Ijk_SigFPE_IntDiv" then
       .fault ⟨.integerDivision, .boolAnd sourceGuard guard⟩
+    else if jumpkind == "Ijk_SigTRAP" then
+      .fault ⟨.signalTrap, .boolAnd sourceGuard guard⟩
     else
       .ordinary
   let metadata : Metadata Γ := {
