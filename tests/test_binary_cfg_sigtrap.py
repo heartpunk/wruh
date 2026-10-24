@@ -129,12 +129,21 @@ class SigtrapAdapterTest(unittest.TestCase):
         start_symbol = project.loader.main_object.get_symbol("_start")
         self.assertIsNotNone(start_symbol)
 
-        start_block = project.factory.block(
-            start_symbol.rebased_addr, num_inst=64
+        start_code = project.loader.memory.load(
+            start_symbol.rebased_addr, start_symbol.size
+        )
+        start_instructions = list(
+            project.arch.capstone.disasm(start_code, start_symbol.rebased_addr)
+        )
+        self.assertTrue(start_instructions)
+        self.assertEqual(start_instructions[0].address, start_symbol.rebased_addr)
+        self.assertEqual(
+            start_instructions[-1].address + start_instructions[-1].size,
+            start_symbol.rebased_addr + start_symbol.size,
         )
         hlt_instructions = [
             instruction
-            for instruction in start_block.capstone.insns
+            for instruction in start_instructions
             if instruction.mnemonic == "hlt"
         ]
         self.assertEqual(len(hlt_instructions), 1)
