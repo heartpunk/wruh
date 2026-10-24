@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import re
-from typing import Any, Callable, Mapping, TypeVar
-
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from typing import Any, TypeVar
 
 from ayxg.expr import ArtifactError, Declaration, TermSort, TypedExpr
 
-
-_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]*\Z")
+_ID_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._:-]*\Z")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 _HEX_BYTES_RE = re.compile(r"(?:[0-9a-f]{2})+\Z")
 _U64_MAX = (1 << 64) - 1
+_FAULT_KIND_PAIRS = {
+    ("Ijk_SigFPE_IntDiv", "integer_division"),
+    ("Ijk_SigTRAP", "signal_trap"),
+    ("Ijk_SigTRAP", "general_protection"),
+}
 
 
 def _nonnegative(value: Any, field: str) -> int:
@@ -781,26 +785,57 @@ class LocalEdge:
     id: EdgeId
     source: int
     summary: StepSummary
+    jumpkind: str | None = None
+    fault_kind: str | None = None
 
     def __post_init__(self) -> None:
         _u64(self.source, "local_edge.source")
+        if (self.jumpkind is None) != (self.fault_kind is None):
+            raise ArtifactError(
+                "local_edge.jumpkind and local_edge.fault_kind must appear together"
+            )
+        if self.jumpkind is not None:
+            _identifier(self.jumpkind, "local_edge.jumpkind")
+            if (self.jumpkind, self.fault_kind) not in _FAULT_KIND_PAIRS:
+                raise ArtifactError(
+                    "local_edge fault_kind conflicts with jumpkind"
+                )
 
     def to_data(self) -> dict[str, Any]:
-        return {
+        result = {
             "edge_id": self.id.to_data(),
             "source": self.source,
             "summary": self.summary.to_data(),
         }
+        if self.jumpkind is not None:
+            result["jumpkind"] = self.jumpkind
+            result["fault_kind"] = self.fault_kind
+        return result
 
     @classmethod
     def from_data(cls, value: Any) -> LocalEdge:
         obj = _object(value, "local_edge")
-        _fields(obj, {"edge_id", "source", "summary"}, "local_edge")
+        expected = {"edge_id", "source", "summary"}
+        if "jumpkind" in obj:
+            expected.add("jumpkind")
+        if "fault_kind" in obj:
+            expected.add("fault_kind")
+        _fields(obj, expected, "local_edge")
         return cls(
             id=EdgeId.from_data(obj["edge_id"], "local_edge.edge_id"),
             source=_u64(obj["source"], "local_edge.source"),
             summary=StepSummary.from_data(
                 obj["summary"], "local_edge.summary"
+            ),
+            jumpkind=(
+                _identifier(obj["jumpkind"], "local_edge.jumpkind")
+                if "jumpkind" in obj
+                else None
+            ),
+            fault_kind=(
+                _text(obj["fault_kind"], "local_edge.fault_kind")
+                if "fault_kind" in obj
+                else None
             ),
         )
 

@@ -92,6 +92,7 @@ class InstructionOutcome:
     target_value: int | None
     jumpkind: str
     writes: tuple[MemoryWrite, ...]
+    fault_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -759,6 +760,16 @@ class _EngineFallbackCapture(logging.Handler):
             self.messages.append(message)
 
 
+def _architectural_fault_kind(mnemonic: str, jumpkind: str) -> str | None:
+    if jumpkind == "Ijk_SigFPE_IntDiv":
+        return "integer_division"
+    if jumpkind == "Ijk_SigTRAP":
+        if mnemonic == "hlt":
+            return "general_protection"
+        return "signal_trap"
+    return None
+
+
 def step_instruction_outcomes(
     project: Any,
     source: int,
@@ -768,6 +779,26 @@ def step_instruction_outcomes(
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
+    if (
+        block.vex.jumpkind == "Ijk_SigTRAP"
+        and block.capstone.insns[0].mnemonic == "hlt"
+    ):
+        # VEX may return an engine successor for HLT, but this privileged
+        # instruction faults at CPL 3, retaining its faulting instruction IP.
+        target = z3.BitVecVal(source, 64, ctx=LTS_EXTRACTION_CONTEXT)
+        outcome = InstructionOutcome(
+            outcome_id=0,
+            guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
+            updates={AMD64_LAYOUT.ip_view: target},
+            target=target,
+            target_value=source,
+            jumpkind=block.vex.jumpkind,
+            writes=(),
+            fault_kind="general_protection",
+        )
+        return InstructionOutcomeFamily(
+            source, source_rip_guard(source), (outcome,)
+        )
     pending: list[dict[str, int]] = [{}]
     successors = []
     while pending:
@@ -817,5 +848,9 @@ def step_instruction_outcomes(
             target_value=target_value,
             jumpkind=post.history.jumpkind,
             writes=writes,
+            fault_kind=_architectural_fault_kind(
+                block.capstone.insns[0].mnemonic,
+                post.history.jumpkind,
+            ),
         ))
     return InstructionOutcomeFamily(source, source_rip_guard(source), tuple(outcomes))
