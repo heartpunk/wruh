@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from ayxg.expr import Declaration, TermSort
-
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Any
 
+import capstone
 import z3
+from ayxg.expr import Declaration, TermSort
 
 from extractor.amd64_state import (
     InstructionOutcomeFamily,
     canonical_declarations,
     step_instruction_outcomes,
 )
+from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.artifact import (
     DecodedInstructionEvidence,
     EdgeId,
@@ -23,13 +24,41 @@ from extractor.artifact import (
     OutcomeId,
     StaticOccurrenceId,
 )
-from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.binary_inventory import PinnedBinary
 from extractor.typed_z3 import step_summary_from_z3
 
 
 class FreshExtractionError(RuntimeError):
     """The exact rooted function cannot be freshly extracted."""
+
+
+@dataclass(frozen=True)
+class ExtractionCoverage:
+    """Immutable traversal evidence; no status claims general closure."""
+
+    unresolved_indirect_sites: tuple[int, ...]
+
+    def to_data(self) -> dict[str, Any]:
+        return {
+            "scope": "intraprocedural-jumps-only",
+            "status": "partial-indirect" if self.unresolved_indirect_sites else "direct-cfg",
+            "unresolved_indirect_sites": list(self.unresolved_indirect_sites),
+            "discovery": "loaded-table-seeds-do-not-bound-symbolic-targets",
+        }
+
+    @classmethod
+    def from_data(cls, value: dict[str, Any]) -> ExtractionCoverage:
+        if not isinstance(value, dict):
+            raise FreshExtractionError("invalid extraction coverage")
+        sites = value.get("unresolved_indirect_sites")
+        if (not isinstance(sites, list)
+                or any(type(site) is not int or site < 0 for site in sites)
+                or sites != sorted(set(sites))):
+            raise FreshExtractionError("invalid unresolved indirect sites")
+        result = cls(tuple(sites))
+        if value != result.to_data():
+            raise FreshExtractionError("contradictory extraction coverage")
+        return result
 
 
 @dataclass(frozen=True)
@@ -40,6 +69,7 @@ class FreshFunction:
     occurrences: tuple[Occurrence, ...]
     local_edges: tuple[LocalEdge, ...]
     architecture: ArchitectureLayout | None = None
+    extraction_coverage: ExtractionCoverage | None = None
 
     schema = "ghot-fresh-function-v1"
 
@@ -51,6 +81,7 @@ class FreshFunction:
             "declarations": [item.to_data() for item in self.declarations],
             "occurrences": [item.to_data() for item in self.occurrences],
             "local_edges": [item.to_data() for item in self.local_edges],
+            **({"extraction_coverage": self.extraction_coverage.to_data()} if self.extraction_coverage is not None else {}),
             **({"architecture": self.architecture.to_data()} if self.architecture is not None else {}),
         }
 
@@ -58,13 +89,34 @@ class FreshFunction:
     def from_data(cls, value: dict[str, Any]) -> FreshFunction:
         if value.get("schema") != cls.schema:
             raise FreshExtractionError("unknown fresh function schema")
-        return cls(
+        result = cls(
             value["function_id"], value["entry"],
             tuple(Declaration.from_data(item) for item in value["declarations"]),
             tuple(Occurrence.from_data(item) for item in value["occurrences"]),
             tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
             ArchitectureLayout.from_data(value["architecture"]) if "architecture" in value else None,
+            ExtractionCoverage.from_data(value["extraction_coverage"]) if "extraction_coverage" in value else None,
         )
+        if result.extraction_coverage is not None:
+            symbolic_sources = {edge.source for edge in result.local_edges
+                                if edge.summary.target.kind == "symbolic"}
+            decoder = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+            decoder.detail = True
+            expected = []
+            for item in result.occurrences:
+                if (not isinstance(item.origin, DecodedInstructionEvidence)
+                        or item.origin.canonical_address not in symbolic_sources):
+                    continue
+                raw = bytes.fromhex(item.origin.instruction_bytes)
+                decoded = list(decoder.disasm(raw, item.origin.canonical_address))
+                if len(decoded) != 1 or decoded[0].size != len(raw):
+                    raise FreshExtractionError("invalid decoded symbolic transfer evidence")
+                if decoded[0].group(capstone.CS_GRP_JUMP):
+                    expected.append(item.origin.canonical_address)
+            expected = sorted(set(expected))
+            if list(result.extraction_coverage.unresolved_indirect_sites) != expected:
+                raise FreshExtractionError("coverage sites disagree with symbolic jump occurrences")
+        return result
 
     def canonical_json(self) -> bytes:
         return json.dumps(
@@ -241,4 +293,5 @@ def extract_fresh_function(
         occurrences=tuple(occurrences),
         local_edges=tuple(edges),
         architecture=architecture_layout(pinned.project.arch),
+        extraction_coverage=ExtractionCoverage.from_data(root["extraction_coverage"]) if "extraction_coverage" in root else None,
     )
