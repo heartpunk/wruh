@@ -10,6 +10,20 @@ from extractor.amd64_terminals import (
 
 
 class Ud2TerminalTests(unittest.TestCase):
+    def test_minimized_synthetic_ud2_is_a_valid_terminal(self):
+        code = b"\x0f\x0b"
+        instruction = {
+            "mnemonic": "ud2",
+            "bytes": code.hex(),
+            "size": len(code),
+            "address": 0x1000,
+        }
+        self.assertTrue(is_ud2_instruction(instruction))
+        self.assertTrue(is_ud2_no_decode_terminal(
+            "Ijk_NoDecode", [instruction], block_end=0x1002,
+            has_zero_length_imark=False,
+        ))
+
     def test_pinned_apache_cold_symbol_fixtures_end_in_ud2(self):
         fixture_dir = Path(__file__).parent / "fixtures" / "apache-httpd-2.4.69"
         self.assertTrue((fixture_dir / "LICENSE").is_file())

@@ -432,6 +432,7 @@ def _walk_function(
         ):
             # x86 UD2 is an architecturally defined invalid-opcode trap. Keep
             # it as a terminal CFG node; arbitrary NoDecode remains rejected.
+            pass
         else:
             raise InventoryError(
                 f"{root_name}: unsupported jumpkind {jumpkind!r} at "
