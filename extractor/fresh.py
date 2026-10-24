@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from ayxg.expr import Declaration, TermSort
-
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Any
 
 import z3
+from ayxg.expr import Declaration, TermSort
 
 from extractor.amd64_state import (
     InstructionOutcomeFamily,
