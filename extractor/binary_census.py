@@ -177,11 +177,15 @@ def _function_candidates(project: Any) -> list[dict[str, Any]]:
         aliases.sort(key=lambda symbol: (-int(symbol.size), str(symbol.name)))
         primary = aliases[0]
         relative_address = int(getattr(primary, "relative_addr", rebased_address - int(image.mapped_base)))
+        linked_address = getattr(primary, "linked_addr", None)
+        if linked_address is None:
+            linked_address = int(getattr(image, "linked_base", 0)) + relative_address
         names = sorted({str(symbol.name) for symbol in aliases})
         candidates.append({
             "id": f"fn_{relative_address:016x}",
             "address": rebased_address,
             "relative_address": relative_address,
+            "object_virtual_address": int(linked_address),
             "size": int(primary.size),
             "symbol": str(primary.name),
             "aliases": names,
@@ -293,7 +297,7 @@ def _entry_nodes(
             {"@id": "bfe:UniqueEntryAddress"},
         ],
         "bfe:candidateAddressSpace": {"@id": "bfe:ObjectVirtualAddress"},
-        "bfe:candidateAddressValue": candidate["relative_address"],
+        "bfe:candidateAddressValue": candidate["object_virtual_address"],
         "bfe:declaredExtentBytes": candidate["size"],
         "bfe:candidateAliasIdentifier": candidate["aliases"],
     }]
