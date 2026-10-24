@@ -1,10 +1,13 @@
 """Public Angr SMT boundary checks; no candidate binary execution."""
-from extractor.amd64_state import claripy_to_z3, LTS_EXTRACTION_CONTEXT
-from extractor.runtime import claripy as c
 import z3
+
+from extractor.amd64_state import LTS_EXTRACTION_CONTEXT, claripy_to_z3
+from extractor.runtime import claripy as c
 
 x, y, b = c.BVS('x', 64, explicit_name=True), c.BVS('y', 64, explicit_name=True), c.BoolS('b', explicit_name=True)
 xz, yz, bz = z3.BitVec('x', 64, ctx=LTS_EXTRACTION_CONTEXT), z3.BitVec('y', 64, ctx=LTS_EXTRACTION_CONTEXT), z3.Bool('b', ctx=LTS_EXTRACTION_CONTEXT)
+# Keep the zero divisor symbolic so Claripy does not constant-fold bvsdiv.
+sdiv_zero_divisor = c.BVS('sdiv_zero_divisor', 8, explicit_name=True)
 cases = [
     ('true', c.BoolV(True), z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT)),
     ('false', c.BoolV(False), z3.BoolVal(False, ctx=LTS_EXTRACTION_CONTEXT)),
@@ -12,6 +15,12 @@ cases = [
     ('bv_symbol', x, xz),
     ('add', x + y, xz + yz),
     ('udiv', c.UDiv(x, y), z3.UDiv(xz, yz)),
+    ('sdiv', c.SDiv(x, y), xz / yz),
+    # SMT-LIB bvsdiv returns all ones for nonnegative / 0 and +1 for
+    # negative / 0. Keep these distinct from the minimum-signed/-1 overflow.
+    ('sdiv_by_zero_positive', c.SDiv(c.BVV(7, 8), sdiv_zero_divisor), z3.BitVecVal(0xFF, 8, ctx=LTS_EXTRACTION_CONTEXT)),
+    ('sdiv_by_zero_negative', c.SDiv(c.BVV(0xF9, 8), sdiv_zero_divisor), z3.BitVecVal(0x01, 8, ctx=LTS_EXTRACTION_CONTEXT)),
+    ('sdiv_min_overflow', c.SDiv(c.BVV(0x80, 8), c.BVV(0xFF, 8)), z3.BitVecVal(0x80, 8, ctx=LTS_EXTRACTION_CONTEXT)),
     ('urem', c.UMod(x, y), z3.URem(xz, yz)),
     ('shift', c.LShR(x, y), z3.LShR(xz, yz)),
     ('extract', c.Extract(7, 0, x), z3.Extract(7, 0, xz)),
@@ -44,6 +53,8 @@ for name, term, expected in cases:
     assert actual.sort() == expected.sort(), name
     assert claripy_to_z3(term) is actual, name
     solver = z3.Solver(ctx=LTS_EXTRACTION_CONTEXT)
+    if name in ('sdiv_by_zero_positive', 'sdiv_by_zero_negative'):
+        solver.add(claripy_to_z3(sdiv_zero_divisor) == 0)
     solver.add(actual != expected)
     assert solver.check() == z3.unsat, name
     print(name, 'UNSAT', flush=True)
