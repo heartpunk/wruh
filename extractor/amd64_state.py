@@ -768,9 +768,12 @@ def step_instruction_outcomes(
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
-    if block.vex.jumpkind == "Ijk_SigTRAP":
-        # VEX may return an engine successor for a trap, but SIGTRAP is a
-        # terminal fault edge. Faults retain the address of the faulting IP.
+    if (
+        block.vex.jumpkind == "Ijk_SigTRAP"
+        and block.capstone.insns[0].mnemonic == "hlt"
+    ):
+        # VEX may return an engine successor for HLT, but this privileged
+        # instruction faults at CPL 3, retaining its faulting instruction IP.
         target = z3.BitVecVal(source, 64, ctx=LTS_EXTRACTION_CONTEXT)
         outcome = InstructionOutcome(
             outcome_id=0,

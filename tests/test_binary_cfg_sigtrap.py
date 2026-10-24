@@ -25,7 +25,7 @@ class SigtrapAdapterTest(unittest.TestCase):
             DecodedInstructionEvidence.from_data(evidence.to_data()), evidence
         )
 
-    def test_hlt_without_engine_successors_becomes_error_outcome(self):
+    def test_hlt_sigtrap_is_terminal_fault_outcome(self):
         project = runtime.angr.load_shellcode(
             b"\xf4", arch="amd64", load_address=0x400000
         )
@@ -59,6 +59,28 @@ class SigtrapAdapterTest(unittest.TestCase):
         self.assertEqual(blocks[0]["instructions"][0]["mnemonic"], "hlt")
         self.assertEqual(blocks[0]["successors"], [])
 
+        edges = _local_edges(
+            artifact_declarations(project.arch),
+            StaticOccurrenceId(0),
+            family,
+        )
+        self.assertEqual(len(edges), 1)
+        self.assertEqual(edges[0].summary.target.kind, "error")
+
+    def test_int3_sigtrap_keeps_post_instruction_rip(self):
+        project = runtime.angr.load_shellcode(
+            b"\xcc", arch="amd64", load_address=0x400000
+        )
+
+        family = step_instruction_outcomes(project, 0x400000)
+
+        self.assertEqual(len(family.outcomes), 1)
+        outcome = family.outcomes[0]
+        self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(outcome.target_value, 0x400001)
+        self.assertEqual(
+            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400001
+        )
         edges = _local_edges(
             artifact_declarations(project.arch),
             StaticOccurrenceId(0),
