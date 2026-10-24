@@ -11,6 +11,7 @@ open Lean Ayxg.QfAbv Ayxg.QfAbv.JsonCodec Wruh.Observation Wruh.FreshExtraction
 inductive FaultKind where
   | integerDivision
   | invalidOpcode
+  | signalTrap
   deriving DecidableEq, Repr
 
 private def faultKindOfJumpkind (jumpkind : String) : Option FaultKind :=
@@ -18,6 +19,8 @@ private def faultKindOfJumpkind (jumpkind : String) : Option FaultKind :=
     some .integerDivision
   else if jumpkind == "Ijk_SigILL" then
     some .invalidOpcode
+  else if jumpkind == "Ijk_SigTRAP" then
+    some .signalTrap
   else
     none
 

@@ -157,7 +157,7 @@ def _local_edges(
             if outcome.target_value is not None
             else outcome.target
         )
-        if outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigILL"}:
+        if outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigILL", "Ijk_SigTRAP"}:
             target = "error"
         result.append(
             LocalEdge(
