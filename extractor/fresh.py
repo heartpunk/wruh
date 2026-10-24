@@ -162,8 +162,16 @@ def _local_edges(
             if outcome.target_value is not None
             else outcome.target
         )
-        if outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP"}:
+        is_fault = outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP"}
+        if is_fault:
             target = "error"
+        fault_kind = outcome.fault_kind
+        if is_fault and fault_kind is None:
+            fault_kind = (
+                "integer_division"
+                if outcome.jumpkind == "Ijk_SigFPE_IntDiv"
+                else "signal_trap"
+            )
         result.append(
             LocalEdge(
                 id=EdgeId(
@@ -178,6 +186,8 @@ def _local_edges(
                     target=target,
                     mirrored_pc=outcome.target,
                 ),
+                jumpkind=outcome.jumpkind if is_fault else None,
+                fault_kind=fault_kind if is_fault else None,
             )
         )
     return tuple(result)
