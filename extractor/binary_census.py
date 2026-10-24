@@ -9,8 +9,10 @@ import hashlib
 import importlib.metadata
 import io
 import json
+import logging
 import platform
 import tarfile
+import time
 import uuid
 from collections import Counter
 from datetime import UTC, datetime
@@ -87,6 +89,41 @@ DISPOSITION_IRIS = {
 }
 
 SAMPLE_POLICY = "sha256-rank-round-half-up-v1"
+
+_LOGGER = logging.getLogger(__name__)
+_COMPLETION_OUTCOMES = {
+    "extracted": "OK",
+    "failed": "FAIL",
+    "incomplete": "INCOMPLETE",
+    "not_attempted": "SKIP",
+}
+
+
+def _configure_logging() -> None:
+    _LOGGER.setLevel(logging.INFO)
+    if not _LOGGER.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            "%(asctime)s %(levelname)s %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%SZ",
+        )
+        formatter.converter = time.gmtime
+        handler.setFormatter(formatter)
+        _LOGGER.addHandler(handler)
+        _LOGGER.propagate = False
+
+
+def _log_candidate_completion(
+    candidate: dict[str, Any], disposition: str, completed: int, total: int
+) -> None:
+    _LOGGER.info(
+        "%s function=%r candidate=%s completed=%d/%d",
+        _COMPLETION_OUTCOMES[disposition],
+        candidate["symbol"],
+        candidate["id"],
+        completed,
+        total,
+    )
 
 
 def _now() -> str:
@@ -674,8 +711,13 @@ def run(arguments: argparse.Namespace) -> int:
                 "artifact": artifact_member,
             }, sort_keys=True) + "\n")
             ledger.flush()
+            _log_candidate_completion(
+                candidate,
+                disposition,
+                completed=sum(counts.values()),
+                total=len(candidates),
+            )
             if (index + 1) % 100 == 0:
-                print(f"census progress: {index + 1}/{len(candidates)} candidates")
                 _write_progress(
                     output_dir,
                     target_id=arguments.target_id,
@@ -767,6 +809,7 @@ def main() -> int:
         arguments.build_package = arguments.target_id
     if arguments.build_configuration == "unknown":
         arguments.build_configuration = "Nix package built with symbol tables retained (dontStrip=true)"
+    _configure_logging()
     return run(arguments)
 
 
