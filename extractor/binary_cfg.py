@@ -12,6 +12,10 @@ from extractor.binary_inventory import (
     InventoryError,
     PinnedBinary,
 )
+from extractor.cfg_blocks import (
+    CfgBlockValidationError,
+    validate_block_partition,
+)
 
 
 def _instruction_records(
@@ -49,60 +53,15 @@ def _validate_block_partition(
     extent_end: int,
     blocks: list[dict[str, Any]],
 ) -> None:
-    if not blocks or blocks[0]["address"] != entry:
-        raise InventoryError(f"{root_name}: CFG omits the entry block")
-
-    addresses = [block["address"] for block in blocks]
-    if len(addresses) != len(set(addresses)):
-        raise InventoryError(f"{root_name}: duplicate static block address")
-    address_set = set(addresses)
-
-    # AMD64 control flow can enter the middle of another instruction, so
-    # distinct block decodings may legitimately cover the same bytes.
-    instruction_by_address: dict[int, dict[str, Any]] = {}
-    for block in blocks:
-        block_start = block["address"]
-        block_end = block_start + block["size"]
-        if (
-            block["size"] <= 0
-            or block_start < entry
-            or block_end > extent_end
-        ):
-            raise InventoryError(
-                f"{root_name}: block [{block_start:#x}, {block_end:#x}) "
-                f"leaves [{entry:#x}, {extent_end:#x})"
-            )
-        records = block["instructions"]
-        if not records or records[0]["address"] != block_start:
-            raise InventoryError(
-                f"{root_name}: block {block_start:#x} has no entry instruction"
-            )
-        cursor = block_start
-        for instruction in records:
-            if instruction["address"] != cursor or instruction["size"] <= 0:
-                raise InventoryError(
-                    f"{root_name}: noncontiguous instruction roster in "
-                    f"block {block_start:#x}"
-                )
-            previous = instruction_by_address.get(instruction["address"])
-            if previous is not None and previous != instruction:
-                raise InventoryError(
-                    f"{root_name}: conflicting instruction decode at "
-                    f"{instruction['address']:#x}"
-                )
-            instruction_by_address[instruction["address"]] = instruction
-            cursor += instruction["size"]
-        if cursor != block_end:
-            raise InventoryError(
-                f"{root_name}: instruction roster does not cover "
-                f"block {block_start:#x}"
-            )
-        unknown = set(block["successors"]) - address_set
-        if unknown:
-            raise InventoryError(
-                f"{root_name}: local successors are not block entries: "
-                f"{sorted(hex(address) for address in unknown)}"
-            )
+    try:
+        validate_block_partition(
+            root_name=root_name,
+            entry=entry,
+            extent_end=extent_end,
+            blocks=blocks,
+        )
+    except CfgBlockValidationError as error:
+        raise InventoryError(str(error)) from error
 
 
 def _resolve_call_target(

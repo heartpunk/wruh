@@ -25,6 +25,10 @@ from extractor.artifact import (
 )
 from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.binary_inventory import PinnedBinary
+from extractor.cfg_blocks import (
+    CfgBlockValidationError,
+    ordered_instruction_records,
+)
 from extractor.typed_z3 import step_summary_from_z3
 
 
@@ -135,17 +139,10 @@ def occurrence_catalog(
 
 
 def _instruction_records(root: dict[str, Any]) -> tuple[dict[str, Any], ...]:
-    records: dict[int, dict[str, Any]] = {}
-    for block in root["blocks"]:
-        for instruction in block["instructions"]:
-            address = instruction["address"]
-            previous = records.get(address)
-            if previous is not None and previous != instruction:
-                raise FreshExtractionError(
-                    f"conflicting instruction decode at {address:#x}"
-                )
-            records[address] = instruction
-    return tuple(records[address] for address in sorted(records))
+    try:
+        return ordered_instruction_records(root["blocks"])
+    except CfgBlockValidationError as error:
+        raise FreshExtractionError(str(error)) from error
 
 
 def _local_edges(
