@@ -143,13 +143,13 @@ def _census_binary_repository_impl(ctx):
         path = ctx.path(binary)
         if not path.exists:
             fail("{} does not exist: {}".format(_CENSUS_BINARY_ENV, binary))
-        ctx.symlink(path, "binary")
-        sources = '["binary"]'
+        ctx.symlink(path, "census_binary")
+        sources = '["census_binary"]'
     else:
         # Keep ordinary Bazel queries and unrelated targets usable when no
         # census binary has been selected by the GitHub Actions job.
-        ctx.file("binary", "")
-        sources = '["binary"]'
+        ctx.file("census_binary", "")
+        sources = '["census_binary"]'
 
     ctx.file("BUILD.bazel", """\
 package(default_visibility = ["//visibility:public"])
