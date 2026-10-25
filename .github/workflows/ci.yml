@@ -50,5 +50,7 @@ jobs:
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor
 
-      - name: Run the minimal CLI smoke test through unittest
-        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Run Python tests in the pinned development shell
+        run: |
+          # shellcheck disable=SC2016
+          nix develop --no-write-lock-file --command bash -c 'export PYTHONPATH="$GITHUB_WORKSPACE${PYTHONPATH:+:$PYTHONPATH}"; exec python3 -m unittest discover -s tests -p "test_*.py" -v'
