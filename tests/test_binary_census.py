@@ -86,6 +86,24 @@ class FunctionCandidateAddressTests(unittest.TestCase):
         )
         self._assert_candidate(project, expected_object_va=0x401000, expected_rebased=0x401000)
 
+    def test_recovered_candidate_records_inferred_extent_and_identity(self):
+        candidate = {
+            "id": "fn_0000000000001000", "object_virtual_address": 0x1000,
+            "size": 0x20, "aliases": [], "identity_basis": "cfgfast",
+        }
+        nodes, _ = _entry_nodes(
+            census_id="urn:test:census", candidate=candidate,
+            binary_id="urn:test:binary", disposition="not_attempted",
+            attempt_id=None, started=None, ended=None, tool_release_ids=[],
+        )
+        node = nodes[0]
+        self.assertEqual(node["bfe:recoveredExtentBytes"], 0x20)
+        self.assertNotIn("bfe:declaredExtentBytes", node)
+        self.assertEqual(node["bfe:candidateAliasIdentifier"], [])
+        self.assertEqual(node["bfe:candidateIdentityBasis"], [
+            {"@id": "bfe:CFGFastEntry"}, {"@id": "bfe:UniqueEntryAddress"},
+        ])
+
     def test_zero_linked_base_pie_reports_object_va_not_runtime_rebase(self):
         # ET_DYN/PIE has linked base 0; the loader maps it at a nonzero address.
         project = self._project(
