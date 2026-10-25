@@ -48,7 +48,7 @@ jobs:
       - name: Build the pinned development shell
         run: nix develop --no-write-lock-file --command true
       - name: Check Python source syntax
-        run: python3 -m compileall -q extractor
+        run: python3 -m compileall -q extractor tools
 
       - name: Run Python tests in the pinned development shell
         run: |
