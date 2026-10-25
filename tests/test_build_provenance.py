@@ -38,6 +38,7 @@ class BuildProvenanceTests(unittest.TestCase):
         ]
         with (
             patch.object(sys, "argv", argv),
+            patch.object(binary_census, "_is_github_actions_runner", return_value=False),
             patch.object(binary_census, "_configure_logging"),
             patch.object(binary_census, "run", return_value=0) as run,
         ):
