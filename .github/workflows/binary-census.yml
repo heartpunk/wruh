@@ -292,6 +292,18 @@ jobs:
             printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)"
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
+        env:
+          WRUH_CI_SERVER_URL: ${{ github.server_url }}
+          WRUH_CI_REPOSITORY: ${{ github.repository }}
+          WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+          WRUH_CI_PULL_REQUEST_ID: ${{ github.event.pull_request.id }}
+          WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          WRUH_CI_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          WRUH_CI_RUN_ID: ${{ github.run_id }}
+          WRUH_CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WRUH_CI_CHECKED_OUT_SHA: ${{ github.sha }}
+          WRUH_CI_WORKFLOW: ${{ github.workflow }}
+          WRUH_CI_JOB: ${{ github.job }}
         run: |
           bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
           nix_version="$(nix --version)"
@@ -309,6 +321,17 @@ jobs:
             --wruh-revision "$GITHUB_SHA" \
             --bazel-version "$bazel_version" \
             --nix-version "$nix_version" \
+            --ci-server-url "$WRUH_CI_SERVER_URL" \
+            --ci-repository "$WRUH_CI_REPOSITORY" \
+            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
+            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
+            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            --ci-run-id "$WRUH_CI_RUN_ID" \
+            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
+            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
+            --ci-workflow "$WRUH_CI_WORKFLOW" \
+            --ci-job "$WRUH_CI_JOB" \
             --output-dir "$RUNNER_TEMP/wruh-census-apache"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -351,6 +374,18 @@ jobs:
             printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)"
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
+        env:
+          WRUH_CI_SERVER_URL: ${{ github.server_url }}
+          WRUH_CI_REPOSITORY: ${{ github.repository }}
+          WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+          WRUH_CI_PULL_REQUEST_ID: ${{ github.event.pull_request.id }}
+          WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          WRUH_CI_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          WRUH_CI_RUN_ID: ${{ github.run_id }}
+          WRUH_CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WRUH_CI_CHECKED_OUT_SHA: ${{ github.sha }}
+          WRUH_CI_WORKFLOW: ${{ github.workflow }}
+          WRUH_CI_JOB: ${{ github.job }}
         run: |
           bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
           nix_version="$(nix --version)"
@@ -369,6 +404,17 @@ jobs:
             --wruh-revision "$GITHUB_SHA" \
             --bazel-version "$bazel_version" \
             --nix-version "$nix_version" \
+            --ci-server-url "$WRUH_CI_SERVER_URL" \
+            --ci-repository "$WRUH_CI_REPOSITORY" \
+            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
+            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
+            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            --ci-run-id "$WRUH_CI_RUN_ID" \
+            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
+            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
+            --ci-workflow "$WRUH_CI_WORKFLOW" \
+            --ci-job "$WRUH_CI_JOB" \
             --output-dir "$RUNNER_TEMP/wruh-census-node"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -411,6 +457,18 @@ jobs:
             printf 'WRUH_CENSUS_AYXG_REVISION=%s\n' "$(jq -r '.nodes.ayxg.locked.rev' flake.lock)"
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
+        env:
+          WRUH_CI_SERVER_URL: ${{ github.server_url }}
+          WRUH_CI_REPOSITORY: ${{ github.repository }}
+          WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+          WRUH_CI_PULL_REQUEST_ID: ${{ github.event.pull_request.id }}
+          WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          WRUH_CI_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          WRUH_CI_RUN_ID: ${{ github.run_id }}
+          WRUH_CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WRUH_CI_CHECKED_OUT_SHA: ${{ github.sha }}
+          WRUH_CI_WORKFLOW: ${{ github.workflow }}
+          WRUH_CI_JOB: ${{ github.job }}
         run: |
           bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
           nix_version="$(nix --version)"
@@ -429,6 +487,17 @@ jobs:
             --wruh-revision "$GITHUB_SHA" \
             --bazel-version "$bazel_version" \
             --nix-version "$nix_version" \
+            --ci-server-url "$WRUH_CI_SERVER_URL" \
+            --ci-repository "$WRUH_CI_REPOSITORY" \
+            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
+            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
+            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            --ci-run-id "$WRUH_CI_RUN_ID" \
+            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
+            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
+            --ci-workflow "$WRUH_CI_WORKFLOW" \
+            --ci-job "$WRUH_CI_JOB" \
             --output-dir "$RUNNER_TEMP/wruh-census-bun"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
