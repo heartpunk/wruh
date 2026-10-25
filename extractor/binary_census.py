@@ -10,11 +10,13 @@ import importlib.metadata
 import io
 import json
 import logging
+import os
 import platform
 import tarfile
 import time
 import uuid
 from collections import Counter
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
@@ -28,9 +30,11 @@ XSD = "http://www.w3.org/2001/XMLSchema#"
 JSONLD_CONTEXT: dict[str, Any] = {
     "bfe": BFE,
     "prov": PROV,
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "xsd": XSD,
     "prov:used": {"@id": "prov:used", "@type": "@id"},
     "prov:wasGeneratedBy": {"@id": "prov:wasGeneratedBy", "@type": "@id"},
+    "prov:wasInformedBy": {"@id": "prov:wasInformedBy", "@type": "@id"},
     "prov:wasAssociatedWith": {"@id": "prov:wasAssociatedWith", "@type": "@id"},
     "prov:wasDerivedFrom": {"@id": "prov:wasDerivedFrom", "@type": "@id"},
     "prov:hadMember": {"@id": "prov:hadMember", "@type": "@id"},
@@ -423,6 +427,76 @@ def _entry_nodes(
     return nodes, entry
 
 
+def _ci_provenance_nodes(arguments: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if arguments.ci_run_id is None:
+        return [], {}
+
+    server_url = arguments.ci_server_url.rstrip("/")
+    repository = arguments.ci_repository
+    pull_request_number = arguments.ci_pull_request_number
+    pull_request_id = arguments.ci_pull_request_id
+    run_id = arguments.ci_run_id
+    run_attempt = arguments.ci_run_attempt
+    head_repository = arguments.ci_pull_request_head_repository or repository
+    pull_request_url = f"{server_url}/{repository}/pull/{pull_request_number}"
+    run_url = f"{server_url}/{repository}/actions/runs/{run_id}/attempts/{run_attempt}"
+
+    commit_nodes: dict[str, dict[str, Any]] = {}
+    commit_references: list[dict[str, str]] = []
+    for commit_repository, revision, label in (
+        (repository, arguments.ci_checked_out_sha, "Commit checked out by the workflow"),
+        (head_repository, arguments.ci_pull_request_head_sha, "Pull request head commit"),
+    ):
+        commit_url = f"{server_url}/{commit_repository}/commit/{revision}"
+        commit_node = commit_nodes.get(commit_url)
+        if commit_node is None:
+            commit_node = {
+                "@id": commit_url,
+                "@type": "prov:Entity",
+                "bfe:identifier": f"git-commit:{revision}",
+                "rdfs:label": label,
+            }
+            commit_nodes[commit_url] = commit_node
+            commit_references.append({"@id": commit_url})
+        elif label not in commit_node["rdfs:label"]:
+            commit_node["rdfs:label"] = [commit_node["rdfs:label"], label]
+
+    pull_request_node = {
+        "@id": pull_request_url,
+        "@type": "prov:Entity",
+        "bfe:identifier": [
+            f"github-pull-request-number:{pull_request_number}",
+            f"github-pull-request-id:{pull_request_id}",
+        ],
+        "rdfs:label": f"GitHub pull request #{pull_request_number}",
+    }
+    run_node = {
+        "@id": run_url,
+        "@type": "prov:Activity",
+        "bfe:identifier": f"github-actions-run:{run_id}/attempt/{run_attempt}",
+        "rdfs:label": f"GitHub Actions workflow {arguments.ci_workflow}, job {arguments.ci_job}",
+        "prov:used": [
+            {"@id": pull_request_url},
+            *commit_references,
+        ],
+    }
+    census_properties = {
+        "prov:wasInformedBy": {"@id": run_url},
+        "prov:used": [
+            {"@id": pull_request_url},
+            *commit_references,
+        ],
+    }
+    return [pull_request_node, *commit_nodes.values(), run_node], census_properties
+
+
+def _write_jsonld_report(report_path: Path, graph: list[dict[str, Any]]) -> None:
+    report_path.write_text(
+        json.dumps({"@context": JSONLD_CONTEXT, "@graph": graph}, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _write_report(
     *,
     output_dir: Path,
@@ -442,10 +516,7 @@ def _write_report(
     census_node = next(node for node in graph if node.get("@id") == census_id)
     census_node["prov:endedAtTime"] = ended
     report_path = output_dir / "census.jsonld"
-    report_path.write_text(
-        json.dumps({"@context": JSONLD_CONTEXT, "@graph": graph}, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
+    _write_jsonld_report(report_path, graph)
     artifact_digest = _sha256(artifact_path) if artifact_path.exists() else None
     summary = {
         "schema": "wruh-binary-function-census-summary-v1",
@@ -598,6 +669,8 @@ def run(arguments: argparse.Namespace) -> int:
         "bfe:activityUsesToolRelease": [{"@id": identifier} for identifier in tool_ids[:8]],
         "prov:startedAtTime": census_started,
     }
+    ci_nodes, ci_census_properties = _ci_provenance_nodes(arguments)
+    census_node.update(ci_census_properties)
     inventory_activity_node = {
         "@id": inventory_activity_id,
         "@type": "bfe:InventoryGeneration",
@@ -607,6 +680,7 @@ def run(arguments: argparse.Namespace) -> int:
         "bfe:inventoryGenerationUsesToolRelease": [{"@id": identifier} for identifier in tool_ids[:7]],
         "prov:startedAtTime": census_started,
     }
+    graph.extend(ci_nodes)
     graph.extend([
         {
             "@id": binary_id,
@@ -827,6 +901,26 @@ def run(arguments: argparse.Namespace) -> int:
     return 130 if interrupted else 0
 
 
+_GITHUB_ACTIONS_RUNNER_MARKERS = (
+    "GITHUB_RUN_ID",
+    "GITHUB_RUN_ATTEMPT",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_REPOSITORY",
+    "GITHUB_SHA",
+    "GITHUB_WORKFLOW",
+    "GITHUB_JOB",
+    "RUNNER_TEMP",
+    "RUNNER_OS",
+)
+
+
+def _is_github_actions_runner(environ: Mapping[str, str] | None = None) -> bool:
+    environment = os.environ if environ is None else environ
+    return environment.get("GITHUB_ACTIONS", "").strip().lower() == "true" or any(
+        marker in environment for marker in _GITHUB_ACTIONS_RUNNER_MARKERS
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Extract every eligible function symbol into PROV-O / BFE census reports.")
     parser.add_argument("--binary", required=True, type=Path, help="ELF executable or shared object to census")
@@ -843,6 +937,17 @@ def main() -> int:
     parser.add_argument("--ayxg-revision", default="unknown")
     parser.add_argument("--bazel-version", default="unknown")
     parser.add_argument("--nix-version")
+    parser.add_argument("--ci-server-url")
+    parser.add_argument("--ci-repository")
+    parser.add_argument("--ci-pull-request-number", type=int)
+    parser.add_argument("--ci-pull-request-id", type=int)
+    parser.add_argument("--ci-pull-request-head-repository")
+    parser.add_argument("--ci-pull-request-head-sha")
+    parser.add_argument("--ci-run-id", type=int)
+    parser.add_argument("--ci-run-attempt", type=int)
+    parser.add_argument("--ci-checked-out-sha")
+    parser.add_argument("--ci-workflow")
+    parser.add_argument("--ci-job")
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--sample-seed", help="explicit seed for deterministic candidate sampling")
     parser.add_argument(
@@ -851,6 +956,33 @@ def main() -> int:
         help="percentage of candidates to sample (0 through 100; requires --sample-seed)",
     )
     arguments = parser.parse_args()
+    ci_metadata = {
+        "--ci-server-url": arguments.ci_server_url,
+        "--ci-repository": arguments.ci_repository,
+        "--ci-pull-request-number": arguments.ci_pull_request_number,
+        "--ci-pull-request-id": arguments.ci_pull_request_id,
+        "--ci-pull-request-head-repository": arguments.ci_pull_request_head_repository,
+        "--ci-pull-request-head-sha": arguments.ci_pull_request_head_sha,
+        "--ci-run-id": arguments.ci_run_id,
+        "--ci-run-attempt": arguments.ci_run_attempt,
+        "--ci-checked-out-sha": arguments.ci_checked_out_sha,
+        "--ci-workflow": arguments.ci_workflow,
+        "--ci-job": arguments.ci_job,
+    }
+    ci_supplied = any(value is not None for value in ci_metadata.values())
+    github_actions_runner = _is_github_actions_runner()
+    if ci_supplied or github_actions_runner:
+        missing = [
+            name
+            for name, value in ci_metadata.items()
+            if value is None or (isinstance(value, str) and not value.strip())
+        ]
+        if missing:
+            if github_actions_runner:
+                message = "GitHub Actions runner detected; all CI provenance arguments are required"
+            else:
+                message = "CI provenance arguments must be supplied together"
+            parser.error(message + "; missing " + ", ".join(missing))
     if (arguments.sample_seed is None) != (arguments.sample_percentage is None):
         parser.error("--sample-seed and --sample-percentage must be provided together")
     if arguments.target_kind == "interpreter" and not arguments.target_implementation:
