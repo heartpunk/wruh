@@ -938,7 +938,7 @@ def main() -> int:
     parser.add_argument("--target-version", required=True)
     parser.add_argument("--target-platform", default="x86_64-linux")
     parser.add_argument("--build-package")
-    parser.add_argument("--build-configuration")
+    parser.add_argument("--build-configuration", nargs="+")
     parser.add_argument("--build-output")
     parser.add_argument("--nixpkgs-revision")
     parser.add_argument("--wruh-revision", default="unknown")
@@ -970,6 +970,8 @@ def main() -> int:
         help="percentage of candidates to sample (0 through 100; requires --sample-seed)",
     )
     arguments = parser.parse_args()
+    if arguments.build_configuration is not None:
+        arguments.build_configuration = " ".join(arguments.build_configuration)
     if not arguments.binary.is_absolute():
         runfiles_root = os.environ.get("TEST_SRCDIR")
         if runfiles_root:
