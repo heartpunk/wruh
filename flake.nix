@@ -43,7 +43,7 @@
               printf '%s\n' '${unstripped.drvPath}' > "$out/package-derivation"
             '';
         in {
-          apacheHttpdPinned = pkgs.apacheHttpd;
+          apacheHttpdPinned = withSymbols pkgs.apacheHttpd;
           censusLua = censusTarget {
             packageName = "lua5_5";
             package = pkgs.lua5_5;
