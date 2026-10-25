@@ -10,11 +10,13 @@ import importlib.metadata
 import io
 import json
 import logging
+import os
 import platform
 import tarfile
 import time
 import uuid
 from collections import Counter
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
@@ -899,6 +901,26 @@ def run(arguments: argparse.Namespace) -> int:
     return 130 if interrupted else 0
 
 
+_GITHUB_ACTIONS_RUNNER_MARKERS = (
+    "GITHUB_RUN_ID",
+    "GITHUB_RUN_ATTEMPT",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_REPOSITORY",
+    "GITHUB_SHA",
+    "GITHUB_WORKFLOW",
+    "GITHUB_JOB",
+    "RUNNER_TEMP",
+    "RUNNER_OS",
+)
+
+
+def _is_github_actions_runner(environ: Mapping[str, str] | None = None) -> bool:
+    environment = os.environ if environ is None else environ
+    return environment.get("GITHUB_ACTIONS", "").strip().lower() == "true" or any(
+        marker in environment for marker in _GITHUB_ACTIONS_RUNNER_MARKERS
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Extract every eligible function symbol into PROV-O / BFE census reports.")
     parser.add_argument("--binary", required=True, type=Path, help="ELF executable or shared object to census")
@@ -939,6 +961,7 @@ def main() -> int:
         "--ci-repository": arguments.ci_repository,
         "--ci-pull-request-number": arguments.ci_pull_request_number,
         "--ci-pull-request-id": arguments.ci_pull_request_id,
+        "--ci-pull-request-head-repository": arguments.ci_pull_request_head_repository,
         "--ci-pull-request-head-sha": arguments.ci_pull_request_head_sha,
         "--ci-run-id": arguments.ci_run_id,
         "--ci-run-attempt": arguments.ci_run_attempt,
@@ -946,13 +969,20 @@ def main() -> int:
         "--ci-workflow": arguments.ci_workflow,
         "--ci-job": arguments.ci_job,
     }
-    ci_supplied = any(value is not None for value in ci_metadata.values()) or (
-        arguments.ci_pull_request_head_repository is not None
-    )
-    if ci_supplied:
-        missing = [name for name, value in ci_metadata.items() if value is None]
+    ci_supplied = any(value is not None for value in ci_metadata.values())
+    github_actions_runner = _is_github_actions_runner()
+    if ci_supplied or github_actions_runner:
+        missing = [
+            name
+            for name, value in ci_metadata.items()
+            if value is None or (isinstance(value, str) and not value.strip())
+        ]
         if missing:
-            parser.error("CI provenance arguments must be supplied together; missing " + ", ".join(missing))
+            if github_actions_runner:
+                message = "GitHub Actions runner detected; all CI provenance arguments are required"
+            else:
+                message = "CI provenance arguments must be supplied together"
+            parser.error(message + "; missing " + ", ".join(missing))
     if (arguments.sample_seed is None) != (arguments.sample_percentage is None):
         parser.error("--sample-seed and --sample-percentage must be provided together")
     if arguments.target_kind == "interpreter" and not arguments.target_implementation:

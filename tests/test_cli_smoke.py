@@ -1,10 +1,11 @@
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
@@ -23,6 +24,55 @@ class CliSmokeTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("--artifact", result.stdout)
+
+    def test_local_cli_may_omit_ci_metadata(self):
+        argv = [
+            "binary_census",
+            "--binary", "input.bin",
+            "--target-id", "lua",
+            "--target-version", "5.5.1",
+            "--output-dir", "out",
+        ]
+        with (
+            patch.object(sys, "argv", argv),
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(binary_census, "_configure_logging"),
+            patch.object(binary_census, "run", return_value=0) as run,
+        ):
+            self.assertEqual(binary_census.main(), 0)
+        run.assert_called_once()
+
+    def test_github_actions_runner_requires_complete_ci_metadata(self):
+        base_argv = [
+            "binary_census",
+            "--binary", "input.bin",
+            "--target-id", "lua",
+            "--target-version", "5.5.1",
+            "--output-dir", "out",
+        ]
+        runner_environments = (
+            {"GITHUB_ACTIONS": "true"},
+            {"GITHUB_RUN_ID": "1234567890"},
+        )
+        incomplete_metadata = (
+            [],
+            ["--ci-run-id", "1234567890"],
+        )
+        for runner_environment in runner_environments:
+            for metadata_arguments in incomplete_metadata:
+                with self.subTest(runner_environment=runner_environment, metadata_arguments=metadata_arguments):
+                    stderr = io.StringIO()
+                    with (
+                        patch.object(sys, "argv", [*base_argv, *metadata_arguments]),
+                        patch.dict(os.environ, runner_environment, clear=True),
+                        redirect_stderr(stderr),
+                    ):
+                        with self.assertRaises(SystemExit) as error:
+                            binary_census.main()
+                    self.assertEqual(error.exception.code, 2)
+                    self.assertIn("GitHub Actions runner detected", stderr.getvalue())
+                    self.assertIn("--ci-pull-request-number", stderr.getvalue())
+                    self.assertIn("--ci-run-id", stderr.getvalue())
 
     def test_ci_metadata_arguments_are_linked_in_jsonld(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
