@@ -61,6 +61,24 @@
             binaryPattern = "*/lib/libpython3.12.so*";
             buildConfiguration = "CPython 3.12 shared library, dontStrip=true";
           };
+          censusApache = censusTarget {
+            packageName = "apache-httpd";
+            package = pkgs.apacheHttpd;
+            binaryPattern = "*/bin/httpd";
+            buildConfiguration = "Apache HTTP Server httpd executable, dontStrip=true";
+          };
+          censusNode = censusTarget {
+            packageName = "nodejs";
+            package = pkgs.nodejs;
+            binaryPattern = "*/bin/node";
+            buildConfiguration = "Nixpkgs Node.js executable, dontStrip=true";
+          };
+          censusBun = censusTarget {
+            packageName = "bun";
+            package = pkgs.bun;
+            binaryPattern = "*/bin/bun";
+            buildConfiguration = "Nixpkgs Bun executable, dontStrip=true";
+          };
         });
     in {
       packages = censusPackages;

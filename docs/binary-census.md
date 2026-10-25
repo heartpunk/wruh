@@ -36,7 +36,7 @@ Sampling metadata (`seed`, the requested decimal percentage, selected count, and
 
 The initial policy enumerates defined, sized ELF `STT_FUNC` symbols in the main object loaded by angr. Symbols sharing one entry address are one candidate; the largest declared extent wins, then the lexically first symbol name, while all aliases are retained. Candidate identifiers use the object's relative virtual address. The runner currently targets AMD64 ELF and records unsupported architectures as a census-level inventory failure.
 
-This is an auditable binary-symbol inventory, not a claim to find anonymous functions, source-level functions without ELF symbols, code in dependent shared objects, or dynamically generated code. For the three interpreter jobs, the selected object is Lua's shared library, QuickJS's `qjs` executable, or CPython's `libpython` shared library. Nix builds those artifacts with stripping disabled.
+This is an auditable binary-symbol inventory, not a claim to find anonymous functions, source-level functions without ELF symbols, code in dependent shared objects, or dynamically generated code. The pinned census targets are Lua's shared library, QuickJS's `qjs` executable, CPython's `libpython` shared library, Apache HTTP Server's `httpd` executable, Node.js's `node` executable, and Bun's `bun` executable. Apache is recorded as a generic binary; Lua, QuickJS, CPython, Node.js, and Bun are recorded as interpreters. Nix builds these artifacts with stripping disabled.
 
 ## Reports
 
@@ -52,5 +52,5 @@ Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`;
 
 ## GitHub jobs
 
-`.github/workflows/binary-census.yml` runs three independent top-level jobs (`lua`, `quickjs`, `cpython`) on GitHub-hosted `ubuntu-24.04` for every pull request. Each job builds its pinned, symbol-preserving target from `flake.lock`, runs the generic Bazel target, and uploads its report bundle as a 14-day artifact. No interpreter census is run on the developer workstation.
+`.github/workflows/binary-census.yml` runs six independent top-level jobs (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`) on GitHub-hosted `ubuntu-24.04` for every pull request. Each job builds its pinned, symbol-preserving target from `flake.lock`, runs the generic Bazel target, and uploads its report bundle as a 14-day artifact. No census is run on the developer workstation.
 
