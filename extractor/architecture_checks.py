@@ -14,13 +14,13 @@ from extractor import runtime
 from extractor.amd64_state import (
     AMD64_LAYOUT,
     FLAG_NAMES,
-    LTS_EXTRACTION_CONTEXT as CTX,
     canonical_declarations,
     canonical_flag,
     canonical_register,
     canonical_register_view,
     step_instruction_outcomes,
 )
+from extractor.amd64_state import LTS_EXTRACTION_CONTEXT as CTX
 from extractor.architecture import NORMALIZED_AMD64_FLAGS
 
 
