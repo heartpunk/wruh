@@ -11,6 +11,7 @@ import concurrent.futures
 import datetime as dt
 import gzip
 import hashlib
+import io
 import json
 import os
 import re
@@ -23,6 +24,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -128,6 +130,17 @@ class ArchiveStore:
                 status TEXT NOT NULL,
                 observed_at TEXT NOT NULL,
                 PRIMARY KEY (run_id, attempt, artifact_id, fingerprint)
+            );
+            CREATE TABLE IF NOT EXISTS census_entities (
+                report_sha256 TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                entity_type TEXT,
+                binary_sha256 TEXT,
+                inventory_id TEXT,
+                candidate_id TEXT,
+                evidence_state TEXT NOT NULL,
+                record_json TEXT NOT NULL,
+                PRIMARY KEY(report_sha256, entity_id)
             );
             CREATE TABLE IF NOT EXISTS actions_reconcile_queue (
                 run_id INTEGER PRIMARY KEY,
@@ -339,6 +352,78 @@ class ArchiveStore:
             )
             self.conn.commit()
 
+    def index_census_artifact(self, archive: bytes, artifact_sha256: str) -> int:
+        """Index JSON-LD entities found in a retained census artifact ZIP.
+
+        The original content-addressed ZIP is unchanged. Missing identity
+        components remain SQL NULL and are never synthesized.
+        """
+        try:
+            with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
+                reports = [(name, zipped.read(name)) for name in zipped.namelist()
+                           if Path(name).name == "census.jsonld"]
+        except (zipfile.BadZipFile, OSError):
+            return 0
+        indexed = 0
+        for _name, report in reports:
+            try:
+                graph = json.loads(report.decode("utf-8")).get("@graph", [])
+            except (UnicodeDecodeError, ValueError, AttributeError):
+                continue
+            nodes = {node.get("@id"): node for node in graph if isinstance(node, dict) and isinstance(node.get("@id"), str)}
+            for node in nodes.values():
+                node_type = node.get("@type")
+                node_type = node_type[0] if isinstance(node_type, list) and node_type else node_type
+                binary_sha = None
+                inventory_id = None
+                candidate_id = None
+                if node_type == "bfe:FunctionCandidate":
+                    candidate_id = node.get("@id")
+                    binary_ref = node.get("bfe:candidateInObject")
+                    binary_node = nodes.get(binary_ref.get("@id")) if isinstance(binary_ref, dict) else None
+                    content_digest = binary_node.get("bfe:contentDigest") if binary_node else None
+                    if isinstance(content_digest, str) and content_digest.startswith("sha256:"):
+                        binary_sha = content_digest[7:]
+                    census_id = str(candidate_id).split("/candidate/", 1)[0]
+                    census_node = nodes.get(census_id, {})
+                    inventory_ref = census_node.get("bfe:censusUsesInventory")
+                    inventory_id = inventory_ref.get("@id") if isinstance(inventory_ref, dict) else None
+                self.conn.execute(
+                    "INSERT OR REPLACE INTO census_entities(report_sha256, entity_id, entity_type, binary_sha256, inventory_id, candidate_id, evidence_state, record_json) VALUES(?,?,?,?,?,?,?,?)",
+                    (artifact_sha256, node["@id"], node_type, binary_sha, inventory_id,
+                     candidate_id, "unknown", canonical_json(node).decode("utf-8")),
+                )
+                indexed += 1
+        self.conn.commit()
+        return indexed
+
+    def reindex_existing_census_archives(self) -> int:
+        """One-time backfill of retained ZIP objects; never rewrites CAS files."""
+        if self.get_state("census-jsonld-index-v1", False):
+            return 0
+        with self.lock:
+            rows = self.conn.execute(
+                "SELECT DISTINCT objects.sha256, objects.relative_path, objects.encoding "
+                "FROM objects JOIN artifacts ON artifacts.blob_sha256=objects.sha256 "
+                "WHERE artifacts.status IN ('stored','reused-digest','reused-occurrence')"
+            ).fetchall()
+        count = 0
+        for sha256, relative_path, encoding in rows:
+            with self.lock:
+                already = self.conn.execute(
+                    "SELECT 1 FROM census_entities WHERE report_sha256=? LIMIT 1", (sha256,)
+                ).fetchone()
+            if already:
+                continue
+            try:
+                raw = (self.root / relative_path).read_bytes()
+                payload = gzip.decompress(raw) if encoding == "gzip" else raw
+            except (OSError, gzip.BadGzipFile, EOFError):
+                continue
+            count += self.index_census_artifact(payload, sha256)
+        self.set_state("census-jsonld-index-v1", True)
+        return count
+
     def manifest(self, repository: str) -> dict[str, Any]:
         with self.lock:
             object_count, raw_bytes, stored_bytes = self.conn.execute(
@@ -349,6 +434,7 @@ class ArchiveStore:
                 "SELECT COUNT(*) FROM job_logs WHERE status='stored'"
             ).fetchone()[0]
             artifact_count = self.conn.execute("SELECT COUNT(*) FROM artifacts").fetchone()[0]
+            census_entity_count = self.conn.execute("SELECT COUNT(*) FROM census_entities").fetchone()[0]
             stored_artifact_count = self.conn.execute(
                 "SELECT COUNT(*) FROM artifacts WHERE status IN ('stored','reused-digest','reused-occurrence','skipped-docker')"
             ).fetchone()[0]
@@ -364,6 +450,7 @@ class ArchiveStore:
                 "terminal_job_logs_stored": log_count,
                 "artifact_occurrences_seen": artifact_count,
                 "artifact_occurrences_resolved_or_skipped": stored_artifact_count,
+                "census_jsonld_entities_indexed": census_entity_count,
             },
         }
 
@@ -725,6 +812,7 @@ class Collector:
                 blob = stored["sha256"]
                 status = "stored"
                 self.store.set_artifact(run_id, attempt, artifact_id, fingerprint, blob, status)
+                self.store.index_census_artifact(body, blob)
             except (GitHubError, OSError) as error:
                 status = "expired" if isinstance(error, GitHubError) and error.status in (404, 410) else "retry"
                 blob = None
@@ -941,6 +1029,7 @@ class Collector:
                 raise RuntimeError(f"archive mirror failed; see {log_path}")
 
     def once(self, force_hourly: bool = False) -> dict[str, Any]:
+        indexed_entities = self.store.reindex_existing_census_archives()
         now = utc_now()
         last_pr_reconcile = parse_time(self.store.get_state("last_pr_reconcile"))
         last_actions_reconcile = parse_time(self.store.get_state("last_actions_reconcile"))
@@ -962,6 +1051,7 @@ class Collector:
             "pr_refresh": pr_refresh,
             "hourly_reconcile": actions_hourly,
             "runs_pending": pending,
+            "census_entities_indexed": indexed_entities,
             "manifest": self.store.manifest(self.repository),
         }
 

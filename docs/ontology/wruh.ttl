@@ -1,0 +1,89 @@
+@prefix wruh: <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+<https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> a skos:ConceptScheme ;
+  dct:title "Wruh extraction outcome and evidence vocabulary"@en ;
+  dct:hasVersion "0.1.0-draft" ;
+  dct:description "Provisional GitHub namespace pending a durable namespace decision. Local binary-analysis terms align selectively with PROV-O and SKOS; no OWL reasoner is required."@en .
+
+wruh:RunAttempt a rdfs:Class ; rdfs:subClassOf prov:Activity .
+wruh:RunOutcome a rdfs:Class ; rdfs:subClassOf skos:Concept .
+wruh:Target a rdfs:Class ; rdfs:subClassOf prov:Entity .
+wruh:TargetObservation a rdfs:Class ; rdfs:subClassOf prov:Entity .
+wruh:Evidence a rdfs:Class ; rdfs:subClassOf prov:Entity .
+wruh:Diagnosis a rdfs:Class ; rdfs:subClassOf prov:Entity .
+wruh:ChangeHypothesis a rdfs:Class ; rdfs:subClassOf prov:Entity .
+wruh:SelectionManifest a rdfs:Class ; rdfs:subClassOf prov:Entity .
+wruh:FailureKind a rdfs:Class ; rdfs:subClassOf skos:Concept .
+wruh:outcome a rdf:Property ; rdfs:domain wruh:TargetObservation ; rdfs:range wruh:RunOutcome .
+wruh:passed a wruh:RunOutcome ; skos:prefLabel "passed" .
+wruh:failed a wruh:RunOutcome ; skos:prefLabel "failed" .
+wruh:incomplete a wruh:RunOutcome ; skos:prefLabel "incomplete" .
+wruh:notRun a wruh:RunOutcome ; skos:prefLabel "not run" .
+wruh:failureKind a rdf:Property ; rdfs:domain wruh:Diagnosis ; rdfs:range wruh:FailureKind .
+wruh:mechanism a rdf:Property ; rdfs:domain wruh:ChangeHypothesis ; rdfs:range wruh:FailureKind .
+wruh:target a rdf:Property ; rdfs:domain wruh:TargetObservation ; rdfs:range wruh:Target .
+wruh:evidence a rdf:Property ; rdfs:domain wruh:Diagnosis ; rdfs:range wruh:Evidence .
+wruh:evidenceDigest a rdf:Property ; rdfs:domain wruh:Evidence .
+wruh:evidenceIdentifier a rdf:Property ; rdfs:domain wruh:Evidence .
+wruh:evidenceState a rdf:Property ; rdfs:domain wruh:Evidence ; rdfs:range xsd:string .
+wruh:binaryDigest a rdf:Property ; rdfs:domain wruh:Target .
+wruh:candidateId a rdf:Property ; rdfs:domain wruh:Target .
+wruh:inventoryDigest a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:selectionMode a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:architecture a rdf:Property ; rdfs:domain wruh:Target .
+wruh:address a rdf:Property ; rdfs:domain wruh:Target .
+wruh:extent a rdf:Property ; rdfs:domain wruh:Target .
+wruh:symbol a rdf:Property ; rdfs:domain wruh:Target ; rdfs:comment "Descriptive label only; not part of target identity." .
+wruh:selectionReason a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:policyVersion a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:targetSetDigest a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:rawReport a rdf:Property ; rdfs:domain wruh:TargetObservation ; rdfs:range prov:Entity .
+wruh:confidence a rdf:Property ; rdfs:domain wruh:Diagnosis ; rdfs:range xsd:decimal .
+wruh:reviewState a rdf:Property ; rdfs:domain wruh:Diagnosis .
+wruh:failureDetail a rdf:Property ; rdfs:domain wruh:FailureKind ; rdfs:range xsd:string .
+wruh:sampleSeed a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:sampleStratum a rdf:Property ; rdfs:domain wruh:SelectionManifest .
+wruh:sampleSize a rdf:Property ; rdfs:domain wruh:SelectionManifest ; rdfs:range xsd:nonNegativeInteger .
+wruh:failureWrongGuard a wruh:FailureKind, skos:Concept ; skos:prefLabel "wrong guard" .
+wruh:failureWrongStateUpdate a wruh:FailureKind, skos:Concept ; skos:prefLabel "wrong state update" .
+wruh:failureWrongMemoryWrite a wruh:FailureKind, skos:Concept ; skos:prefLabel "wrong memory write" .
+
+wruh:failureInventoryOverlap a wruh:FailureKind, skos:Concept ; skos:prefLabel "overlapping static block" .
+wruh:failureMetadata a wruh:FailureKind, skos:Concept ; skos:prefLabel "missing or inconsistent metadata" .
+wruh:failureNoDecode a wruh:FailureKind, skos:Concept ; skos:prefLabel "NoDecode" .
+wruh:failureUnexpectedTrap a wruh:FailureKind, skos:Concept ; skos:prefLabel "unexpected trap" .
+wruh:failureUnrecognizedTerminal a wruh:FailureKind, skos:Concept ; skos:prefLabel "unrecognized terminal" .
+wruh:failureCallFallthrough a wruh:FailureKind, skos:Concept ; skos:prefLabel "call fall-through" .
+wruh:failureMissingEdge a wruh:FailureKind, skos:Concept ; skos:prefLabel "missing edge or branch" .
+wruh:failureWrongTarget a wruh:FailureKind, skos:Concept ; skos:prefLabel "wrong target" .
+wruh:failureUnsupportedOperation a wruh:FailureKind, skos:Concept ; skos:prefLabel "unsupported operation, including signed division" .
+wruh:failureSemanticMismatch a wruh:FailureKind, skos:Concept ; skos:prefLabel "semantic mismatch" ; skos:scopeNote "Specify wrong guard, target, state update, or memory write in the record." .
+wruh:failureRunner a wruh:FailureKind, skos:Concept ; skos:prefLabel "runner or provenance failure" .
+wruh:failureCancellation a wruh:FailureKind, skos:Concept ; skos:prefLabel "cancellation" ; skos:broader wruh:failureIncompleteExecution .
+wruh:failureTimeout a wruh:FailureKind, skos:Concept ; skos:prefLabel "timeout" ; skos:broader wruh:failureIncompleteExecution .
+wruh:failureOOM a wruh:FailureKind, skos:Concept ; skos:prefLabel "out of memory" ; skos:broader wruh:failureIncompleteExecution .
+wruh:failureIncompleteExecution a wruh:FailureKind, skos:Concept ; skos:prefLabel "incomplete execution" ; skos:scopeNote "An execution outcome, never a semantic diagnosis." .
+
+# Example: absent evidence is explicitly unknown; it cannot imply success.
+wruh:exampleRun a wruh:RunAttempt, prov:Activity ; prov:used wruh:exampleTarget ; prov:wasAssociatedWith wruh:exampleSoftwareAgent .
+wruh:exampleSoftwareAgent a prov:SoftwareAgent ; dct:title "Wruh example runner"@en .
+wruh:exampleTarget a wruh:Target ; wruh:binaryDigest "sha256:0000000000000000000000000000000000000000000000000000000000000000" ; wruh:architecture "x86_64" ; wruh:address "0x401000" ; wruh:extent 32 ; wruh:symbol "example_fn" .
+wruh:exampleObservation a wruh:TargetObservation ; wruh:target wruh:exampleTarget ; wruh:outcome wruh:notRun ; prov:wasGeneratedBy wruh:exampleRun .
+wruh:unknownEvidence a wruh:Evidence ; wruh:evidenceIdentifier "urn:wruh:evidence:example:missing" ; wruh:evidenceState "unknown" ; dct:description "No retained artifact establishes an outcome."@en .
+
+# Optional SHACL Core checks for required record fields; no reasoner is needed.
+wruh:TargetShape a sh:NodeShape ; sh:targetClass wruh:Target ;
+  sh:property [ sh:path wruh:binaryDigest ; sh:minCount 1 ] ;
+  sh:property [ sh:path wruh:architecture ; sh:minCount 1 ] ;
+  sh:property [ sh:path wruh:address ; sh:minCount 1 ] ;
+  sh:property [ sh:path wruh:extent ; sh:minCount 1 ] .
+wruh:EvidenceShape a sh:NodeShape ; sh:targetClass wruh:Evidence ;
+  sh:property [ sh:path wruh:evidenceIdentifier ; sh:minCount 1 ] ;
+  sh:property [ sh:path wruh:evidenceState ; sh:minCount 1 ] .

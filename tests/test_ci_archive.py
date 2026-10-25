@@ -1,7 +1,10 @@
 import datetime as dt
 import gzip
+import io
+import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 from tools.ci_archive import ArchiveStore, Collector, digest_bytes
@@ -10,7 +13,7 @@ from tools.ci_archive import ArchiveStore, Collector, digest_bytes
 class ArchiveStoreTests(unittest.TestCase):
     def test_json_payload_is_gzipped_and_deduplicated_by_raw_sha256(self):
         with tempfile.TemporaryDirectory() as temporary:
-            store = ArchiveStore(Path(temporary))
+            store = ArchiveStore(Path(temporary), min_free_bytes=0)
             payload = b'{"hello":"archive"}\n'
             first = store.put(payload, "application/json", name="one.json")
             second = store.put(payload, "application/json", name="two.json")
@@ -49,6 +52,29 @@ class ArchiveStoreTests(unittest.TestCase):
             self.assertEqual(store.get_artifact(100, 2, 7, "fingerprint"), ("b" * 64, "retry"))
             store.set_log(100, 2, 99, None, "retry")
             self.assertEqual(store.pending_run_ids(), {100})
+            store.close()
+
+    def test_census_jsonld_is_indexed_without_rewriting_original_archive(self):
+        graph = [
+            {"@id": "census", "@type": "bfe:ExtractionCensus", "bfe:censusUsesInventory": {"@id": "inventory"}},
+            {"@id": "binary", "@type": "bfe:BinaryObject", "bfe:contentDigest": "sha256:" + "a" * 64},
+            {"@id": "census/candidate/401000", "@type": "bfe:FunctionCandidate", "bfe:candidateInObject": {"@id": "binary"}},
+        ]
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, "w") as archive:
+            archive.writestr("census.jsonld", json.dumps({"@graph": graph}))
+        original = payload.getvalue()
+        with tempfile.TemporaryDirectory() as temporary:
+            store = ArchiveStore(Path(temporary), min_free_bytes=0)
+            stored = store.put(original, "application/zip", name="binary-census.zip")
+            store.set_artifact(1, 1, 1, "fixture", stored["sha256"], "stored")
+            self.assertEqual(store.reindex_existing_census_archives(), 3)
+            self.assertEqual(store.reindex_existing_census_archives(), 0)
+            row = store.conn.execute(
+                "SELECT binary_sha256, inventory_id, candidate_id, evidence_state FROM census_entities WHERE entity_type='bfe:FunctionCandidate'"
+            ).fetchone()
+            self.assertEqual(row, ("a" * 64, "inventory", "census/candidate/401000", "unknown"))
+            self.assertEqual((Path(temporary) / stored["path"]).read_bytes(), original)
             store.close()
 
     def test_docker_image_artifact_is_skipped_but_census_bundle_is_kept(self):

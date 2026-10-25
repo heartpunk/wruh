@@ -1,0 +1,4 @@
+@prefix wruh: <https://wruh.heartpunk.dev/ontology/> .
+
+[] a wruh:ChangeHypothesis ;
+  wruh:mechanism wruh:failureUnsupportedOperation .
