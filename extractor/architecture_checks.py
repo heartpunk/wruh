@@ -14,6 +14,7 @@ from extractor import runtime
 from extractor.amd64_state import (
     AMD64_LAYOUT,
     FLAG_NAMES,
+    LTS_EXTRACTION_CONTEXT as CTX,
     canonical_declarations,
     canonical_flag,
     canonical_register,
