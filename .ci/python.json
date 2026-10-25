@@ -18,6 +18,9 @@
     ],
     [
       "extractor/open_transfers_smoke.py"
+    ],
+    [
+      "tests/test_instruction_outcomes.py"
     ]
   ]
 }
