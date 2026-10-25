@@ -11,12 +11,11 @@ from extractor.amd64_terminals import (
     is_ud2_instruction,
     is_ud2_no_decode_terminal,
 )
-from extractor.artifact import StaticOccurrenceId
+from extractor.artifact import LocalEdge, StaticOccurrenceId
 from extractor.binary_cfg import (
     _validate_block_partition,
     _walk_function,
 )
-from extractor.binary_inventory import InventoryError
 from extractor.fresh import _local_edges, artifact_declarations
 
 
@@ -42,6 +41,9 @@ class Ud2TerminalTests(unittest.TestCase):
             family,
         )[0]
         self.assertEqual(edge.summary.target.kind, "error")
+        self.assertEqual(edge.jumpkind, "Ijk_SigILL")
+        self.assertEqual(edge.fault_kind, "invalid_opcode")
+        self.assertEqual(LocalEdge.from_data(edge.to_data()), edge)
 
     def test_minimized_synthetic_ud2_is_a_valid_terminal(self):
         code = b"\x0f\x0b"
@@ -128,8 +130,10 @@ class Ud2TerminalTests(unittest.TestCase):
                 else:
                     self.assertEqual(calls, [])
 
-    def test_static_cfg_inventory_rejects_overlapping_blocks(self):
-        with self.assertRaisesRegex(InventoryError, "overlapping static block"):
+    def test_static_cfg_inventory_accepts_distinct_overlapping_instruction_streams(
+        self,
+    ):
+        self.assertIsNone(
             _validate_block_partition(
                 root_name="sample",
                 entry=0x1000,
@@ -149,6 +153,7 @@ class Ud2TerminalTests(unittest.TestCase):
                     },
                 ],
             )
+        )
 
     def test_ordinary_decode_failures_and_zero_length_imarks_are_rejected(self):
         ud2 = {"mnemonic": "ud2", "bytes": "0f0b", "size": 2,
