@@ -129,6 +129,10 @@ class ArchiveStore:
                 observed_at TEXT NOT NULL,
                 PRIMARY KEY (run_id, attempt, artifact_id, fingerprint)
             );
+            CREATE TABLE IF NOT EXISTS actions_reconcile_queue (
+                run_id INTEGER PRIMARY KEY,
+                enqueued_at TEXT NOT NULL
+            );
             """
         )
         self.conn.commit()
@@ -301,6 +305,27 @@ class ArchiveStore:
                 "UNION SELECT DISTINCT run_id FROM artifacts WHERE status='retry'"
             ).fetchall()
         return {int(row[0]) for row in rows}
+
+    def enqueue_actions_reconcile(self, run_ids: set[int]) -> None:
+        if not run_ids:
+            return
+        enqueued_at = iso_now()
+        with self.lock:
+            self.conn.executemany(
+                "INSERT OR IGNORE INTO actions_reconcile_queue(run_id, enqueued_at) VALUES(?, ?)",
+                ((run_id, enqueued_at) for run_id in run_ids),
+            )
+            self.conn.commit()
+
+    def actions_reconcile_run_ids(self) -> set[int]:
+        with self.lock:
+            rows = self.conn.execute("SELECT run_id FROM actions_reconcile_queue").fetchall()
+        return {int(row[0]) for row in rows}
+
+    def complete_actions_reconcile(self, run_id: int) -> None:
+        with self.lock:
+            self.conn.execute("DELETE FROM actions_reconcile_queue WHERE run_id=?", (run_id,))
+            self.conn.commit()
 
     def set_artifact(
         self, run_id: int, attempt: int, artifact_id: int, fingerprint: str, blob: str | None, status: str
@@ -796,26 +821,39 @@ class Collector:
         now = utc_now()
         cutoff_recent = now - dt.timedelta(hours=1)
         cutoff_reconcile = now - dt.timedelta(hours=24)
-        candidates: list[dict[str, Any]] = []
+        if hourly_reconcile:
+            reconcile_ids = {
+                int(run["id"])
+                for run in runs
+                if (created := parse_time(run.get("created_at"))) is not None
+                and created >= cutoff_reconcile
+            }
+            self.store.enqueue_actions_reconcile(reconcile_ids)
+
+        queued_ids = self.store.actions_reconcile_run_ids()
         retry_ids = self.store.pending_run_ids()
+        run_by_id = {int(run["id"]): run for run in runs}
+        candidates: list[dict[str, Any]] = []
         for run in runs:
             run_id = int(run["id"])
             previous = self.store.get_state(f"run:{run_id}:updated_at")
-            created = parse_time(run.get("created_at"))
-            active = run.get("status") != "completed"
-            is_recent = created is not None and created >= cutoff_recent
-            is_hourly = hourly_reconcile and created is not None and created >= cutoff_reconcile
             changed = previous != run.get("updated_at")
-            if changed or active or is_recent or is_hourly or run_id in linked_ids or run_id in retry_ids:
+            if changed or run_id in linked_ids or run_id in retry_ids or run_id in queued_ids:
                 candidates.append(run)
-        def run_priority(run: dict[str, Any]) -> tuple[int, int, int, float]:
+
+        queued_missing = queued_ids.difference(run_by_id)
+
+        def run_priority(run: dict[str, Any]) -> tuple[int, int, int, int, float]:
             run_id = int(run["id"])
             previous = self.store.get_state(f"run:{run_id}:updated_at")
             created = parse_time(run.get("created_at"))
+            changed = previous != run.get("updated_at")
+            is_new_live = previous is None and created is not None and created >= cutoff_recent
             return (
                 0 if run_id in linked_ids else 1,
-                0 if run.get("status") != "completed" else 1,
-                0 if previous != run.get("updated_at") else 1,
+                0 if run_id in retry_ids else 1,
+                0 if (changed and previous is not None) or is_new_live else 1,
+                0 if run_id in queued_ids else 1,
                 -(created.timestamp() if created else 0.0),
             )
 
@@ -839,12 +877,14 @@ class Collector:
                             })
                             continue
                         self.store.set_state(f"run:{run['id']}:updated_at", run.get("updated_at"))
-        pending = max(0, len(candidates) - len(selected)) + failed
+                        self.store.complete_actions_reconcile(int(run["id"]))
+        pending = max(0, len(candidates) - len(selected)) + failed + len(queued_missing)
         self.store.event("collector", {
             "kind": "actions-scan",
             "runs_returned": len(runs),
             "runs_selected": len(selected),
             "runs_pending": pending,
+            "reconcile_queue_pending": len(self.store.actions_reconcile_run_ids()),
             "hourly_reconcile": hourly_reconcile,
         })
         return pending
@@ -910,7 +950,10 @@ class Collector:
         if pr_hourly:
             self.store.set_state("last_pr_reconcile", iso_now())
         pending = self.collect_actions(action_links, hourly_reconcile=actions_hourly)
-        if actions_hourly and pending == 0:
+        if actions_hourly:
+            # The 24-hour sweep is persisted in actions_reconcile_queue. Advance
+            # its hourly watermark now so a capped batch does not rescan the same
+            # entire window on every five-minute poll.
             self.store.set_state("last_actions_reconcile", iso_now())
         self.store.set_state("last_successful_cycle", iso_now())
         self.postprocess()
