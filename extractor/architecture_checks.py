@@ -42,6 +42,41 @@ def check():
         records.append({"case": name, "outcomes": len(family.outcomes),
                         "updated": [sorted(o.updates) for o in family.outcomes]})
         return family
+    # Exercise real AMD64 IDIV lifting (idiv rcx), including a negative
+    # dividend and truncation-toward-zero remainder through the extraction path.
+    family = instruction("signed-idiv-quotient-remainder", "48f7f9")
+    dividend_low = z3.BitVecVal((1 << 64) - 7, 64, ctx=CTX)
+    dividend_high = z3.BitVecVal((1 << 64) - 1, 64, ctx=CTX)
+    divisor = z3.BitVecVal(3, 64, ctx=CTX)
+    expected_quotient = z3.BitVecVal((1 << 64) - 2, 64, ctx=CTX)
+    expected_remainder = z3.BitVecVal((1 << 64) - 1, 64, ctx=CTX)
+    normal_outcomes = [
+        outcome for outcome in family.outcomes
+        if outcome.jumpkind != "Ijk_SigFPE_IntDiv"
+    ]
+    assert normal_outcomes, "signed IDIV produced no normal outcome"
+    initial_operands = (
+        canonical_register("rax") == dividend_low,
+        canonical_register("rdx") == dividend_high,
+        canonical_register("rcx") == divisor,
+    )
+    matching_outcomes = []
+    for outcome in normal_outcomes:
+        solver = z3.Solver(ctx=CTX)
+        solver.add(family.source_guard, outcome.guard, *initial_operands)
+        if solver.check() == z3.sat:
+            matching_outcomes.append(outcome)
+    assert len(matching_outcomes) == 1, (
+        "negative -7 / 3 did not select exactly one normal IDIV outcome"
+    )
+    outcome = matching_outcomes[0]
+    solver = z3.Solver(ctx=CTX)
+    solver.add(family.source_guard, outcome.guard, *initial_operands)
+    solver.add(z3.Or(
+        outcome.updates["rax"] != expected_quotient,
+        outcome.updates["rdx"] != expected_remainder,
+    ))
+    assert solver.check() == z3.unsat, "signed IDIV quotient/remainder changed"
     out = instruction("eax-zero-extension", "b878563412").outcomes[0]
     prove(out.updates["rax"] == 0x12345678)
     out = instruction("ah-preserves-other-bits", "b47f").outcomes[0]
