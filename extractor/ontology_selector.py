@@ -44,7 +44,7 @@ def canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def canonical_inventory(*, target_id: str, binary_sha256: str, policy_version: str,
+def canonical_inventory(*, target_id: str, binary_sha256: str, architecture: str, policy_version: str,
                         candidates: list[dict[str, Any]]) -> dict[str, Any]:
     """Normalize the pinned current inventory before selection or partitioning."""
     normalized = []
@@ -52,13 +52,18 @@ def canonical_inventory(*, target_id: str, binary_sha256: str, policy_version: s
         candidate_id = candidate["candidateId"]
         address_space = candidate["addressSpace"]
         address = candidate["address"]
+        extent = candidate["extent"]
         if not isinstance(candidate_id, str) or not isinstance(address_space, str):
             raise ValueError("candidate identity needs candidateId and addressSpace")
-        normalized.append({"candidateId": candidate_id, "addressSpace": address_space, "address": address})
+        normalized.append({"candidateId": candidate_id, "addressSpace": address_space,
+                           "address": address, "extent": extent})
     ids = [candidate["candidateId"] for candidate in normalized]
     if len(ids) != len(set(ids)):
         raise ValueError("current inventory candidate IDs must be unique")
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", binary_sha256):
+        raise ValueError("binarySha256 must be a 64-digit SHA-256 digest")
     return {"schemaVersion": 1, "targetId": target_id, "binarySha256": binary_sha256.lower(),
+            "architecture": architecture,
             "inventoryPolicyVersion": policy_version,
             "candidates": sorted(normalized, key=lambda candidate: candidate["candidateId"])}
 
@@ -139,6 +144,7 @@ def main() -> int:
     parser.add_argument("--sample-size", type=int, default=2)
     parser.add_argument("--target-id", required=True)
     parser.add_argument("--binary-sha256", required=True)
+    parser.add_argument("--architecture", required=True)
     parser.add_argument("--inventory-policy-version", required=True)
     parser.add_argument("--inventory", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -146,6 +152,7 @@ def main() -> int:
     records, gaps = load_records(args.records)
     inventory_payload = json.loads(args.inventory.read_text(encoding="utf-8"))
     inventory = canonical_inventory(target_id=args.target_id, binary_sha256=args.binary_sha256,
+                                    architecture=args.architecture,
                                     policy_version=args.inventory_policy_version,
                                     candidates=inventory_payload["candidates"])
     # The legacy archive reader cannot prove complete typed diagnosis coverage.

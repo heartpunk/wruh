@@ -58,7 +58,7 @@ class ArchiveStoreTests(unittest.TestCase):
         graph = [
             {"@id": "census", "@type": "bfe:ExtractionCensus", "bfe:censusUsesInventory": {"@id": "inventory"}},
             {"@id": "binary", "@type": "bfe:BinaryObject", "bfe:contentDigest": "sha256:" + "a" * 64},
-            {"@id": "census/candidate/401000", "@type": "bfe:FunctionCandidate", "bfe:candidateInObject": {"@id": "binary"}},
+            {"@id": "census/candidate/fn_0000000000000001", "@type": "bfe:FunctionCandidate", "bfe:candidateInObject": {"@id": "binary"}},
         ]
         payload = io.BytesIO()
         with zipfile.ZipFile(payload, "w") as archive:
@@ -71,9 +71,9 @@ class ArchiveStoreTests(unittest.TestCase):
             self.assertEqual(store.reindex_existing_census_archives(), 3)
             self.assertEqual(store.reindex_existing_census_archives(), 0)
             row = store.conn.execute(
-                "SELECT binary_sha256, inventory_id, candidate_id, evidence_state FROM census_entities WHERE entity_type='bfe:FunctionCandidate'"
+                "SELECT binary_sha256, inventory_digest, inventory_id, candidate_id, evidence_state FROM census_entities WHERE entity_type='bfe:FunctionCandidate'"
             ).fetchone()
-            self.assertEqual(row, ("a" * 64, "inventory", "census/candidate/401000", "unknown"))
+            self.assertEqual(row, ("a" * 64, None, "inventory", "fn_0000000000000001", "unknown"))
             self.assertEqual((Path(temporary) / stored["path"]).read_bytes(), original)
             store.close()
 

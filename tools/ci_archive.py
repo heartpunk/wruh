@@ -136,6 +136,7 @@ class ArchiveStore:
                 entity_id TEXT NOT NULL,
                 entity_type TEXT,
                 binary_sha256 TEXT,
+                inventory_digest TEXT,
                 inventory_id TEXT,
                 candidate_id TEXT,
                 evidence_state TEXT NOT NULL,
@@ -375,22 +376,25 @@ class ArchiveStore:
                 node_type = node.get("@type")
                 node_type = node_type[0] if isinstance(node_type, list) and node_type else node_type
                 binary_sha = None
+                inventory_digest = None
                 inventory_id = None
                 candidate_id = None
                 if node_type == "bfe:FunctionCandidate":
-                    candidate_id = node.get("@id")
+                    candidate_iri = node.get("@id", "")
+                    candidate_suffix = candidate_iri.rsplit("/candidate/", 1)[-1]
+                    candidate_id = candidate_suffix if re.fullmatch(r"fn_[0-9a-fA-F]{16}", candidate_suffix) else None
                     binary_ref = node.get("bfe:candidateInObject")
                     binary_node = nodes.get(binary_ref.get("@id")) if isinstance(binary_ref, dict) else None
                     content_digest = binary_node.get("bfe:contentDigest") if binary_node else None
                     if isinstance(content_digest, str) and content_digest.startswith("sha256:"):
                         binary_sha = content_digest[7:]
-                    census_id = str(candidate_id).split("/candidate/", 1)[0]
+                    census_id = str(candidate_iri).split("/candidate/", 1)[0]
                     census_node = nodes.get(census_id, {})
                     inventory_ref = census_node.get("bfe:censusUsesInventory")
                     inventory_id = inventory_ref.get("@id") if isinstance(inventory_ref, dict) else None
                 self.conn.execute(
-                    "INSERT OR REPLACE INTO census_entities(report_sha256, entity_id, entity_type, binary_sha256, inventory_id, candidate_id, evidence_state, record_json) VALUES(?,?,?,?,?,?,?,?)",
-                    (artifact_sha256, node["@id"], node_type, binary_sha, inventory_id,
+                    "INSERT OR REPLACE INTO census_entities(report_sha256, entity_id, entity_type, binary_sha256, inventory_digest, inventory_id, candidate_id, evidence_state, record_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (artifact_sha256, node["@id"], node_type, binary_sha, inventory_digest, inventory_id,
                      candidate_id, "unknown", canonical_json(node).decode("utf-8")),
                 )
                 indexed += 1

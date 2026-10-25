@@ -8,9 +8,10 @@ class OntologySelectorTests(unittest.TestCase):
     kind = "https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#failureUnsupportedOperation"
 
     def inventory(self):
-        return canonical_inventory(target_id="lua", binary_sha256="a" * 64, policy_version="symbols-v1",
+        return canonical_inventory(target_id="lua", binary_sha256="a" * 64, architecture="AMD64",
+                                   policy_version="symbols-v1",
                                    candidates=[{"candidateId": f"fn_{i:016x}", "addressSpace": "object-relative",
-                                                "address": i} for i in range(1, 5)])
+                                                "address": i, "extent": 16} for i in range(1, 5)])
 
     def test_positive_match_and_seeded_unaffected_sample(self):
         inventory = self.inventory()
