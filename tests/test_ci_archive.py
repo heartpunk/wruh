@@ -77,6 +77,19 @@ class ArchiveStoreTests(unittest.TestCase):
             self.assertEqual((Path(temporary) / stored["path"]).read_bytes(), original)
             store.close()
 
+    def test_unreadable_retained_archive_is_recorded_as_unknown(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            store = ArchiveStore(Path(temporary), min_free_bytes=0)
+            stored = store.put(b"not a zip archive", "application/zip", name="census.zip")
+            store.set_artifact(1, 1, 2, "broken", stored["sha256"], "stored")
+            self.assertEqual(store.reindex_existing_census_archives(), 0)
+            row = store.conn.execute(
+                "SELECT entity_type, evidence_state FROM census_entities WHERE report_sha256=?",
+                (stored["sha256"],),
+            ).fetchone()
+            self.assertEqual(row, ("wruh:EvidenceGap", "unknown"))
+            store.close()
+
     def test_docker_image_artifact_is_skipped_but_census_bundle_is_kept(self):
         self.assertEqual(Collector.skip_artifact("wruh-dev-linux-amd64"), "skipped-docker")
         self.assertEqual(Collector.skip_artifact("docker-image-layer"), "skipped-docker")

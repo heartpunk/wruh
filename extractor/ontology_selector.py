@@ -82,6 +82,7 @@ def build_selection_manifest(inventory: dict[str, Any], hypothesis_kinds: set[st
     candidate_ids = {candidate["candidateId"] for candidate in inventory["candidates"]}
     gaps = list(evidence_gaps or [])
     matched: set[str] = set()
+    covered: set[str] = set()
     proven = history_coverage_complete and not gaps
     for record in history:
         if (record.get("binarySha256", "").lower() != inventory["binarySha256"]
@@ -95,8 +96,13 @@ def build_selection_manifest(inventory: dict[str, Any], hypothesis_kinds: set[st
             proven = False
             gaps.append("historical-candidate-not-in-current-inventory")
             continue
+        covered.add(candidate_id)
         if record.get("failureKind") in hypothesis_kinds:
             matched.add(candidate_id)
+
+    if not candidate_ids.issubset(covered):
+        proven = False
+        gaps.append("historical-evidence-does-not-cover-current-inventory")
 
     if not proven:
         manifest = {"schemaVersion": 1, "selectionPolicyVersion": POLICY_VERSION,

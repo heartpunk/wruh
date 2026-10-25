@@ -22,10 +22,10 @@ wruh:ChangeHypothesis a rdfs:Class ; rdfs:subClassOf prov:Entity .
 wruh:SelectionManifest a rdfs:Class ; rdfs:subClassOf prov:Entity .
 wruh:FailureKind a rdfs:Class ; rdfs:subClassOf skos:Concept .
 wruh:outcome a rdf:Property ; rdfs:domain wruh:TargetObservation ; rdfs:range wruh:RunOutcome .
-wruh:passed a wruh:RunOutcome ; skos:prefLabel "passed" .
-wruh:failed a wruh:RunOutcome ; skos:prefLabel "failed" .
-wruh:incomplete a wruh:RunOutcome ; skos:prefLabel "incomplete" .
-wruh:notRun a wruh:RunOutcome ; skos:prefLabel "not run" .
+wruh:passed a wruh:RunOutcome, skos:Concept ; skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> ; skos:prefLabel "passed" .
+wruh:failed a wruh:RunOutcome, skos:Concept ; skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> ; skos:prefLabel "failed" .
+wruh:incomplete a wruh:RunOutcome, skos:Concept ; skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> ; skos:prefLabel "incomplete" .
+wruh:notRun a wruh:RunOutcome, skos:Concept ; skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> ; skos:prefLabel "not run" .
 wruh:failureKind a rdf:Property ; rdfs:domain wruh:Diagnosis ; rdfs:range wruh:FailureKind .
 wruh:mechanism a rdf:Property ; rdfs:domain wruh:ChangeHypothesis ; rdfs:range wruh:FailureKind .
 wruh:target a rdf:Property ; rdfs:domain wruh:TargetObservation ; rdfs:range wruh:Target .
@@ -70,6 +70,25 @@ wruh:failureCancellation a wruh:FailureKind, skos:Concept ; skos:prefLabel "canc
 wruh:failureTimeout a wruh:FailureKind, skos:Concept ; skos:prefLabel "timeout" ; skos:broader wruh:failureIncompleteExecution .
 wruh:failureOOM a wruh:FailureKind, skos:Concept ; skos:prefLabel "out of memory" ; skos:broader wruh:failureIncompleteExecution .
 wruh:failureIncompleteExecution a wruh:FailureKind, skos:Concept ; skos:prefLabel "incomplete execution" ; skos:scopeNote "An execution outcome, never a semantic diagnosis." .
+
+wruh:failureInventoryOverlap skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureMetadata skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureNoDecode skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureUnexpectedTrap skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureUnrecognizedTerminal skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureCallFallthrough skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureMissingEdge skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureWrongTarget skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureUnsupportedOperation skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureSemanticMismatch skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureRunner skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureCancellation skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureTimeout skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureOOM skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureIncompleteExecution skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureWrongGuard skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureWrongStateUpdate skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
+wruh:failureWrongMemoryWrite skos:inScheme <https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#> .
 
 # Example: absent evidence is explicitly unknown; it cannot imply success.
 wruh:exampleRun a wruh:RunAttempt, prov:Activity ; prov:used wruh:exampleTarget ; prov:wasAssociatedWith wruh:exampleSoftwareAgent .

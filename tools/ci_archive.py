@@ -364,14 +364,20 @@ class ArchiveStore:
                 reports = [(name, zipped.read(name)) for name in zipped.namelist()
                            if Path(name).name == "census.jsonld"]
         except (zipfile.BadZipFile, OSError):
+            self._record_census_index_gap(artifact_sha256, "archive-is-not-readable-zip")
             return 0
         indexed = 0
         for _name, report in reports:
             try:
-                graph = json.loads(report.decode("utf-8")).get("@graph", [])
+                payload = json.loads(report.decode("utf-8"))
+                graph = payload.get("@graph") if isinstance(payload, dict) else None
+                if not isinstance(graph, list):
+                    raise ValueError("JSON-LD report has no @graph array")
             except (UnicodeDecodeError, ValueError, AttributeError):
+                self._record_census_index_gap(artifact_sha256, "census-jsonld-is-not-readable")
                 continue
             nodes = {node.get("@id"): node for node in graph if isinstance(node, dict) and isinstance(node.get("@id"), str)}
+            rows = []
             for node in nodes.values():
                 node_type = node.get("@type")
                 node_type = node_type[0] if isinstance(node_type, list) and node_type else node_type
@@ -392,14 +398,26 @@ class ArchiveStore:
                     census_node = nodes.get(census_id, {})
                     inventory_ref = census_node.get("bfe:censusUsesInventory")
                     inventory_id = inventory_ref.get("@id") if isinstance(inventory_ref, dict) else None
-                self.conn.execute(
+                rows.append((artifact_sha256, node["@id"], node_type, binary_sha, inventory_digest,
+                             inventory_id, candidate_id, "unknown", canonical_json(node).decode("utf-8")))
+            with self.lock:
+                self.conn.executemany(
                     "INSERT OR REPLACE INTO census_entities(report_sha256, entity_id, entity_type, binary_sha256, inventory_digest, inventory_id, candidate_id, evidence_state, record_json) VALUES(?,?,?,?,?,?,?,?,?)",
-                    (artifact_sha256, node["@id"], node_type, binary_sha, inventory_digest, inventory_id,
-                     candidate_id, "unknown", canonical_json(node).decode("utf-8")),
+                    rows,
                 )
-                indexed += 1
-        self.conn.commit()
+                self.conn.commit()
+            indexed += len(rows)
         return indexed
+
+    def _record_census_index_gap(self, artifact_sha256: str, reason: str) -> None:
+        entity_id = f"urn:wruh:archive-index-gap:sha256:{artifact_sha256}"
+        record = {"@id": entity_id, "@type": "wruh:EvidenceGap", "evidenceState": "unknown", "reason": reason}
+        with self.lock:
+            self.conn.execute(
+                "INSERT OR REPLACE INTO census_entities(report_sha256, entity_id, entity_type, binary_sha256, inventory_digest, inventory_id, candidate_id, evidence_state, record_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                (artifact_sha256, entity_id, "wruh:EvidenceGap", None, None, None, None, "unknown", canonical_json(record).decode("utf-8")),
+            )
+            self.conn.commit()
 
     def reindex_existing_census_archives(self) -> int:
         """One-time backfill of retained ZIP objects; never rewrites CAS files."""
@@ -423,6 +441,7 @@ class ArchiveStore:
                 raw = (self.root / relative_path).read_bytes()
                 payload = gzip.decompress(raw) if encoding == "gzip" else raw
             except (OSError, gzip.BadGzipFile, EOFError):
+                self._record_census_index_gap(sha256, "retained-census-archive-is-missing-or-unreadable")
                 continue
             count += self.index_census_artifact(payload, sha256)
         self.set_state("census-jsonld-index-v1", True)

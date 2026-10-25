@@ -15,8 +15,9 @@ class OntologySelectorTests(unittest.TestCase):
 
     def test_positive_match_and_seeded_unaffected_sample(self):
         inventory = self.inventory()
-        records = [{"binarySha256": "a" * 64, "candidateId": "fn_0000000000000001",
-                    "failureKind": self.kind, "evidenceState": "known", "evidenceReference": "archive:report#entry-1"}]
+        records = [{"binarySha256": "a" * 64, "candidateId": f"fn_{i:016x}",
+                    "failureKind": self.kind if i == 1 else "other-kind", "evidenceState": "known",
+                    "evidenceReference": f"archive:report#entry-{i}"} for i in range(1, 5)]
         result = build_selection_manifest(inventory, {self.kind}, records, history_coverage_complete=True,
                                           seed=19, sample_size=1)
         manifest = result["manifest"]
@@ -47,7 +48,7 @@ class OntologySelectorTests(unittest.TestCase):
                                           evidence_gaps=gaps)
         self.assertEqual(result["manifest"]["mode"], "all")
         self.assertEqual(result["manifest"]["candidateIds"], [])
-        self.assertEqual(result["manifest"]["evidenceGaps"], ["exist.jsonld:unknown"])
+        self.assertIn("exist.jsonld:unknown", result["manifest"]["evidenceGaps"])
 
 
 if __name__ == "__main__":
