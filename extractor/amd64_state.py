@@ -11,10 +11,11 @@ from functools import cache
 from typing import Any
 
 from extractor import runtime
+from extractor.amd64_terminals import is_ud2_instruction
+from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
 
 archinfo = importlib.import_module("archinfo")
 z3 = importlib.import_module("z3")
-from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
 
 
 class Amd64AdapterError(RuntimeError):
@@ -766,6 +767,35 @@ def step_instruction_outcomes(
     """Translate the complete successor relation of one real instruction."""
     source = _u64(source, "source")
     block = project.factory.block(source, num_inst=1)
+    decoded_instruction = block.capstone.insns
+    if (
+        len(decoded_instruction) == 1
+        and decoded_instruction[0].address == source
+        and decoded_instruction[0].size == 2
+        and is_ud2_instruction(
+            {
+                "mnemonic": decoded_instruction[0].mnemonic,
+                "bytes": decoded_instruction[0].bytes.hex(),
+                "size": decoded_instruction[0].size,
+            }
+        )
+    ):
+        # UD2 has no normal successor: its sole architectural result is #UD.
+        return InstructionOutcomeFamily(
+            source,
+            source_rip_guard(source),
+            (
+                InstructionOutcome(
+                    outcome_id=0,
+                    guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
+                    updates={},
+                    target=z3.BitVecVal(source, 64, ctx=LTS_EXTRACTION_CONTEXT),
+                    target_value=source,
+                    jumpkind="Ijk_SigILL",
+                    writes=(),
+                ),
+            ),
+        )
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
     pending: list[dict[str, int]] = [{}]
