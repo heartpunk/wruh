@@ -18,6 +18,12 @@
     ],
     [
       "extractor/open_transfers_smoke.py"
+    ],
+    [
+      "tests/test_memory_semantics.py"
+    ],
+    [
+      "tests/test_loaded_image_semantics.py"
     ]
   ]
 }
