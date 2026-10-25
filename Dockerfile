@@ -29,3 +29,6 @@ RUN nix develop .#buildbuddyRbe --no-write-lock-file --command bash -euo pipefai
       'python3.12 --version && python3.12 -c "import angr, z3"'
 # BuildBuddy actions need to write into the executor-provided workspace.
 USER root
+
+# Keep the developer image as the default for existing `docker build .` callers.
+FROM source
