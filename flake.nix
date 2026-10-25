@@ -84,6 +84,18 @@
       packages = censusPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
+            buildbuddyRbe = pkgs.mkShell {
+              packages = [
+                ifrl.packages.${system}.angr-python
+                pkgs.stdenv.cc.cc.lib
+              ];
+              GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString (system == "x86_64-linux") "${pkgs.stdenv.cc.cc.lib}";
+              shellHook = ''
+                export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
+                export PYTHONNOUSERSITE=1
+                export PYTHONSAFEPATH=1
+              '';
+            };
         in {
         default = pkgs.mkShell {
           inputsFrom = [ ifrl.devShells.${system}.default ayxg.devShells.${system}.default ];
@@ -109,6 +121,8 @@
           PYTHONNOUSERSITE = "1";
           PYTHONSAFEPATH = "1";
         };
-      });
+        } // (pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+          buildbuddyRbe = buildbuddyRbe;
+        }));
     };
 }

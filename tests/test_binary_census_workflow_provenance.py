@@ -4,6 +4,9 @@ from pathlib import Path
 
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/binary-census.yml"
+CI_SCRIPT = Path(__file__).resolve().parents[1] / "tools/run_census_ci.sh"
+BAZEL_TARGETS = Path(__file__).resolve().parents[1] / "extractor/binary_census_targets.bzl"
+BAZEL_BUILD = Path(__file__).resolve().parents[1] / "extractor/BUILD.bazel"
 TARGETS = ("lua", "quickjs", "cpython", "apache", "node", "bun")
 CI_OPTIONS = (
     "--ci-server-url",
@@ -35,22 +38,45 @@ CI_ENV = (
 
 class BinaryCensusWorkflowProvenanceTests(unittest.TestCase):
     def test_every_target_passes_required_ci_provenance(self):
-        content = WORKFLOW.read_text()
-        sections = re.split(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$", content)
-        jobs = dict(zip(sections[1::2], sections[2::2]))
+        workflow = WORKFLOW.read_text()
+        script = CI_SCRIPT.read_text()
+        bazel_targets = BAZEL_TARGETS.read_text()
+        bazel_build = BAZEL_BUILD.read_text()
 
-        for target in TARGETS:
-            with self.subTest(target=target):
-                self.assertIn(target, jobs)
-                block = jobs[target]
-                step_start = block.index("- name: Run generic binary census")
-                step_end = block.index("- uses: actions/upload-artifact", step_start)
-                run_step = block[step_start:step_end]
+        self.assertIn("run: bash tools/run_census_ci.sh", workflow)
+        for name in CI_ENV:
+            with self.subTest(workflow_env=name):
+                self.assertIn(name, workflow)
 
-                for option in CI_OPTIONS:
-                    self.assertIn(option, run_step)
-                for name in CI_ENV:
-                    self.assertIn(name, run_step)
+        target_match = re.search(r"(?m)^target_ids=\(([^)]*)\)", script)
+        self.assertIsNotNone(target_match, "census target list is missing")
+        self.assertEqual(tuple(target_match.group(1).split()), TARGETS)
+        self.assertIn('for target_id in "${target_ids[@]}"; do', script)
+        self.assertIn(
+            'bazel_args+=("//extractor:binary_census_${target_id}_remote_test")',
+            script,
+        )
+        target_definitions = re.search(
+            r"(?ms)^_CENSUS_REMOTE_TARGETS = \[(.*?)^\]",
+            bazel_targets,
+        )
+        self.assertIsNotNone(target_definitions, "Bazel census target list is missing")
+        declared_targets = tuple(
+            re.findall(r'\("([a-z0-9]+)"\s*,', target_definitions.group(1))
+        )
+        self.assertEqual(declared_targets, TARGETS)
+        self.assertIn(
+            'load(":binary_census_targets.bzl", "binary_census_remote_tests")',
+            bazel_build,
+        )
+        self.assertIn("binary_census_remote_tests()", bazel_build)
+
+        for name, option in zip(CI_ENV, CI_OPTIONS):
+            with self.subTest(ci_provenance=name):
+                self.assertIn(
+                    f'"--test_arg={option}=${{{name}:?{name} is required}}"',
+                    script,
+                )
 
 
 if __name__ == "__main__":

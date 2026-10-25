@@ -42,6 +42,29 @@ class CliSmokeTest(unittest.TestCase):
             self.assertEqual(binary_census.main(), 0)
         run.assert_called_once()
 
+    def test_build_configuration_may_contain_spaces(self):
+        argv = [
+            "binary_census",
+            "--binary", "input.bin",
+            "--target-id", "quickjs",
+            "--target-version", "2026-06-04",
+            "--build-configuration", "QuickJS", "qjs", "executable,", "dontStrip=true",
+            "--build-output", "/nix/store/example.drv",
+            "--output-dir", "out",
+        ]
+        with (
+            patch.object(sys, "argv", argv),
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(binary_census, "_configure_logging"),
+            patch.object(binary_census, "run", return_value=0) as run,
+        ):
+            self.assertEqual(binary_census.main(), 0)
+        arguments = run.call_args.args[0]
+        self.assertEqual(
+            arguments.build_configuration,
+            "QuickJS qjs executable, dontStrip=true",
+        )
+
     def test_github_actions_runner_requires_complete_ci_metadata(self):
         base_argv = [
             "binary_census",

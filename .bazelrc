@@ -19,5 +19,21 @@ build:reapi --remote_local_fallback=false
 build:reapi --remote_download_outputs=toplevel
 build:reapi --jobs=48
 
+# BuildBuddy remote execution and the UFDA-shared cache for GitHub Actions.
+# The CI wrapper adds this profile only when the organization key and the
+# matching Nix runtime image are available.
+build:buildbuddy_ci --build_metadata=ROLE=CI
+build:buildbuddy_ci --bes_results_url=https://app.buildbuddy.io/invocation/
+build:buildbuddy_ci --bes_backend=grpcs://remote.buildbuddy.io
+build:buildbuddy_ci --remote_cache=grpcs://remote.buildbuddy.io
+build:buildbuddy_ci --remote_executor=grpcs://remote.buildbuddy.io
+build:buildbuddy_ci --remote_instance_name=ufda
+build:buildbuddy_ci --remote_local_fallback=false
+build:buildbuddy_ci --spawn_strategy=remote
+test:buildbuddy_ci --strategy=TestRunner=remote
+build:buildbuddy_ci --remote_timeout=10m
+build:buildbuddy_ci --remote_download_outputs=all
+build:buildbuddy_ci --action_env=PATH
+
 common --repo_env=IFRL_ANGR_ENVIRONMENT
 common --repo_env=WRUH_AYXG_SOURCE

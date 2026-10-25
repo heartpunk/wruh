@@ -54,5 +54,22 @@ Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`;
 
 `.github/workflows/binary-census.yml` runs six independent top-level jobs (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`) on GitHub-hosted `ubuntu-24.04` for every pull request. Each job builds its pinned, symbol-preserving target from `flake.lock`, runs the generic Bazel target, and uploads its report bundle as a 14-day artifact. No census is run on the developer workstation.
 
+For trusted pull requests from this repository, the workflow also builds and
+publishes a PR-revision image to the existing public `ghcr.io/heartpunk/wruh-dev`
+package. Its digest pins the BuildBuddy remote execution container to the same
+Nix Python 3.12, angr, and native-library closure used by the Bazel client. The
+Nix-built target binary is declared as a Bazel input; `//extractor:binary_census_remote_test`
+then runs the actual census as a BuildBuddy remote test action. Bazel downloads
+the test's undeclared report outputs back to the GitHub runner for artifact
+upload. Nix target builds remain on GitHub Actions.
+
+Set the BuildBuddy organization writer key as the repository Actions secret
+`BUILDBUDDY_ORG_API_KEY`. Trusted same-repository PR runs require this secret
+and fail if remote execution cannot be configured. Fork PRs do not receive the
+secret or publish an execution image; they run the census locally on the
+GitHub runner. The BuildBuddy profile uses remote instance `ufda`, so other
+UFDA repositories can share the cache by using the same BuildBuddy organization,
+endpoint, and instance name.
+
 The workflow passes the PR number and GitHub PR ID, PR head repository and commit, checked-out commit, repository and server URL, workflow run ID and attempt, workflow name, and job ID as CLI arguments. The JSON-LD graph identifies the PR and commit resources as PROV entities, links the census activity to the workflow attempt, and records the run's PR and commit inputs. Local runs outside GitHub Actions may omit all `--ci-*` arguments. On a GitHub Actions runner, detected through `GITHUB_ACTIONS=true` or standard runner environment markers such as `GITHUB_RUN_ID`, the CLI requires every `--ci-*` provenance argument and fails with an explicit list of missing arguments if the workflow does not pass them. Partial metadata is rejected in all environments.
 
