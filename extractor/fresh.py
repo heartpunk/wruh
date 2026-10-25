@@ -14,6 +14,7 @@ from extractor.amd64_state import (
     canonical_declarations,
     step_instruction_outcomes,
 )
+from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.artifact import (
     DecodedInstructionEvidence,
     EdgeId,
@@ -22,7 +23,6 @@ from extractor.artifact import (
     OutcomeId,
     StaticOccurrenceId,
 )
-from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.binary_inventory import PinnedBinary
 from extractor.cfg_blocks import (
     CfgBlockValidationError,
