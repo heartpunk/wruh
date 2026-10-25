@@ -25,9 +25,9 @@ The post-download pass imports the latest CLI JSON, deduplicates payloads by raw
 
 ## Deployment contract
 
-Keep all deployment-specific values outside this repository. Configure the following in the Shire service environment and its external secret/configuration store:
+Keep all deployment-specific values outside this repository. Configure the following in the service environment and its external secret/configuration store:
 
-- `CI_ARCHIVE_ROOT`: local archive working root on Shire.
+- `CI_ARCHIVE_ROOT`: archive data root.
 - `CI_ARCHIVE_GITHUB_TOKEN_FILE`: path to a read-only GitHub token file. The same token is passed to `github-backup` by a `file://` reference, so it never appears in process arguments.
 - `CI_ARCHIVE_GITHUB_BACKUP_DIR`: mutable working directory used by the CLI; do not point it at the archive root.
 - `CI_ARCHIVE_UVX`: path to `uvx`.
@@ -36,7 +36,7 @@ Keep all deployment-specific values outside this repository. Configure the follo
 - `CI_ARCHIVE_RCLONE_BIN`: `rclone` executable path.
 - Optional limits: `CI_ARCHIVE_MAX_API_QPS`, `CI_ARCHIVE_API_WORKERS`, `CI_ARCHIVE_DOWNLOAD_WORKERS`, `CI_ARCHIVE_MAX_RUNS_PER_CYCLE`, and `CI_ARCHIVE_MIN_FREE_BYTES`.
 
-Install one service invocation and a five-minute timer outside the repository. The program performs one capture batch and exits; a failed invocation leaves local data intact and the next timer retries unresolved artifacts and logs. Point the mirror at the durable TrueNAS share. Do not configure retention cleanup during the evidence-gathering week.
+Install one service invocation and a five-minute timer outside the repository. The program performs one capture batch and exits; a failed invocation leaves local data intact and the next timer retries unresolved artifacts and logs. Point the mirror at the configured durable storage destination. Do not configure retention cleanup during the evidence-gathering week.
 
 The first-pass archive remains a raw evidence store. Review the seven-day volume, duplicate rate, compression ratio, API behavior, and mirror lag before choosing a generic service split or adding webhooks.
 
