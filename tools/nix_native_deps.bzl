@@ -130,3 +130,36 @@ ayxg_python_repository = repository_rule(
     environ = [_AYXG_SOURCE_ENV],
     local = True,
 )
+
+
+_CENSUS_BINARY_ENV = "WRUH_CENSUS_BINARY"
+
+
+def _census_binary_repository_impl(ctx):
+    binary = ctx.os.environ.get(_CENSUS_BINARY_ENV)
+    if binary:
+        if not binary.startswith("/nix/store/"):
+            fail("{} must name an immutable Nix store file".format(_CENSUS_BINARY_ENV))
+        path = ctx.path(binary)
+        if not path.exists:
+            fail("{} does not exist: {}".format(_CENSUS_BINARY_ENV, binary))
+        ctx.symlink(path, "binary")
+        sources = '["binary"]'
+    else:
+        # Keep ordinary Bazel queries and unrelated targets usable when no
+        # census binary has been selected by the GitHub Actions job.
+        ctx.file("binary", "")
+        sources = '["binary"]'
+
+    ctx.file("BUILD.bazel", """\
+package(default_visibility = ["//visibility:public"])
+filegroup(name = "binary", srcs = {})
+""".format(sources))
+
+
+census_binary_repository = repository_rule(
+    implementation = _census_binary_repository_impl,
+    configure = True,
+    environ = [_CENSUS_BINARY_ENV],
+    local = True,
+)

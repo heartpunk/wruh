@@ -39,3 +39,23 @@ py_binary(
     deps = [":binary_census_runtime"],
     target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
 )
+
+py_test(
+    name = "binary_census_remote_test",
+    srcs = ["binary_census.py"],
+    main = "binary_census.py",
+    size = "enormous",
+    timeout = "eternal",
+    args = ["--binary", "$(rlocationpath @wruh_census_binary//:binary)"],
+    data = [
+        "@nix_native_deps//:libstdcxx",
+        "@wruh_census_binary//:binary",
+    ],
+    env = {
+        "GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)",
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONSAFEPATH": "1",
+    },
+    deps = [":binary_census_runtime"],
+    target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+)

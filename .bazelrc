@@ -3,6 +3,7 @@ common --repo_env=GIT_CONFIG_GLOBAL=/dev/null
 common --repo_env=GHOT_NIX_ANGR_ROOT
 common --repo_env=GHOT_NIX_LIBSTDCXX_ROOT
 common --repo_env=GHOT_REAPI_WORKER_RUNTIME_ROOT
+common --repo_env=WRUH_CENSUS_BINARY
 build --show_result=20
 build --incompatible_strict_action_env
 build --spawn_strategy=sandboxed
@@ -19,12 +20,21 @@ build:reapi --remote_local_fallback=false
 build:reapi --remote_download_outputs=toplevel
 build:reapi --jobs=48
 
-# Optional BuildBuddy cache and invocation links for GitHub Actions. The CI
-# wrapper adds this profile only when BUILDBUDDY_ORG_API_KEY is available.
+# BuildBuddy remote execution and the UFDA-shared cache for GitHub Actions.
+# The CI wrapper adds this profile only when the organization key and the
+# matching Nix runtime image are available.
 build:buildbuddy_ci --build_metadata=ROLE=CI
 build:buildbuddy_ci --bes_results_url=https://app.buildbuddy.io/invocation/
 build:buildbuddy_ci --bes_backend=grpcs://remote.buildbuddy.io
 build:buildbuddy_ci --remote_cache=grpcs://remote.buildbuddy.io
+build:buildbuddy_ci --remote_executor=grpcs://remote.buildbuddy.io
+build:buildbuddy_ci --remote_instance_name=ufda
+build:buildbuddy_ci --remote_local_fallback=false
+build:buildbuddy_ci --spawn_strategy=remote
+build:buildbuddy_ci --test_strategy=remote
+build:buildbuddy_ci --remote_timeout=10m
+build:buildbuddy_ci --remote_download_outputs=all
+build:buildbuddy_ci --action_env=PATH
 
 common --repo_env=IFRL_ANGR_ENVIRONMENT
 common --repo_env=WRUH_AYXG_SOURCE

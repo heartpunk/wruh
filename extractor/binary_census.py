@@ -572,12 +572,18 @@ def _write_progress(
     temporary.replace(output_dir / "progress.json")
 
 
-def _write_global_failure(output_dir: Path, target_id: str, binary: Path, stage: str, error: Exception) -> None:
+def _write_global_failure(
+    output_dir: Path,
+    target_id: str,
+    binary_identifier: str,
+    stage: str,
+    error: Exception,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     summary = {
         "schema": "wruh-binary-function-census-summary-v1",
         "targetId": target_id,
-        "binary": str(binary),
+        "binary": binary_identifier,
         "inventoryCandidates": 0,
         "attempted": 0,
         "dispositions": {},
@@ -600,6 +606,7 @@ def run(arguments: argparse.Namespace) -> int:
     from extractor.fresh import extract_fresh_function
 
     binary = arguments.binary.resolve(strict=True)
+    binary_identifier = arguments.binary_identifier or str(binary)
     output_dir = arguments.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     binary_digest = _sha256(binary)
@@ -613,7 +620,7 @@ def run(arguments: argparse.Namespace) -> int:
         object_path = Path(str(image.binary)).resolve()
         candidates = _function_candidates(project)
     except Exception as error:  # noqa: BLE001 -- record an inventory-generation failure in the report
-        _write_global_failure(output_dir, arguments.target_id, binary, "inventory-generation", error)
+        _write_global_failure(output_dir, arguments.target_id, binary_identifier, "inventory-generation", error)
         print(f"inventory-generation failed: {type(error).__name__}: {error}")
         return 2
 
@@ -685,7 +692,7 @@ def run(arguments: argparse.Namespace) -> int:
         {
             "@id": binary_id,
             "@type": "bfe:BinaryObject",
-            "bfe:identifier": str(binary),
+            "bfe:identifier": binary_identifier,
             "bfe:contentDigest": f"sha256:{binary_digest}",
         },
         {
@@ -924,6 +931,7 @@ def _is_github_actions_runner(environ: Mapping[str, str] | None = None) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Extract every eligible function symbol into PROV-O / BFE census reports.")
     parser.add_argument("--binary", required=True, type=Path, help="ELF executable or shared object to census")
+    parser.add_argument("--binary-identifier", help="stable source path recorded in the report")
     parser.add_argument("--target-id", required=True)
     parser.add_argument("--target-kind", choices=("generic", "interpreter"), default="generic")
     parser.add_argument("--target-implementation")
@@ -948,7 +956,13 @@ def main() -> int:
     parser.add_argument("--ci-checked-out-sha")
     parser.add_argument("--ci-workflow")
     parser.add_argument("--ci-job")
-    parser.add_argument("--output-dir", required=True, type=Path)
+    undeclared_outputs = os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(undeclared_outputs) if undeclared_outputs else None,
+        help="report directory (defaults to Bazel's test undeclared-outputs directory)",
+    )
     parser.add_argument("--sample-seed", help="explicit seed for deterministic candidate sampling")
     parser.add_argument(
         "--sample-percentage",
@@ -956,6 +970,12 @@ def main() -> int:
         help="percentage of candidates to sample (0 through 100; requires --sample-seed)",
     )
     arguments = parser.parse_args()
+    if not arguments.binary.is_absolute():
+        runfiles_root = os.environ.get("TEST_SRCDIR")
+        if runfiles_root:
+            arguments.binary = Path(runfiles_root) / arguments.binary
+    if arguments.output_dir is None:
+        parser.error("--output-dir is required outside a Bazel test")
     ci_metadata = {
         "--ci-server-url": arguments.ci_server_url,
         "--ci-repository": arguments.ci_repository,

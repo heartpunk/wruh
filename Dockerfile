@@ -20,3 +20,12 @@ FROM tools AS source
 # Build context is one clean WRUH clone, including usable Git metadata.
 COPY --chown=wruh:wruh . /workspace
 CMD ["bash", "--noprofile", "--norc"]
+
+FROM source AS buildbuddy-rbe
+# Remote actions use the same pinned Nix Python and native-library closure as
+# the GitHub Actions Bazel client. Realize it into the image so Bazel can send
+# those actions to BuildBuddy without rebuilding or downloading Nix at runtime.
+RUN nix develop .#buildbuddyRbe --no-write-lock-file --command bash -euo pipefail -c \
+      'python3.12 --version && python3.12 -c "import angr, z3"'
+# BuildBuddy actions need to write into the executor-provided workspace.
+USER root

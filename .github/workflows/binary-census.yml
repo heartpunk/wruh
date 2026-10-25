@@ -11,8 +11,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  buildbuddy_rbe_image:
+    name: Prepare BuildBuddy remote execution image
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Build and publish the pinned Nix runtime image
+        id: publish
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/heartpunk/wruh-dev:rbe-${GITHUB_SHA}"
+          docker build --network=host --target buildbuddy-rbe --tag "$image" .
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker push "$image"
+          image_digest="$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')"
+          printf 'image=%s\n' "$image_digest" >> "$GITHUB_OUTPUT"
+
   lua:
     name: Lua function census
+    needs: buildbuddy_rbe_image
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -45,6 +74,11 @@ jobs:
       - name: Run generic binary census
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
+          BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          WRUH_CENSUS_TARGET_ID: lua
+          WRUH_CENSUS_TARGET_KIND: interpreter
+          WRUH_CENSUS_TARGET_IMPLEMENTATION: Lua
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -57,35 +91,18 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: |
-          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
-          nix_version="$(nix --version)"
-          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
-            --binary "$WRUH_CENSUS_BINARY" \
-            --target-id lua \
-            --target-kind interpreter \
-            --target-implementation Lua \
-            --target-version "$WRUH_CENSUS_VERSION" \
-            --target-platform x86_64-linux \
-            --build-package "$WRUH_CENSUS_PACKAGE" \
-            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
-            --build-output "$WRUH_CENSUS_DERIVATION" \
-            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
-            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
-            --wruh-revision "$GITHUB_SHA" \
-            --bazel-version "$bazel_version" \
-            --nix-version "$nix_version" \
-            --ci-server-url "$WRUH_CI_SERVER_URL" \
-            --ci-repository "$WRUH_CI_REPOSITORY" \
-            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
-            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
-            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
-            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
-            --ci-run-id "$WRUH_CI_RUN_ID" \
-            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
-            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
-            --ci-workflow "$WRUH_CI_WORKFLOW" \
-            --ci-job "$WRUH_CI_JOB" \
-            --output-dir "$RUNNER_TEMP/wruh-census-lua"
+          bash tools/run_census_ci.sh \
+            "--ci-server-url=$WRUH_CI_SERVER_URL" \
+            "--ci-repository=$WRUH_CI_REPOSITORY" \
+            "--ci-pull-request-number=$WRUH_CI_PULL_REQUEST_NUMBER" \
+            "--ci-pull-request-id=$WRUH_CI_PULL_REQUEST_ID" \
+            "--ci-pull-request-head-repository=$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            "--ci-pull-request-head-sha=$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            "--ci-run-id=$WRUH_CI_RUN_ID" \
+            "--ci-run-attempt=$WRUH_CI_RUN_ATTEMPT" \
+            "--ci-checked-out-sha=$WRUH_CI_CHECKED_OUT_SHA" \
+            "--ci-workflow=$WRUH_CI_WORKFLOW" \
+            "--ci-job=$WRUH_CI_JOB"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -97,6 +114,8 @@ jobs:
 
   quickjs:
     name: QuickJS function census
+    needs: buildbuddy_rbe_image
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -129,6 +148,11 @@ jobs:
       - name: Run generic binary census
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
+          BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          WRUH_CENSUS_TARGET_ID: quickjs
+          WRUH_CENSUS_TARGET_KIND: interpreter
+          WRUH_CENSUS_TARGET_IMPLEMENTATION: QuickJS
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -141,35 +165,18 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: |
-          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
-          nix_version="$(nix --version)"
-          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
-            --binary "$WRUH_CENSUS_BINARY" \
-            --target-id quickjs \
-            --target-kind interpreter \
-            --target-implementation QuickJS \
-            --target-version "$WRUH_CENSUS_VERSION" \
-            --target-platform x86_64-linux \
-            --build-package "$WRUH_CENSUS_PACKAGE" \
-            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
-            --build-output "$WRUH_CENSUS_DERIVATION" \
-            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
-            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
-            --wruh-revision "$GITHUB_SHA" \
-            --bazel-version "$bazel_version" \
-            --nix-version "$nix_version" \
-            --ci-server-url "$WRUH_CI_SERVER_URL" \
-            --ci-repository "$WRUH_CI_REPOSITORY" \
-            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
-            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
-            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
-            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
-            --ci-run-id "$WRUH_CI_RUN_ID" \
-            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
-            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
-            --ci-workflow "$WRUH_CI_WORKFLOW" \
-            --ci-job "$WRUH_CI_JOB" \
-            --output-dir "$RUNNER_TEMP/wruh-census-quickjs"
+          bash tools/run_census_ci.sh \
+            "--ci-server-url=$WRUH_CI_SERVER_URL" \
+            "--ci-repository=$WRUH_CI_REPOSITORY" \
+            "--ci-pull-request-number=$WRUH_CI_PULL_REQUEST_NUMBER" \
+            "--ci-pull-request-id=$WRUH_CI_PULL_REQUEST_ID" \
+            "--ci-pull-request-head-repository=$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            "--ci-pull-request-head-sha=$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            "--ci-run-id=$WRUH_CI_RUN_ID" \
+            "--ci-run-attempt=$WRUH_CI_RUN_ATTEMPT" \
+            "--ci-checked-out-sha=$WRUH_CI_CHECKED_OUT_SHA" \
+            "--ci-workflow=$WRUH_CI_WORKFLOW" \
+            "--ci-job=$WRUH_CI_JOB"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -181,6 +188,8 @@ jobs:
 
   cpython:
     name: CPython function census
+    needs: buildbuddy_rbe_image
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -213,6 +222,11 @@ jobs:
       - name: Run generic binary census
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
+          BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          WRUH_CENSUS_TARGET_ID: cpython
+          WRUH_CENSUS_TARGET_KIND: interpreter
+          WRUH_CENSUS_TARGET_IMPLEMENTATION: CPython
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -225,35 +239,18 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: |
-          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
-          nix_version="$(nix --version)"
-          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
-            --binary "$WRUH_CENSUS_BINARY" \
-            --target-id cpython \
-            --target-kind interpreter \
-            --target-implementation CPython \
-            --target-version "$WRUH_CENSUS_VERSION" \
-            --target-platform x86_64-linux \
-            --build-package "$WRUH_CENSUS_PACKAGE" \
-            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
-            --build-output "$WRUH_CENSUS_DERIVATION" \
-            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
-            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
-            --wruh-revision "$GITHUB_SHA" \
-            --bazel-version "$bazel_version" \
-            --nix-version "$nix_version" \
-            --ci-server-url "$WRUH_CI_SERVER_URL" \
-            --ci-repository "$WRUH_CI_REPOSITORY" \
-            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
-            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
-            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
-            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
-            --ci-run-id "$WRUH_CI_RUN_ID" \
-            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
-            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
-            --ci-workflow "$WRUH_CI_WORKFLOW" \
-            --ci-job "$WRUH_CI_JOB" \
-            --output-dir "$RUNNER_TEMP/wruh-census-cpython"
+          bash tools/run_census_ci.sh \
+            "--ci-server-url=$WRUH_CI_SERVER_URL" \
+            "--ci-repository=$WRUH_CI_REPOSITORY" \
+            "--ci-pull-request-number=$WRUH_CI_PULL_REQUEST_NUMBER" \
+            "--ci-pull-request-id=$WRUH_CI_PULL_REQUEST_ID" \
+            "--ci-pull-request-head-repository=$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            "--ci-pull-request-head-sha=$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            "--ci-run-id=$WRUH_CI_RUN_ID" \
+            "--ci-run-attempt=$WRUH_CI_RUN_ATTEMPT" \
+            "--ci-checked-out-sha=$WRUH_CI_CHECKED_OUT_SHA" \
+            "--ci-workflow=$WRUH_CI_WORKFLOW" \
+            "--ci-job=$WRUH_CI_JOB"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -265,6 +262,8 @@ jobs:
 
   apache:
     name: Apache HTTP Server function census
+    needs: buildbuddy_rbe_image
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -297,6 +296,10 @@ jobs:
       - name: Run generic binary census
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
+          BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          WRUH_CENSUS_TARGET_ID: apache
+          WRUH_CENSUS_TARGET_KIND: generic
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -309,34 +312,18 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: |
-          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
-          nix_version="$(nix --version)"
-          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
-            --binary "$WRUH_CENSUS_BINARY" \
-            --target-id apache \
-            --target-kind generic \
-            --target-version "$WRUH_CENSUS_VERSION" \
-            --target-platform x86_64-linux \
-            --build-package "$WRUH_CENSUS_PACKAGE" \
-            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
-            --build-output "$WRUH_CENSUS_DERIVATION" \
-            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
-            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
-            --wruh-revision "$GITHUB_SHA" \
-            --bazel-version "$bazel_version" \
-            --nix-version "$nix_version" \
-            --ci-server-url "$WRUH_CI_SERVER_URL" \
-            --ci-repository "$WRUH_CI_REPOSITORY" \
-            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
-            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
-            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
-            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
-            --ci-run-id "$WRUH_CI_RUN_ID" \
-            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
-            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
-            --ci-workflow "$WRUH_CI_WORKFLOW" \
-            --ci-job "$WRUH_CI_JOB" \
-            --output-dir "$RUNNER_TEMP/wruh-census-apache"
+          bash tools/run_census_ci.sh \
+            "--ci-server-url=$WRUH_CI_SERVER_URL" \
+            "--ci-repository=$WRUH_CI_REPOSITORY" \
+            "--ci-pull-request-number=$WRUH_CI_PULL_REQUEST_NUMBER" \
+            "--ci-pull-request-id=$WRUH_CI_PULL_REQUEST_ID" \
+            "--ci-pull-request-head-repository=$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            "--ci-pull-request-head-sha=$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            "--ci-run-id=$WRUH_CI_RUN_ID" \
+            "--ci-run-attempt=$WRUH_CI_RUN_ATTEMPT" \
+            "--ci-checked-out-sha=$WRUH_CI_CHECKED_OUT_SHA" \
+            "--ci-workflow=$WRUH_CI_WORKFLOW" \
+            "--ci-job=$WRUH_CI_JOB"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -348,6 +335,8 @@ jobs:
 
   node:
     name: Node.js function census
+    needs: buildbuddy_rbe_image
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -380,6 +369,11 @@ jobs:
       - name: Run generic binary census
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
+          BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          WRUH_CENSUS_TARGET_ID: node
+          WRUH_CENSUS_TARGET_KIND: interpreter
+          WRUH_CENSUS_TARGET_IMPLEMENTATION: Node.js
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -392,35 +386,18 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: |
-          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
-          nix_version="$(nix --version)"
-          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
-            --binary "$WRUH_CENSUS_BINARY" \
-            --target-id node \
-            --target-kind interpreter \
-            --target-implementation Node.js \
-            --target-version "$WRUH_CENSUS_VERSION" \
-            --target-platform x86_64-linux \
-            --build-package "$WRUH_CENSUS_PACKAGE" \
-            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
-            --build-output "$WRUH_CENSUS_DERIVATION" \
-            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
-            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
-            --wruh-revision "$GITHUB_SHA" \
-            --bazel-version "$bazel_version" \
-            --nix-version "$nix_version" \
-            --ci-server-url "$WRUH_CI_SERVER_URL" \
-            --ci-repository "$WRUH_CI_REPOSITORY" \
-            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
-            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
-            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
-            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
-            --ci-run-id "$WRUH_CI_RUN_ID" \
-            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
-            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
-            --ci-workflow "$WRUH_CI_WORKFLOW" \
-            --ci-job "$WRUH_CI_JOB" \
-            --output-dir "$RUNNER_TEMP/wruh-census-node"
+          bash tools/run_census_ci.sh \
+            "--ci-server-url=$WRUH_CI_SERVER_URL" \
+            "--ci-repository=$WRUH_CI_REPOSITORY" \
+            "--ci-pull-request-number=$WRUH_CI_PULL_REQUEST_NUMBER" \
+            "--ci-pull-request-id=$WRUH_CI_PULL_REQUEST_ID" \
+            "--ci-pull-request-head-repository=$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            "--ci-pull-request-head-sha=$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            "--ci-run-id=$WRUH_CI_RUN_ID" \
+            "--ci-run-attempt=$WRUH_CI_RUN_ATTEMPT" \
+            "--ci-checked-out-sha=$WRUH_CI_CHECKED_OUT_SHA" \
+            "--ci-workflow=$WRUH_CI_WORKFLOW" \
+            "--ci-job=$WRUH_CI_JOB"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -432,6 +409,8 @@ jobs:
 
   bun:
     name: Bun function census
+    needs: buildbuddy_rbe_image
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -464,6 +443,11 @@ jobs:
       - name: Run generic binary census
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
+          BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          WRUH_CENSUS_TARGET_ID: bun
+          WRUH_CENSUS_TARGET_KIND: interpreter
+          WRUH_CENSUS_TARGET_IMPLEMENTATION: Bun
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -476,35 +460,18 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: |
-          bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
-          nix_version="$(nix --version)"
-          nix develop --no-write-lock-file --command bazel run //extractor:binary_census -- \
-            --binary "$WRUH_CENSUS_BINARY" \
-            --target-id bun \
-            --target-kind interpreter \
-            --target-implementation Bun \
-            --target-version "$WRUH_CENSUS_VERSION" \
-            --target-platform x86_64-linux \
-            --build-package "$WRUH_CENSUS_PACKAGE" \
-            --build-configuration "$WRUH_CENSUS_CONFIGURATION" \
-            --build-output "$WRUH_CENSUS_DERIVATION" \
-            --nixpkgs-revision "$WRUH_CENSUS_NIXPKGS_REVISION" \
-            --ayxg-revision "$WRUH_CENSUS_AYXG_REVISION" \
-            --wruh-revision "$GITHUB_SHA" \
-            --bazel-version "$bazel_version" \
-            --nix-version "$nix_version" \
-            --ci-server-url "$WRUH_CI_SERVER_URL" \
-            --ci-repository "$WRUH_CI_REPOSITORY" \
-            --ci-pull-request-number "$WRUH_CI_PULL_REQUEST_NUMBER" \
-            --ci-pull-request-id "$WRUH_CI_PULL_REQUEST_ID" \
-            --ci-pull-request-head-repository "$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
-            --ci-pull-request-head-sha "$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
-            --ci-run-id "$WRUH_CI_RUN_ID" \
-            --ci-run-attempt "$WRUH_CI_RUN_ATTEMPT" \
-            --ci-checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA" \
-            --ci-workflow "$WRUH_CI_WORKFLOW" \
-            --ci-job "$WRUH_CI_JOB" \
-            --output-dir "$RUNNER_TEMP/wruh-census-bun"
+          bash tools/run_census_ci.sh \
+            "--ci-server-url=$WRUH_CI_SERVER_URL" \
+            "--ci-repository=$WRUH_CI_REPOSITORY" \
+            "--ci-pull-request-number=$WRUH_CI_PULL_REQUEST_NUMBER" \
+            "--ci-pull-request-id=$WRUH_CI_PULL_REQUEST_ID" \
+            "--ci-pull-request-head-repository=$WRUH_CI_PULL_REQUEST_HEAD_REPOSITORY" \
+            "--ci-pull-request-head-sha=$WRUH_CI_PULL_REQUEST_HEAD_SHA" \
+            "--ci-run-id=$WRUH_CI_RUN_ID" \
+            "--ci-run-attempt=$WRUH_CI_RUN_ATTEMPT" \
+            "--ci-checked-out-sha=$WRUH_CI_CHECKED_OUT_SHA" \
+            "--ci-workflow=$WRUH_CI_WORKFLOW" \
+            "--ci-job=$WRUH_CI_JOB"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
