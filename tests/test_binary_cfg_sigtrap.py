@@ -20,7 +20,7 @@ class SigtrapAdapterTest(unittest.TestCase):
     # Nixpkgs Apache 2.4.69 from flake.lock; inspect the installed binary without
     # copying its glibc CRT startup bytes into this repository.
     APACHE_HTTPD_SHA256 = (
-        "1f2ef71a5ae7425591b1d4422dce02473c9025fc4e11dec9e02d6ae84d141ae6"
+        "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9"
     )
 
     def test_decoded_evidence_accepts_elf_entry_symbol_owner(self):
