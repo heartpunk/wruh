@@ -1,6 +1,8 @@
 """Public Angr SMT boundary checks; no candidate binary execution."""
 # runtime preloads libstdc++ before importing angr or the Bazel-provided Z3.
 from extractor.runtime import claripy as c
+
+# ruff: isort: split
 import z3
 
 from extractor.amd64_state import LTS_EXTRACTION_CONTEXT, claripy_to_z3
