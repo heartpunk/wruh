@@ -31,7 +31,7 @@ build:buildbuddy_ci --remote_executor=grpcs://remote.buildbuddy.io
 build:buildbuddy_ci --remote_instance_name=ufda
 build:buildbuddy_ci --remote_local_fallback=false
 build:buildbuddy_ci --spawn_strategy=remote
-build:buildbuddy_ci --test_strategy=remote
+test:buildbuddy_ci --strategy=TestRunner=remote
 build:buildbuddy_ci --remote_timeout=10m
 build:buildbuddy_ci --remote_download_outputs=all
 build:buildbuddy_ci --action_env=PATH
