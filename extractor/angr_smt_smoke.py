@@ -11,6 +11,9 @@ x, y, b = c.BVS('x', 64, explicit_name=True), c.BVS('y', 64, explicit_name=True)
 xz, yz, bz = z3.BitVec('x', 64, ctx=LTS_EXTRACTION_CONTEXT), z3.BitVec('y', 64, ctx=LTS_EXTRACTION_CONTEXT), z3.Bool('b', ctx=LTS_EXTRACTION_CONTEXT)
 # Keep the zero divisor symbolic so Claripy does not constant-fold bvsdiv.
 sdiv_zero_divisor = c.BVS('sdiv_zero_divisor', 8, explicit_name=True)
+# Keep overflow operands symbolic until the solver selects the corner case.
+sdiv_min_overflow_dividend = c.BVS('sdiv_min_overflow_dividend', 8, explicit_name=True)
+sdiv_min_overflow_divisor = c.BVS('sdiv_min_overflow_divisor', 8, explicit_name=True)
 cases = [
     ('true', c.BoolV(True), z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT)),
     ('false', c.BoolV(False), z3.BoolVal(False, ctx=LTS_EXTRACTION_CONTEXT)),
@@ -23,7 +26,7 @@ cases = [
     # negative / 0. Keep these distinct from the minimum-signed/-1 overflow.
     ('sdiv_by_zero_positive', c.SDiv(c.BVV(7, 8), sdiv_zero_divisor), z3.BitVecVal(0xFF, 8, ctx=LTS_EXTRACTION_CONTEXT)),
     ('sdiv_by_zero_negative', c.SDiv(c.BVV(0xF9, 8), sdiv_zero_divisor), z3.BitVecVal(0x01, 8, ctx=LTS_EXTRACTION_CONTEXT)),
-    ('sdiv_min_overflow', c.SDiv(c.BVV(0x80, 8), c.BVV(0xFF, 8)), z3.BitVecVal(0x80, 8, ctx=LTS_EXTRACTION_CONTEXT)),
+    ('sdiv_min_overflow', c.SDiv(sdiv_min_overflow_dividend, sdiv_min_overflow_divisor), z3.BitVecVal(0x80, 8, ctx=LTS_EXTRACTION_CONTEXT)),
     ('urem', c.UMod(x, y), z3.URem(xz, yz)),
     ('shift', c.LShR(x, y), z3.LShR(xz, yz)),
     ('extract', c.Extract(7, 0, x), z3.Extract(7, 0, xz)),
@@ -58,6 +61,11 @@ for name, term, expected in cases:
     solver = z3.Solver(ctx=LTS_EXTRACTION_CONTEXT)
     if name in ('sdiv_by_zero_positive', 'sdiv_by_zero_negative'):
         solver.add(claripy_to_z3(sdiv_zero_divisor) == 0)
+    if name == 'sdiv_min_overflow':
+        solver.add(
+            claripy_to_z3(sdiv_min_overflow_dividend) == 0x80,
+            claripy_to_z3(sdiv_min_overflow_divisor) == 0xFF,
+        )
     solver.add(actual != expected)
     assert solver.check() == z3.unsat, name
     print(name, 'UNSAT', flush=True)
