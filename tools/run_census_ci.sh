@@ -54,17 +54,13 @@ write_run_manifest() {
       completed_targets+=("$target_id")
     fi
   done
-  cat >"$temporary" <<EOF
-{
-  "schemaVersion": 1,
-  "wruhRevision": "${GITHUB_SHA}",
-  "runId": "${WRUH_CI_RUN_ID}",
-  "runAttempt": "${WRUH_CI_RUN_ATTEMPT}",
-  "requestedTargets": [$(printf '"%s",' "${target_ids[@]}" | sed 's/,$//')],
-  "collectedTargets": [$(printf '"%s",' "${completed_targets[@]}" | sed 's/,$//')],
-  "status": "${status}"
-}
-EOF
+  python3 tools/write_census_run_manifest.py \
+    --wruh-revision "$GITHUB_SHA" \
+    --run-id "$WRUH_CI_RUN_ID" \
+    --run-attempt "$WRUH_CI_RUN_ATTEMPT" \
+    --requested-targets "${target_ids[@]}" \
+    --collected-targets "${completed_targets[@]}" \
+    --status "$status" >"$temporary"
   mv "$temporary" "$report_root/run-manifest.json"
 }
 
@@ -81,7 +77,8 @@ write_run_manifest "running"
 collector_pid=""
 stop_collector() {
   if [[ -n "$collector_pid" ]]; then
-    kill "$collector_pid" 2>/dev/null || true
+    # The subshell may have a Python copy active. Let it notice Bazel's exit
+    # and finish that copy before the final synchronous collection pass.
     wait "$collector_pid" 2>/dev/null || true
   fi
 }

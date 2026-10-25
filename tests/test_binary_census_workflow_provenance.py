@@ -75,9 +75,13 @@ class BinaryCensusWorkflowProvenanceTests(unittest.TestCase):
         script = CI_SCRIPT.read_text()
         self.assertIn("collect_completed_outputs()", script)
         self.assertIn("tools/collect_census_outputs.py", script)
+        self.assertIn("tools/write_census_run_manifest.py", script)
         self.assertIn("write_run_manifest \"running\"", script)
         self.assertIn("trap 'stop_collector; collect_completed_outputs; write_run_manifest incomplete' EXIT", script)
         self.assertLess(script.index('while kill -0 "$bazel_pid"'), script.index('collect_completed_outputs\n    sleep 15'))
+        self.assertIn("wait \"$collector_pid\"", script)
+        self.assertNotIn('kill "$collector_pid"', script)
+        self.assertLess(script.index('wait "$bazel_pid"'), script.index('stop_collector\ncollect_completed_outputs'))
         self.assertIn("--nozip_undeclared_test_outputs", script)
 
         for name, option in zip(CI_ENV, CI_OPTIONS):

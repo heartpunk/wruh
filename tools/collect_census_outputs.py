@@ -30,6 +30,29 @@ def _has_run_provenance(report: Path, run_identifier: str, revision_identifier: 
     return run_identifier in identifiers and revision_identifier in identifiers
 
 
+def _has_global_failure_provenance(
+    summary: Path,
+    *,
+    target_id: str,
+    run_identifier: str,
+    revision_identifier: str,
+) -> bool:
+    try:
+        payload = json.loads(summary.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    provenance = payload.get("provenance", {})
+    return (
+        payload.get("targetId") == target_id
+        and isinstance(payload.get("globalFailure"), dict)
+        and isinstance(provenance, dict)
+        and provenance.get("run") == run_identifier
+        and provenance.get("revision") == revision_identifier
+    )
+
+
 def collect(
     testlogs: Path,
     report_root: Path,
@@ -52,9 +75,16 @@ def collect(
             if not summary.is_file():
                 continue
             report = summary.parent / "census.jsonld"
-            if not report.is_file() or not _has_run_provenance(
+            has_report_provenance = report.is_file() and _has_run_provenance(
                 report, run_identifier, revision_identifier
-            ):
+            )
+            has_failure_provenance = _has_global_failure_provenance(
+                summary,
+                target_id=target,
+                run_identifier=run_identifier,
+                revision_identifier=revision_identifier,
+            )
+            if not has_report_provenance and not has_failure_provenance:
                 continue
 
             shard_name = summary.parent.relative_to(outputs_root)
