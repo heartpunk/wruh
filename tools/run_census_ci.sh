@@ -30,6 +30,13 @@ test_args=(
 if [[ -n "${WRUH_CENSUS_TARGET_IMPLEMENTATION:-}" ]]; then
   test_args+=("--test_arg=--target-implementation=$WRUH_CENSUS_TARGET_IMPLEMENTATION")
 fi
+for metadata_arg in "$@"; do
+  if [[ "$metadata_arg" != --ci-*=* ]]; then
+    printf 'unsupported census metadata argument: %s\n' "$metadata_arg" >&2
+    exit 2
+  fi
+  test_args+=("--test_arg=$metadata_arg")
+done
 bazel_args+=("${test_args[@]}" //extractor:binary_census_remote_test)
 
 test_status=0
