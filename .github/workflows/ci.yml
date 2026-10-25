@@ -53,4 +53,4 @@ jobs:
       - name: Run Python tests in the pinned development shell
         run: |
           # shellcheck disable=SC2016
-          nix develop --no-write-lock-file --command bash -c 'export PYTHONPATH="$GITHUB_WORKSPACE${PYTHONPATH:+:$PYTHONPATH}"; exec python3 -m pytest tests -v'
+          nix develop --no-write-lock-file --command bash -c 'export PYTHONPATH="$GITHUB_WORKSPACE:${WRUH_AYXG_SOURCE:?pinned AYXG source is required}/python${PYTHONPATH:+:$PYTHONPATH}"; exec python3 -m pytest tests -v'
