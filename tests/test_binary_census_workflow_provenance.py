@@ -71,6 +71,15 @@ class BinaryCensusWorkflowProvenanceTests(unittest.TestCase):
         )
         self.assertIn("binary_census_remote_tests()", bazel_build)
 
+    def test_completed_outputs_are_collected_while_bazel_is_running(self):
+        script = CI_SCRIPT.read_text()
+        self.assertIn("collect_completed_outputs()", script)
+        self.assertIn("tools/collect_census_outputs.py", script)
+        self.assertIn("write_run_manifest \"running\"", script)
+        self.assertIn("trap 'stop_collector; collect_completed_outputs; write_run_manifest incomplete' EXIT", script)
+        self.assertLess(script.index('while kill -0 "$bazel_pid"'), script.index('collect_completed_outputs\n    sleep 15'))
+        self.assertIn("--nozip_undeclared_test_outputs", script)
+
         for name, option in zip(CI_ENV, CI_OPTIONS):
             with self.subTest(ci_provenance=name):
                 self.assertIn(
