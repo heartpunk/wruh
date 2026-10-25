@@ -49,4 +49,4 @@ census_binary_repository = use_repo_rule(
     "//tools:nix_native_deps.bzl",
     "census_binary_repository",
 )
-census_binary_repository(name = "wruh_census_binary")
+census_binary_repository(name = "wruh_census_binaries")

@@ -132,34 +132,75 @@ ayxg_python_repository = repository_rule(
 )
 
 
-_CENSUS_BINARY_ENV = "WRUH_CENSUS_BINARY"
+_CENSUS_TARGETS = ["lua", "quickjs", "cpython", "apache", "node", "bun"]
+_CENSUS_OUTPUTS_ENV = [
+    "WRUH_CENSUS_{}_OUTPUT".format(target.upper())
+    for target in _CENSUS_TARGETS
+]
 
 
 def _census_binary_repository_impl(ctx):
-    binary = ctx.os.environ.get(_CENSUS_BINARY_ENV)
-    if binary:
-        if not binary.startswith("/nix/store/"):
-            fail("{} must name an immutable Nix store file".format(_CENSUS_BINARY_ENV))
-        path = ctx.path(binary)
-        if not path.exists:
-            fail("{} does not exist: {}".format(_CENSUS_BINARY_ENV, binary))
-        ctx.symlink(path, "census_binary")
-        sources = '["census_binary"]'
-    else:
-        # Keep ordinary Bazel queries and unrelated targets usable when no
-        # census binary has been selected by the GitHub Actions job.
-        ctx.file("census_binary", "")
-        sources = '["census_binary"]'
+    lock = json.decode(ctx.read(Label("//:flake.lock")))
+    nixpkgs_revision = lock["nodes"]["nixpkgs"]["locked"]["rev"]
+    ayxg_revision = lock["nodes"]["ayxg"]["locked"]["rev"]
+    metadata = {}
+    build_lines = [
+        'package(default_visibility = ["//visibility:public"])',
+        'exports_files(["metadata.bzl"])',
+    ]
 
-    ctx.file("BUILD.bazel", """\
-package(default_visibility = ["//visibility:public"])
-filegroup(name = "binary", srcs = {})
-""".format(sources))
+    for target in _CENSUS_TARGETS:
+        output_env = "WRUH_CENSUS_{}_OUTPUT".format(target.upper())
+        output = ctx.os.environ.get(output_env)
+        binary_file = target + "_binary"
+        if output:
+            if not output.startswith("/nix/store/"):
+                fail("{} must name an immutable Nix store output".format(output_env))
+            root = ctx.path(output)
+            if not root.exists:
+                fail("{} does not exist: {}".format(output_env, output))
+            binary = ctx.path(output + "/binary")
+            if not binary.exists:
+                fail("{} has no binary file: {}".format(output_env, output))
+            for name in ["version", "package", "build-configuration", "package-derivation"]:
+                if not ctx.path(output + "/" + name).exists:
+                    fail("{} has no {} file: {}".format(output_env, name, output))
+            ctx.symlink(binary, binary_file)
+            metadata[target] = {
+                "binary_identifier": output + "/binary",
+                "target_version": ctx.read(ctx.path(output + "/version")).strip(),
+                "build_package": ctx.read(ctx.path(output + "/package")).strip(),
+                "build_configuration": ctx.read(ctx.path(output + "/build-configuration")).strip(),
+                "build_output": ctx.read(ctx.path(output + "/package-derivation")).strip(),
+                "nixpkgs_revision": nixpkgs_revision,
+                "ayxg_revision": ayxg_revision,
+            }
+        else:
+            # Keep ordinary Bazel queries usable when census inputs are absent.
+            ctx.file(binary_file, "")
+            metadata[target] = {
+                "binary_identifier": "",
+                "target_version": "",
+                "build_package": "",
+                "build_configuration": "",
+                "build_output": "",
+                "nixpkgs_revision": nixpkgs_revision,
+                "ayxg_revision": ayxg_revision,
+            }
+        build_lines.append(
+            "filegroup(name = {}, srcs = [{}])".format(
+                json.encode(target),
+                json.encode(binary_file),
+            )
+        )
+
+    ctx.file("metadata.bzl", "CENSUS_METADATA = {}\n".format(json.encode(metadata)))
+    ctx.file("BUILD.bazel", "\n".join(build_lines) + "\n")
 
 
 census_binary_repository = repository_rule(
     implementation = _census_binary_repository_impl,
     configure = True,
-    environ = [_CENSUS_BINARY_ENV],
+    environ = _CENSUS_OUTPUTS_ENV,
     local = True,
 )
