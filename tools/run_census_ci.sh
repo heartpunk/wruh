@@ -43,6 +43,46 @@ unset cachix_auth_token
 
 bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
 nix_version="$(nix --version)"
+testlogs="$(nix develop --no-write-lock-file --command bazel info bazel-testlogs)"
+
+write_run_manifest() {
+  local status="$1"
+  local temporary="$report_root/run-manifest.json.tmp"
+  local completed_targets=()
+  for target_id in "${target_ids[@]}"; do
+    if find "$report_root/$target_id" -name .collected -type f -print -quit 2>/dev/null | rg -q .; then
+      completed_targets+=("$target_id")
+    fi
+  done
+  python3 tools/write_census_run_manifest.py \
+    --wruh-revision "$GITHUB_SHA" \
+    --run-id "$WRUH_CI_RUN_ID" \
+    --run-attempt "$WRUH_CI_RUN_ATTEMPT" \
+    --requested-targets "${target_ids[@]}" \
+    --collected-targets "${completed_targets[@]}" \
+    --status "$status" >"$temporary"
+  mv "$temporary" "$report_root/run-manifest.json"
+}
+
+collect_completed_outputs() {
+  python3 tools/collect_census_outputs.py \
+    --testlogs "$testlogs" \
+    --report-root "$report_root" \
+    --run-id "$WRUH_CI_RUN_ID" \
+    --run-attempt "$WRUH_CI_RUN_ATTEMPT" \
+    --checked-out-sha "$WRUH_CI_CHECKED_OUT_SHA"
+}
+
+write_run_manifest "running"
+collector_pid=""
+stop_collector() {
+  if [[ -n "$collector_pid" ]]; then
+    # The subshell may have a Python copy active. Let it notice Bazel's exit
+    # and finish that copy before the final synchronous collection pass.
+    wait "$collector_pid" 2>/dev/null || true
+  fi
+}
+trap 'stop_collector; collect_completed_outputs; write_run_manifest incomplete' EXIT
 
 bazel_args=(
   test
@@ -70,24 +110,34 @@ for target_id in "${target_ids[@]}"; do
   bazel_args+=("//extractor:binary_census_${target_id}_remote_test")
 done
 
+bash tools/ci_bazel.sh "${bazel_args[@]}" &
+bazel_pid=$!
+(
+  while kill -0 "$bazel_pid" 2>/dev/null; do
+    collect_completed_outputs
+    sleep 15
+  done
+) &
+collector_pid=$!
 test_status=0
-bash tools/ci_bazel.sh "${bazel_args[@]}" || test_status=$?
+wait "$bazel_pid" || test_status=$?
+stop_collector
+collect_completed_outputs
 
-# Bazel materializes each remote TestRunner's undeclared outputs separately.
-testlogs="$(nix develop --no-write-lock-file --command bazel info bazel-testlogs)"
 for target_id in "${target_ids[@]}"; do
-  test_outputs="$testlogs/extractor/binary_census_${target_id}_remote_test/test.outputs"
-  target_report_dir="$report_root/$target_id"
-  if [[ -d "$test_outputs" ]]; then
-    cp -a "$test_outputs/." "$target_report_dir/"
-  elif [[ $test_status -eq 0 ]]; then
-    echo "Bazel passed without materializing $target_id census outputs at $test_outputs" >&2
-    test_status=1
-  fi
-  if [[ $test_status -eq 0 && ! -f "$target_report_dir/summary.json" ]]; then
-    echo "Bazel passed without producing $target_id summary.json in $target_report_dir" >&2
-    test_status=1
+  if ! find "$report_root/$target_id" -name summary.json -type f -print -quit | rg -q .; then
+    echo "No completed census summary was collected for $target_id" >&2
+    if [[ $test_status -eq 0 ]]; then
+      test_status=1
+    fi
   fi
 done
+
+if [[ $test_status -eq 0 ]]; then
+  write_run_manifest complete
+else
+  write_run_manifest incomplete
+fi
+trap - EXIT
 
 exit "$test_status"

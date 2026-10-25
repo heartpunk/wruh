@@ -578,6 +578,10 @@ def _write_global_failure(
     binary_identifier: str,
     stage: str,
     error: Exception,
+    *,
+    ci_run_id: int | None = None,
+    ci_run_attempt: int | None = None,
+    ci_checked_out_sha: str | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     summary = {
@@ -590,6 +594,11 @@ def _write_global_failure(
         "failureCategories": {f"{stage}:{type(error).__name__}": 1},
         "globalFailure": {"stage": stage, "code": type(error).__name__, "message": str(error)[:2000]},
     }
+    if ci_run_id is not None and ci_run_attempt is not None and ci_checked_out_sha:
+        summary["provenance"] = {
+            "run": f"github-actions-run:{ci_run_id}/attempt/{ci_run_attempt}",
+            "revision": f"git-commit:{ci_checked_out_sha}",
+        }
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -620,7 +629,16 @@ def run(arguments: argparse.Namespace) -> int:
         object_path = Path(str(image.binary)).resolve()
         candidates = _function_candidates(project)
     except Exception as error:  # noqa: BLE001 -- record an inventory-generation failure in the report
-        _write_global_failure(output_dir, arguments.target_id, binary_identifier, "inventory-generation", error)
+        _write_global_failure(
+            output_dir,
+            arguments.target_id,
+            binary_identifier,
+            "inventory-generation",
+            error,
+            ci_run_id=arguments.ci_run_id,
+            ci_run_attempt=arguments.ci_run_attempt,
+            ci_checked_out_sha=arguments.ci_checked_out_sha,
+        )
         print(f"inventory-generation failed: {type(error).__name__}: {error}")
         return 2
 
