@@ -44,6 +44,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
         env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -127,6 +128,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
         env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -210,6 +212,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
         env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -293,6 +296,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
         env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -375,6 +379,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
         env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -458,6 +463,7 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Run generic binary census
         env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           WRUH_CI_SERVER_URL: ${{ github.server_url }}
           WRUH_CI_REPOSITORY: ${{ github.repository }}
           WRUH_CI_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}

@@ -19,5 +19,12 @@ build:reapi --remote_local_fallback=false
 build:reapi --remote_download_outputs=toplevel
 build:reapi --jobs=48
 
+# Optional BuildBuddy cache and invocation links for GitHub Actions. The CI
+# wrapper adds this profile only when BUILDBUDDY_ORG_API_KEY is available.
+build:buildbuddy_ci --build_metadata=ROLE=CI
+build:buildbuddy_ci --bes_results_url=https://app.buildbuddy.io/invocation/
+build:buildbuddy_ci --bes_backend=grpcs://remote.buildbuddy.io
+build:buildbuddy_ci --remote_cache=grpcs://remote.buildbuddy.io
+
 common --repo_env=IFRL_ANGR_ENVIRONMENT
 common --repo_env=WRUH_AYXG_SOURCE
