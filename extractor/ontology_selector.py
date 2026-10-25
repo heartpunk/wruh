@@ -30,16 +30,6 @@ def read_hypothesis(path: Path) -> set[str]:
     return {"https://github.com/heartpunk/wruh/blob/main/docs/ontology/wruh.ttl#" + kind for kind in kinds}
 
 
-def _nodes(value: Any):
-    if isinstance(value, dict):
-        yield value
-        for child in value.values():
-            yield from _nodes(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from _nodes(child)
-
-
 def canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
@@ -129,16 +119,30 @@ def build_selection_manifest(inventory: dict[str, Any], hypothesis_kinds: set[st
     return {"manifest": manifest, "manifestDigest": manifest_digest}
 
 
-def load_records(paths: list[Path]) -> tuple[list[dict[str, Any]], list[str]]:
-    records, gaps = [], []
+def load_selection_history(paths: list[Path], *, binary_sha256: str) -> tuple[list[dict[str, Any]], bool, list[str]]:
+    """Read only normalized, provenance-bearing records from the archive adapter.
+
+    Legacy census JSON-LD is intentionally not reinterpreted as typed diagnoses.
+    """
+    records: list[dict[str, Any]] = []
+    gaps: list[str] = []
+    complete = bool(paths)
     for path in paths:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            complete = False
             gaps.append(f"{path.name}:unknown")
             continue
-        records.extend(n for n in _nodes(payload) if isinstance(n, dict) and (n.get("@type") in {"wruh:TargetRecord", "wruh:Target"} or "targetId" in n))
-    return records, gaps
+        if (not isinstance(payload, dict) or payload.get("selectionHistoryVersion") != 1
+                or payload.get("evidenceCoverage") != "complete"
+                or str(payload.get("binarySha256", "")).lower() != binary_sha256.lower()
+                or not isinstance(payload.get("records"), list)):
+            complete = False
+            gaps.append(f"{path.name}:legacy-or-unverified-history-format")
+            continue
+        records.extend(item for item in payload["records"] if isinstance(item, dict))
+    return records, complete, gaps
 
 
 def main() -> int:
@@ -155,18 +159,16 @@ def main() -> int:
     parser.add_argument("--inventory", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    records, gaps = load_records(args.records)
+    records, coverage_complete, gaps = load_selection_history(args.records, binary_sha256=args.binary_sha256)
     inventory_payload = json.loads(args.inventory.read_text(encoding="utf-8"))
     inventory = canonical_inventory(target_id=args.target_id, binary_sha256=args.binary_sha256,
                                     architecture=args.architecture,
                                     policy_version=args.inventory_policy_version,
                                     candidates=inventory_payload["candidates"])
-    # The legacy archive reader cannot prove complete typed diagnosis coverage.
-    # Until it does, bind mode=all to this exact inventory.
-    result = build_selection_manifest(inventory, read_hypothesis(args.hypothesis), [],
-                                      history_coverage_complete=False, seed=args.seed,
+    result = build_selection_manifest(inventory, read_hypothesis(args.hypothesis), records,
+                                      history_coverage_complete=coverage_complete, seed=args.seed,
                                       sample_size=args.sample_size,
-                                      evidence_gaps=gaps + (["legacy-jsonld-has-no-typed-candidate-diagnoses"] if records else []))
+                                      evidence_gaps=gaps)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0
 
