@@ -9,6 +9,12 @@ packages=(censusLua censusQuickjs censusCpython censusApache censusNode censusBu
 report_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/wruh-census"
 mkdir -p "$report_root"
 
+# Keep the cache credential out of Nix builds and the later Bazel process.
+cachix_auth_token="${CACHIX_AUTH_TOKEN:-}"
+unset CACHIX_AUTH_TOKEN
+cachix_push_enabled="${CACHIX_PUSH_ENABLED:-false}"
+unset CACHIX_PUSH_ENABLED
+
 # Nix stays on GitHub Actions. Each output becomes a declared Bazel input;
 # the six census TestRunner actions are then submitted in one Bazel invocation.
 repo_env_args=()
@@ -21,10 +27,19 @@ for index in "${!target_ids[@]}"; do
     echo "Nix returned an invalid census output for $target_id: $target_output" >&2
     exit 2
   fi
+  if [[ "$cachix_push_enabled" == "true" ]]; then
+    if [[ -z "$cachix_auth_token" ]]; then
+      echo "CACHIX_AUTH_TOKEN is required to publish trusted census outputs." >&2
+      exit 2
+    fi
+    echo "Publishing $target_id census output and runtime closure to Wruh Cachix."
+    CACHIX_AUTH_TOKEN="$cachix_auth_token" cachix push wruh "$target_output"
+  fi
   env_name="WRUH_CENSUS_${target_id^^}_OUTPUT"
   repo_env_args+=("--repo_env=$env_name=$target_output")
   mkdir -p "$report_root/$target_id"
 done
+unset cachix_auth_token
 
 bazel_version="$(nix develop --no-write-lock-file --command bazel --version)"
 nix_version="$(nix --version)"
