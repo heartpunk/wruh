@@ -11,9 +11,13 @@ from extractor.artifact import (
     StaticOccurrenceId,
 )
 from extractor.lean_angr_worker import _step
-from extractor.binary_cfg import _walk_function
+from extractor.binary_cfg import _walk_function, build_static_cfg
 from extractor.binary_inventory import PinnedBinary
-from extractor.fresh import _local_edges, artifact_declarations
+from extractor.fresh import (
+    _local_edges,
+    artifact_declarations,
+    extract_fresh_function,
+)
 
 
 class SigtrapAdapterTest(unittest.TestCase):
@@ -168,6 +172,56 @@ class SigtrapAdapterTest(unittest.TestCase):
         self.assertEqual(outcome.target_value, hlt_address)
         self.assertEqual(
             outcome.updates[AMD64_LAYOUT.ip_view].as_long(), hlt_address
+        )
+
+        image_sha256 = hashlib.sha256(binary.read_bytes()).hexdigest()
+        pinned = PinnedBinary(
+            artifact=binary,
+            manifest={
+                "call_graph": {"_start": {}},
+                "image_sha256": image_sha256,
+                "open_transfers": True,
+                "primitive_boundaries": {},
+                "roots": {
+                    "_start": {
+                        "address": start_symbol.rebased_addr,
+                        "size": start_symbol.size,
+                        "symbol": "_start",
+                    }
+                },
+            },
+            project=project,
+        )
+        cfg = build_static_cfg(pinned)
+        start_root = cfg["roots"]["_start"]
+        hlt_blocks = [
+            block
+            for block in start_root["blocks"]
+            if any(
+                instruction["address"] == hlt_address
+                and instruction["mnemonic"] == "hlt"
+                for instruction in block["instructions"]
+            )
+        ]
+        self.assertEqual(len(hlt_blocks), 1)
+        self.assertEqual(hlt_blocks[0]["successors"], [])
+
+        fresh = extract_fresh_function(pinned, cfg, "_start")
+        hlt_edges = [
+            edge for edge in fresh.local_edges if edge.source == hlt_address
+        ]
+        self.assertEqual(len(hlt_edges), 1)
+        self.assertEqual(hlt_edges[0].jumpkind, "Ijk_SigTRAP")
+        self.assertEqual(hlt_edges[0].fault_kind, "general_protection")
+        self.assertEqual(hlt_edges[0].summary.target.kind, "error")
+        ip_update = next(
+            assignment
+            for assignment in hlt_edges[0].summary.simultaneous_update
+            if assignment.name == AMD64_LAYOUT.ip_view
+        )
+        self.assertEqual(
+            ip_update.value.to_data(),
+            hlt_edges[0].summary.mirrored_pc.to_data(),
         )
 
 
