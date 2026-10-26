@@ -68,6 +68,257 @@ _AMD64_FLAG_BIT: dict[str, int] = {
 }
 
 
+def _fp_bv_negate(value: Any) -> Any:
+    """Negate a bitvector without introducing a separate bvneg operator."""
+    return (~value) + _claripy.BVV(1, value.size())
+
+
+def _fp_shift(value: Any, amount: Any, *, left: bool) -> Any:
+    """Shift by a bounded symbolic amount using constant-shift stages."""
+    if amount.size() < value.size():
+        amount = _claripy.ZeroExt(value.size() - amount.size(), amount)
+    elif amount.size() > value.size():
+        amount = amount[value.size() - 1 : 0]
+    shift_bits = (value.size() - 1).bit_length()
+    shifted = value
+    for bit in range(shift_bits):
+        constant_shift = 1 << bit
+        width = shifted.size()
+        if constant_shift >= width:
+            candidate = _claripy.BVV(0, width)
+        elif left:
+            candidate = _claripy.Concat(
+                shifted[width - constant_shift - 1 : 0],
+                _claripy.BVV(0, constant_shift),
+            )
+        else:
+            candidate = _claripy.Concat(
+                _claripy.BVV(0, constant_shift),
+                shifted[width - 1 : constant_shift],
+            )
+        shifted = _claripy.If(
+            amount[bit:bit] == _claripy.BVV(1, 1), candidate, shifted
+        )
+    if shift_bits < value.size():
+        out_of_range = amount[value.size() - 1 : shift_bits] != _claripy.BVV(
+            0, value.size() - shift_bits
+        )
+        shifted = _claripy.If(out_of_range, _claripy.BVV(0, value.size()), shifted)
+    return shifted
+
+
+def _fp_components(value: Any) -> tuple[Any, Any, Any]:
+    """Return sign, unbiased exponent, and a normalized 53-bit significand."""
+    bits = value.raw_to_bv()
+    sign = bits[63:63]
+    exponent_field = bits[62:52]
+    fraction = bits[51:0]
+    highest_fraction_bit = _claripy.BVV(0, 6)
+    for index in range(52):
+        highest_fraction_bit = _claripy.If(
+            fraction[index] == _claripy.BVV(1, 1),
+            _claripy.BVV(index, 6),
+            highest_fraction_bit,
+        )
+
+    normal_exponent = _claripy.ZeroExt(5, exponent_field) - _claripy.BVV(1023, 16)
+    subnormal_exponent = (
+        _claripy.ZeroExt(10, highest_fraction_bit) - _claripy.BVV(1074, 16)
+    )
+    subnormal_shift = _claripy.ZeroExt(
+        10, _claripy.BVV(52, 6) - highest_fraction_bit
+    )
+    subnormal_fraction = _fp_shift(fraction, subnormal_shift, left=True)[51:0]
+    significand = _claripy.If(
+        exponent_field == 0,
+        _claripy.Concat(_claripy.BVV(1, 1), subnormal_fraction),
+        _claripy.Concat(_claripy.BVV(1, 1), fraction),
+    )
+    exponent = _claripy.If(
+        exponent_field == 0, subnormal_exponent, normal_exponent
+    )
+    return sign, exponent, significand
+
+
+def _fp_signed_ge(value: Any, threshold: int) -> Any:
+    """Express signed greater-than-or-equal using Claripy's signed-greater op."""
+    return value.SGT(_claripy.BVV(threshold - 1, value.size()))
+
+
+def _fp_encode_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
+    """Encode magnitude * 2**base_exponent exactly as an IEEE binary64 value."""
+    magnitude = magnitude[52:0]
+    highest_bit = _claripy.BVV(0, 6)
+    for index in range(53):
+        highest_bit = _claripy.If(
+            magnitude[index] == _claripy.BVV(1, 1),
+            _claripy.BVV(index, 6),
+            highest_bit,
+        )
+
+    result_exponent = base_exponent + _claripy.ZeroExt(10, highest_bit)
+    normal = _fp_signed_ge(result_exponent, -1022)
+    exponent_field = (result_exponent + _claripy.BVV(1023, 16))[10:0]
+    normalize_by = _claripy.ZeroExt(47, _claripy.BVV(52, 6) - highest_bit)
+    fraction = _fp_shift(magnitude, normalize_by, left=True)[51:0]
+
+    subnormal_shift = base_exponent + _claripy.BVV(1074, 16)
+    shift_left = _fp_signed_ge(subnormal_shift, 0)
+    left_by = _claripy.If(shift_left, subnormal_shift, _claripy.BVV(0, 16))
+    right_by = _claripy.If(
+        subnormal_shift.SLT(_claripy.BVV(0, 16)),
+        _fp_bv_negate(subnormal_shift),
+        _claripy.BVV(0, 16),
+    )
+    subnormal_fraction = _claripy.If(
+        shift_left,
+        _fp_shift(magnitude, left_by, left=True),
+        _fp_shift(magnitude, right_by, left=False),
+    )[51:0]
+
+    encoded = _claripy.Concat(
+        sign,
+        _claripy.If(normal, exponent_field, _claripy.BVV(0, 11)),
+        _claripy.If(normal, fraction, subnormal_fraction),
+    )
+    signed_zero = _claripy.Concat(sign, _claripy.BVV(0, 63))
+    return _claripy.If(magnitude == 0, signed_zero, encoded).raw_to_fp()
+
+
+def _fp_is_zero(value: Any) -> Any:
+    return value.raw_to_bv()[62:0] == _claripy.BVV(0, 63)
+
+
+def _fp_is_infinite(value: Any) -> Any:
+    bits = value.raw_to_bv()
+    return (bits[62:52] == _claripy.BVV(0x7FF, 11)) & (
+        bits[51:0] == _claripy.BVV(0, 52)
+    )
+
+
+def _fp_is_nan(value: Any) -> Any:
+    bits = value.raw_to_bv()
+    return (bits[62:52] == _claripy.BVV(0x7FF, 11)) & (
+        bits[51:0] != _claripy.BVV(0, 52)
+    )
+
+
+def _fprem_value(args: tuple[Any, ...]) -> Any:
+    """Model one x87 FPREM step, including its bounded partial-reduction step."""
+    dividend, divisor = args[-2:]
+    sign_x, exponent_x, significand_x = _fp_components(dividend)
+    _, exponent_y, significand_y = _fp_components(divisor)
+    exponent_diff = exponent_x - exponent_y
+    nonnegative_diff = _fp_signed_ge(exponent_diff, 0)
+    partial = _fp_signed_ge(exponent_diff, 64)
+
+    # A 60-bit quotient chunk is within the architectural 32..63-bit range.
+    # Repeating FPREM on the resulting remainder completes larger reductions.
+    quotient_shift = _claripy.If(
+        partial,
+        _claripy.BVV(60, 16),
+        _claripy.If(nonnegative_diff, exponent_diff, _claripy.BVV(0, 16)),
+    )
+    numerator = _fp_shift(
+        _claripy.ZeroExt(75, significand_x), quotient_shift, left=True
+    )
+    denominator = _claripy.ZeroExt(75, significand_y)
+    # Both operands are positive 128-bit values, so signed `%` has the same
+    # result as unsigned remainder and is available in this Claripy version.
+    remainder = numerator % denominator
+    remainder = _claripy.If(nonnegative_diff, remainder, _claripy.BVV(0, 128))
+
+    result_base_exponent = _claripy.If(
+        partial,
+        exponent_x - _claripy.BVV(60, 16) - _claripy.BVV(52, 16),
+        exponent_y - _claripy.BVV(52, 16),
+    )
+    result = _fp_encode_remainder(sign_x, remainder, result_base_exponent)
+
+    nan = _claripy.FPV(float("nan"), _claripy.FSORT_DOUBLE)
+    invalid = (
+        _fp_is_nan(dividend)
+        | _fp_is_nan(divisor)
+        | _fp_is_infinite(dividend)
+        | _fp_is_zero(divisor)
+    )
+    passthrough = _fp_is_infinite(divisor) | _fp_is_zero(dividend) | ~nonnegative_diff
+    return _claripy.If(invalid, nan, _claripy.If(passthrough, dividend, result))
+
+
+def _fprem_flags(args: tuple[Any, ...]) -> Any:
+    """Return FPREM's x87 C3210 condition-code bits in an I32 result."""
+    dividend, divisor = args[-2:]
+    sign_x, exponent_x, significand_x = _fp_components(dividend)
+    sign_y, exponent_y, significand_y = _fp_components(divisor)
+    exponent_diff = exponent_x - exponent_y
+    partial = _fp_signed_ge(exponent_diff, 64)
+    nonnegative_diff = _fp_signed_ge(exponent_diff, 0)
+    quotient_shift = _claripy.If(
+        partial,
+        _claripy.BVV(60, 16),
+        _claripy.If(nonnegative_diff, exponent_diff, _claripy.BVV(0, 16)),
+    )
+    numerator = _fp_shift(
+        _claripy.ZeroExt(75, significand_x), quotient_shift, left=True
+    )
+    denominator = _claripy.ZeroExt(75, significand_y)
+    quotient_magnitude = _claripy.UDiv(numerator, denominator)
+    quotient_magnitude = _claripy.If(
+        partial | ~nonnegative_diff,
+        _claripy.BVV(0, 128),
+        quotient_magnitude,
+    )
+    quotient = _claripy.If(
+        sign_x != sign_y,
+        _fp_bv_negate(quotient_magnitude),
+        quotient_magnitude,
+    )
+    c0 = _claripy.ZeroExt(31, quotient[2:2]) << 8
+    c1 = _claripy.ZeroExt(31, quotient[0:0]) << 9
+    c2 = _claripy.If(partial, _claripy.BVV(1 << 10, 32), _claripy.BVV(0, 32))
+    c3 = _claripy.ZeroExt(31, quotient[1:1]) << 14
+    flags = c0 | c1 | c2 | c3
+    invalid = (
+        _fp_is_nan(dividend)
+        | _fp_is_nan(divisor)
+        | _fp_is_infinite(dividend)
+        | _fp_is_infinite(divisor)
+        | _fp_is_zero(dividend)
+        | _fp_is_zero(divisor)
+    )
+    return _claripy.If(invalid, _claripy.BVV(0, 32), flags)
+
+
+@cache
+def _install_x87_fprem_operations() -> None:
+    """Register the x87 FPREM operations missing from Angr's generic table."""
+    from angr.engines.vex.claripy import irop
+
+    operations = (
+        (
+            "Iop_PRemF64",
+            _fprem_value,
+            {"generic_name": "PRem", "from_type": "F", "from_size": 64},
+        ),
+        (
+            "Iop_PRemC3210F64",
+            _fprem_flags,
+            {"generic_name": "PRemC3210", "from_type": "F", "from_size": 64},
+        ),
+    )
+    for name, implementation, attrs in operations:
+        if name in irop.operations:
+            continue
+        setattr(irop.SimIROp, f"_op_{name}", staticmethod(implementation))
+        try:
+            irop.operations[name] = irop.SimIROp(name, **attrs)
+        except Exception:
+            delattr(irop.SimIROp, f"_op_{name}")
+            raise
+        irop.unsupported.discard(name)
+
+
 @dataclass(frozen=True)
 class CanonicalDeclaration:
     name: str
@@ -486,7 +737,23 @@ def _selector_read_hook(state: Any) -> None:
     offset = state.inspect.reg_read_offset
     if hasattr(offset, "op"):
         if offset.op != "BVV":
-            raise Amd64AdapterError("symbolic register-file offset cannot identify selector domain")
+            variables = set(getattr(offset, "variables", ()))
+            selector_variables = variables.intersection(_SELECTOR_DOMAINS)
+            if len(variables) != 1 or len(selector_variables) != 1:
+                raise Amd64AdapterError(
+                    "symbolic register-file offset cannot identify one selector domain"
+                )
+            name = next(iter(selector_variables))
+            assignments = state.globals.get("_wruh_selector_assignments", {})
+            if name not in assignments:
+                raise _SelectorSplitRequired(name)
+            if name in _SELECTOR_MASKS:
+                # Modular selectors retain symbolic high counter bits after the
+                # finite low-bit domain has been assigned.
+                return
+            raise Amd64AdapterError(
+                f"symbolic register-file offset for selector {name} remained symbolic after splitting"
+            )
         offset = int(offset.args[0])
     size = _access_size(state.inspect.reg_read_length, "register read")
     for name in _SELECTOR_DOMAINS:
@@ -765,6 +1032,7 @@ def step_instruction_outcomes(
 ) -> InstructionOutcomeFamily:
     """Translate the complete successor relation of one real instruction."""
     source = _u64(source, "source")
+    _install_x87_fprem_operations()
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
