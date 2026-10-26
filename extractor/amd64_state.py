@@ -94,60 +94,88 @@ def _fp_components(value: Any) -> tuple[Any, Any, Any]:
     return sign, exponent, significand
 
 
-def _scaled_fprem_divisor(divisor: Any, dividend_exponent: Any) -> Any:
-    """Scale the divisor so x87 FPREM produces a bounded quotient chunk."""
-    sign, _, significand = _fp_components(divisor)
-    scaled_exponent = dividend_exponent - _claripy.BVV(60, 16)
-    normal = scaled_exponent.SGE(_claripy.BVV(-1022, 16))
-    exponent_field = (scaled_exponent + _claripy.BVV(1023, 16))[10:0]
-    subnormal_shift = _claripy.BVV(-1022, 16) - scaled_exponent
-    subnormal_fraction = _claripy.LShR(
-        significand,
-        _claripy.ZeroExt(37, subnormal_shift),
+def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
+    """Encode an exact integer remainder times a power of two as binary64."""
+    magnitude = magnitude[52:0]
+    leading_bit = _claripy.BVV(0, 6)
+    for index in range(53):
+        leading_bit = _claripy.If(
+            magnitude[index] == 1,
+            _claripy.BVV(index, 6),
+            leading_bit,
+        )
+
+    exponent = base_exponent + _claripy.ZeroExt(10, leading_bit)
+    normal = exponent.SGE(_claripy.BVV(-1022, 16))
+    exponent_field = (exponent + _claripy.BVV(1023, 16))[10:0]
+    normalized_shift = _claripy.ZeroExt(47, _claripy.BVV(52, 6) - leading_bit)
+    normalized_fraction = (magnitude << normalized_shift)[51:0]
+
+    subnormal_shift = base_exponent + _claripy.BVV(1074, 16)
+    left_shift = _claripy.If(
+        subnormal_shift.SGE(_claripy.BVV(0, 16)),
+        subnormal_shift,
+        _claripy.BVV(0, 16),
+    )
+    right_shift = _claripy.If(
+        subnormal_shift.SLT(_claripy.BVV(0, 16)),
+        -subnormal_shift,
+        _claripy.BVV(0, 16),
+    )
+    subnormal_fraction = _claripy.If(
+        subnormal_shift.SGE(_claripy.BVV(0, 16)),
+        magnitude << _claripy.ZeroExt(37, left_shift),
+        _claripy.LShR(magnitude, _claripy.ZeroExt(37, right_shift)),
     )[51:0]
+
     bits = _claripy.Concat(
         sign,
         _claripy.If(normal, exponent_field, _claripy.BVV(0, 11)),
-        _claripy.If(normal, significand[51:0], subnormal_fraction),
+        _claripy.If(normal, normalized_fraction, subnormal_fraction),
     )
-    return bits.raw_to_fp()
+    signed_zero = _claripy.Concat(sign, _claripy.BVV(0, 63))
+    return _claripy.If(magnitude == 0, signed_zero, bits).raw_to_fp()
 
 
 def _fprem_value(args: tuple[Any, ...]) -> Any:
     dividend, divisor = args[-2:]
-    sign_x, exponent_x, _ = _fp_components(dividend)
-    _, exponent_y, _ = _fp_components(divisor)
-    partial = (exponent_x - exponent_y).SGE(_claripy.BVV(64, 16))
-    # Match Angr's deterministic fallback, which selects a 60-bit quotient
-    # chunk from the implementation-defined x87 range of 32 through 63 bits.
-    scaled_divisor = _scaled_fprem_divisor(divisor, exponent_x)
-    positive_divisor = _claripy.If(partial, scaled_divisor, _claripy.fpAbs(divisor))
-
-    # SMT fp.rem rounds the quotient to nearest-even. FPREM truncates it
-    # toward zero; when nearest-even chose the adjacent integer, correcting
-    # the remainder by one divisor recovers the truncating remainder.
-    nearest_remainder = _claripy.fpRem(dividend, positive_divisor)
-    x_is_negative = sign_x == 1
-    remainder_sign_differs = (
-        ~_claripy.fpIsZero(nearest_remainder)
-        & (_claripy.fpIsNegative(nearest_remainder) != x_is_negative)
-    )
-    correction = _claripy.If(
-        x_is_negative,
-        _claripy.fpNeg(_claripy.fpAbs(positive_divisor)),
-        _claripy.fpAbs(positive_divisor),
-    )
-    adjusted = _claripy.If(
-        remainder_sign_differs,
-        _claripy.fpAdd(
-            _claripy.fp.RM.RM_NearestTiesEven,
-            nearest_remainder,
-            correction,
+    sign_x, exponent_x, significand_x = _fp_components(dividend)
+    _, exponent_y, significand_y = _fp_components(divisor)
+    exponent_diff = exponent_x - exponent_y
+    partial = exponent_diff.SGE(_claripy.BVV(64, 16))
+    # FPREM may reduce a large quotient in implementation-defined chunks of
+    # 32 through 63 bits. A 60-bit exponent chunk keeps the symbolic quotient
+    # bounded while preserving the instruction's partial-remainder behavior.
+    quotient_shift = _claripy.If(
+        partial,
+        _claripy.BVV(60, 16),
+        _claripy.If(
+            exponent_diff.SGE(_claripy.BVV(0, 16)),
+            exponent_diff,
+            _claripy.BVV(0, 16),
         ),
-        nearest_remainder,
     )
-    signed_zero = _claripy.Concat(sign_x, _claripy.BVV(0, 63)).raw_to_fp()
-    finite_remainder = _claripy.If(_claripy.fpIsZero(adjusted), signed_zero, adjusted)
+    numerator = _claripy.ZeroExt(75, significand_x) << _claripy.ZeroExt(
+        112, quotient_shift
+    )
+    denominator = _claripy.ZeroExt(75, significand_y)
+    remainder = _claripy.URem(numerator, denominator)
+    remainder = _claripy.If(
+        exponent_diff.SGE(_claripy.BVV(0, 16)) | partial,
+        remainder,
+        _claripy.BVV(0, 128),
+    )
+    effective_divisor_exponent = _claripy.If(
+        partial,
+        exponent_x - _claripy.BVV(60, 16),
+        exponent_y,
+    )
+    result = _encode_fp_remainder(
+        sign_x,
+        remainder,
+        effective_divisor_exponent - _claripy.BVV(52, 16),
+    )
+
     nan = _claripy.FPV(float("nan"), _claripy.FSORT_DOUBLE)
     invalid = (
         _claripy.fpIsNaN(dividend)
@@ -155,12 +183,12 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
         | _claripy.fpIsInf(dividend)
         | _claripy.fpIsZero(divisor)
     )
-    passthrough = _claripy.fpIsInf(divisor) | _claripy.fpIsZero(dividend)
-    return _claripy.If(
-        invalid,
-        nan,
-        _claripy.If(passthrough, dividend, finite_remainder),
+    passthrough = (
+        _claripy.fpIsInf(divisor)
+        | _claripy.fpIsZero(dividend)
+        | exponent_diff.SLT(_claripy.BVV(0, 16))
     )
+    return _claripy.If(invalid, nan, _claripy.If(passthrough, dividend, result))
 
 
 def _fprem_flags(args: tuple[Any, ...]) -> Any:
