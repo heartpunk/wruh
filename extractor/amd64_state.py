@@ -137,6 +137,12 @@ def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
     return _claripy.If(magnitude == 0, signed_zero, bits).raw_to_fp()
 
 
+def _fp_is_zero(value: Any) -> Any:
+    """Recognize either signed zero through its IEEE-754 encoding."""
+    magnitude = value.raw_to_bv()[62:0]
+    return magnitude == _claripy.BVV(0, 63)
+
+
 def _fprem_value(args: tuple[Any, ...]) -> Any:
     dividend, divisor = args[-2:]
     sign_x, exponent_x, significand_x = _fp_components(dividend)
@@ -181,11 +187,11 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
         _claripy.fpIsNaN(dividend)
         | _claripy.fpIsNaN(divisor)
         | _claripy.fpIsInf(dividend)
-        | _claripy.fpIsZero(divisor)
+        | _fp_is_zero(divisor)
     )
     passthrough = (
         _claripy.fpIsInf(divisor)
-        | _claripy.fpIsZero(dividend)
+        | _fp_is_zero(dividend)
         | exponent_diff.SLT(_claripy.BVV(0, 16))
     )
     return _claripy.If(invalid, nan, _claripy.If(passthrough, dividend, result))
@@ -235,9 +241,9 @@ def _fprem_flags(args: tuple[Any, ...]) -> Any:
         _claripy.fpIsNaN(dividend)
         | _claripy.fpIsNaN(divisor)
         | _claripy.fpIsInf(dividend)
-        | _claripy.fpIsZero(divisor)
+        | _fp_is_zero(divisor)
         | _claripy.fpIsInf(divisor)
-        | _claripy.fpIsZero(dividend)
+        | _fp_is_zero(dividend)
     )
     return _claripy.If(invalid, _claripy.BVV(0, 16), flags)
 
