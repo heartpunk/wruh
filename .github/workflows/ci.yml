@@ -45,10 +45,6 @@ jobs:
         run: |
           git config --global --add url.https://github.com/.insteadOf ssh://git@github.com/
           git config --global --add url.https://github.com/.insteadOf git@github.com:
-      - name: Resolve the exact AYXG pin and report the generated lock
-        run: |
-          nix flake lock --update-input ayxg
-          cat flake.lock
       - name: Build the pinned development shell
         run: nix develop --no-write-lock-file --command true
       - name: Check Python source syntax
