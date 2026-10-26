@@ -486,7 +486,24 @@ def _selector_read_hook(state: Any) -> None:
     offset = state.inspect.reg_read_offset
     if hasattr(offset, "op"):
         if offset.op != "BVV":
-            raise Amd64AdapterError("symbolic register-file offset cannot identify selector domain")
+            variables = set(getattr(offset, "variables", ()))
+            selector_variables = variables.intersection(_SELECTOR_DOMAINS)
+            if len(variables) != 1 or len(selector_variables) != 1:
+                raise Amd64AdapterError(
+                    "symbolic register-file offset cannot identify one selector domain"
+                )
+            name = next(iter(selector_variables))
+            assignments = state.globals.get("_wruh_selector_assignments", {})
+            if name not in assignments:
+                raise _SelectorSplitRequired(name)
+            if name in _SELECTOR_MASKS:
+                # Modular selectors retain symbolic high counter bits after their
+                # finite low-bit domain has been assigned. The dynamic offset is
+                # still constrained to this selector branch.
+                return
+            raise Amd64AdapterError(
+                f"symbolic register-file offset for selector {name} remained symbolic after splitting"
+            )
         offset = int(offset.args[0])
     size = _access_size(state.inspect.reg_read_length, "register read")
     for name in _SELECTOR_DOMAINS:

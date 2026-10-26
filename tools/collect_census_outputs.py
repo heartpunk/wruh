@@ -8,11 +8,21 @@ import json
 import os
 import re
 import shutil
+import stat
 import tempfile
 from pathlib import Path
 
 
 TARGET_PATTERN = re.compile(r"^binary_census_([a-z0-9]+)_remote_test$")
+
+
+def _make_directories_writable(root: Path) -> None:
+    """Allow marker creation and cleanup after copying Bazel's sealed outputs."""
+    for directory, _, _ in os.walk(root, topdown=False, followlinks=False):
+        path = Path(directory)
+        if path.is_symlink():
+            continue
+        path.chmod(path.stat().st_mode | stat.S_IWUSR | stat.S_IXUSR)
 
 
 def _has_run_provenance(report: Path, run_identifier: str, revision_identifier: str) -> bool:
@@ -99,12 +109,15 @@ def collect(
             staging = Path(tempfile.mkdtemp(prefix=".census-collect-", dir=destination.parent))
             try:
                 shutil.copytree(summary.parent, staging, dirs_exist_ok=True)
+                _make_directories_writable(staging)
                 (staging / ".collected").touch()
                 if destination.exists():
+                    _make_directories_writable(destination)
                     shutil.rmtree(destination)
                 os.replace(staging, destination)
             finally:
                 if staging.exists():
+                    _make_directories_writable(staging)
                     shutil.rmtree(staging)
             collected.add(target)
     return collected
