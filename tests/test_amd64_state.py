@@ -104,14 +104,19 @@ class X87PartialRemainderTests(unittest.TestCase):
         _, exponent_x, significand_x = _fp_components(dividend)
         _, exponent_y, significand_y = _fp_components(divisor)
         difference = exponent_x - exponent_y
+        extended_significand = claripy.ZeroExt(75, significand_x)
         numerator = _fp_shift(
-            claripy.ZeroExt(75, significand_x),
+            extended_significand,
             difference,
             left=True,
         )
         denominator = claripy.ZeroExt(75, significand_y)
         quotient = claripy.UDiv(numerator, denominator)
+        expected_significand = (1 << 52) | (self._double_bits(5.3) & ((1 << 52) - 1))
         self.assertEqual(self._evaluate(difference), 1)
+        self.assertEqual(self._evaluate(significand_x), expected_significand)
+        self.assertEqual(self._evaluate(significand_y), 1 << 52)
+        self.assertEqual(self._evaluate(numerator), expected_significand << 1)
         self.assertEqual(self._evaluate(quotient), 2)
 
         flags = self._value("Iop_PRemC3210F64", -5.3, 2.0)

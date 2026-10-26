@@ -74,12 +74,27 @@ def _fp_bv_negate(value: Any) -> Any:
 
 
 def _fp_shift(value: Any, amount: Any, *, left: bool) -> Any:
-    """Shift a bitvector by a symbolic amount with an explicitly sized operand."""
+    """Shift by a bounded symbolic amount using constant-shift stages."""
     if amount.size() < value.size():
         amount = _claripy.ZeroExt(value.size() - amount.size(), amount)
     elif amount.size() > value.size():
         amount = amount[value.size() - 1 : 0]
-    return value << amount if left else _claripy.LShR(value, amount)
+    shift_bits = (value.size() - 1).bit_length()
+    shifted = value
+    for bit in range(shift_bits):
+        constant_shift = 1 << bit
+        candidate = (
+            shifted << constant_shift
+            if left
+            else _claripy.LShR(shifted, constant_shift)
+        )
+        shifted = _claripy.If(amount[bit:bit] == 1, candidate, shifted)
+    if shift_bits < value.size():
+        out_of_range = amount[value.size() - 1 : shift_bits] != _claripy.BVV(
+            0, value.size() - shift_bits
+        )
+        shifted = _claripy.If(out_of_range, _claripy.BVV(0, value.size()), shifted)
+    return shifted
 
 
 def _fp_components(value: Any) -> tuple[Any, Any, Any]:
