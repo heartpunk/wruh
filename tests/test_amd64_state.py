@@ -61,7 +61,6 @@ class X87PartialRemainderTests(unittest.TestCase):
     def _value(op_name, dividend, divisor):
         op = X87PartialRemainderTests.vexop_to_simop(op_name)
         return op.calculate(
-            claripy.fp.RM.RM_NearestTiesEven,
             claripy.FPV(dividend, claripy.FSORT_DOUBLE),
             claripy.FPV(divisor, claripy.FSORT_DOUBLE),
         )

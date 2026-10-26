@@ -159,7 +159,7 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
         112, quotient_shift
     )
     denominator = _claripy.ZeroExt(75, significand_y)
-    remainder = _claripy.URem(numerator, denominator)
+    remainder = numerator % denominator
     remainder = _claripy.If(
         exponent_diff.SGE(_claripy.BVV(0, 16)) | partial,
         remainder,
