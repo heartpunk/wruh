@@ -94,6 +94,11 @@ def _fp_components(value: Any) -> tuple[Any, Any, Any]:
     return sign, exponent, significand
 
 
+def _fp_signed_ge(value: Any, threshold: int) -> Any:
+    """Express signed greater-or-equal using the supported signed-greater op."""
+    return value.SGT(_claripy.BVV(threshold - 1, value.size()))
+
+
 def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
     """Encode an exact integer remainder times a power of two as binary64."""
     magnitude = magnitude[52:0]
@@ -106,14 +111,14 @@ def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
         )
 
     exponent = base_exponent + _claripy.ZeroExt(10, leading_bit)
-    normal = exponent.SGE(_claripy.BVV(-1022, 16))
+    normal = _fp_signed_ge(exponent, -1022)
     exponent_field = (exponent + _claripy.BVV(1023, 16))[10:0]
     normalized_shift = _claripy.ZeroExt(47, _claripy.BVV(52, 6) - leading_bit)
     normalized_fraction = (magnitude << normalized_shift)[51:0]
 
     subnormal_shift = base_exponent + _claripy.BVV(1074, 16)
     left_shift = _claripy.If(
-        subnormal_shift.SGE(_claripy.BVV(0, 16)),
+        _fp_signed_ge(subnormal_shift, 0),
         subnormal_shift,
         _claripy.BVV(0, 16),
     )
@@ -123,7 +128,7 @@ def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
         _claripy.BVV(0, 16),
     )
     subnormal_fraction = _claripy.If(
-        subnormal_shift.SGE(_claripy.BVV(0, 16)),
+        _fp_signed_ge(subnormal_shift, 0),
         magnitude << _claripy.ZeroExt(37, left_shift),
         _claripy.LShR(magnitude, _claripy.ZeroExt(37, right_shift)),
     )[51:0]
@@ -148,7 +153,7 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
     sign_x, exponent_x, significand_x = _fp_components(dividend)
     _, exponent_y, significand_y = _fp_components(divisor)
     exponent_diff = exponent_x - exponent_y
-    partial = exponent_diff.SGE(_claripy.BVV(64, 16))
+    partial = _fp_signed_ge(exponent_diff, 64)
     # FPREM may reduce a large quotient in implementation-defined chunks of
     # 32 through 63 bits. A 60-bit exponent chunk keeps the symbolic quotient
     # bounded while preserving the instruction's partial-remainder behavior.
@@ -156,7 +161,7 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
         partial,
         _claripy.BVV(60, 16),
         _claripy.If(
-            exponent_diff.SGE(_claripy.BVV(0, 16)),
+            _fp_signed_ge(exponent_diff, 0),
             exponent_diff,
             _claripy.BVV(0, 16),
         ),
@@ -167,7 +172,7 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
     denominator = _claripy.ZeroExt(75, significand_y)
     remainder = numerator % denominator
     remainder = _claripy.If(
-        exponent_diff.SGE(_claripy.BVV(0, 16)) | partial,
+        _fp_signed_ge(exponent_diff, 0) | partial,
         remainder,
         _claripy.BVV(0, 128),
     )
@@ -202,16 +207,16 @@ def _fprem_flags(args: tuple[Any, ...]) -> Any:
     sign_x, exponent_x, significand_x = _fp_components(dividend)
     sign_y, exponent_y, significand_y = _fp_components(divisor)
     exponent_diff = exponent_x - exponent_y
-    partial = exponent_diff.SGE(_claripy.BVV(64, 16))
+    partial = _fp_signed_ge(exponent_diff, 64)
 
     positive_shift = _claripy.If(
-        exponent_diff.SGE(_claripy.BVV(0, 16)),
+        _fp_signed_ge(exponent_diff, 0),
         exponent_diff,
         _claripy.BVV(0, 16),
     )
     negative_shift = _claripy.If(
         exponent_diff.SLT(_claripy.BVV(0, 16))
-        & exponent_diff.SGE(_claripy.BVV(-52, 16)),
+        & _fp_signed_ge(exponent_diff, -52),
         -exponent_diff,
         _claripy.BVV(0, 16),
     )
@@ -219,7 +224,7 @@ def _fprem_flags(args: tuple[Any, ...]) -> Any:
     denominator_positive = _claripy.ZeroExt(75, significand_y)
     numerator_negative = _claripy.ZeroExt(75, significand_x)
     denominator_negative = _claripy.ZeroExt(75, significand_y) << _claripy.ZeroExt(112, negative_shift)
-    nonnegative_diff = exponent_diff.SGE(_claripy.BVV(0, 16))
+    nonnegative_diff = _fp_signed_ge(exponent_diff, 0)
     numerator = _claripy.If(nonnegative_diff, numerator_positive, numerator_negative)
     denominator = _claripy.If(nonnegative_diff, denominator_positive, denominator_negative)
     quotient_magnitude = _claripy.UDiv(

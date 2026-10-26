@@ -7,6 +7,8 @@ import unittest
 from extractor.amd64_state import (
     Amd64AdapterError,
     _SelectorSplitRequired,
+    _encode_fp_remainder,
+    _fp_components,
     _install_x87_fprem_operations,
     _selector_read_hook,
 )
@@ -72,6 +74,39 @@ class X87PartialRemainderTests(unittest.TestCase):
     @staticmethod
     def _double_bits(value):
         return int.from_bytes(struct.pack(">d", value), "big")
+
+    def test_normal_components_and_remainder_encoding_match_binary64(self):
+        dividend = claripy.FPV(5.3, claripy.FSORT_DOUBLE)
+        divisor = claripy.FPV(2.0, claripy.FSORT_DOUBLE)
+        sign_x, exponent_x, significand_x = _fp_components(dividend)
+        _, exponent_y, significand_y = _fp_components(divisor)
+
+        bits_x = self._double_bits(5.3)
+        expected_significand_x = (1 << 52) | (bits_x & ((1 << 52) - 1))
+        expected_significand_y = 1 << 52
+        self.assertEqual(self._evaluate(exponent_x), 2)
+        self.assertEqual(self._evaluate(exponent_y), 1)
+        self.assertEqual(self._evaluate(significand_x), expected_significand_x)
+        self.assertEqual(self._evaluate(significand_y), expected_significand_y)
+
+        exponent_diff = exponent_x - exponent_y
+        remainder = (
+            claripy.ZeroExt(75, significand_x)
+            << claripy.ZeroExt(112, exponent_diff)
+        ) % claripy.ZeroExt(75, significand_y)
+        expected_remainder = (expected_significand_x << 1) % expected_significand_y
+        self.assertEqual(self._evaluate(exponent_diff), 1)
+        self.assertEqual(self._evaluate(remainder), expected_remainder)
+
+        encoded = _encode_fp_remainder(
+            sign_x,
+            remainder,
+            exponent_y - claripy.BVV(52, 16),
+        )
+        self.assertEqual(
+            self._evaluate(encoded.raw_to_bv()),
+            self._double_bits(math.fmod(5.3, 2.0)),
+        )
 
     def test_prem_uses_truncating_quotient_for_positive_and_negative_inputs(self):
         for dividend in (5.3, -5.3):
