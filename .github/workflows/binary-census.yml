@@ -6,8 +6,9 @@ on:
 permissions:
   contents: read
 
-# One GitHub coordinator builds all six Nix inputs and submits their census
-# test targets in one Bazel invocation. Superseded PR runs still cancel.
+# One GitHub coordinator builds census Nix inputs and submits their tests in
+# one Bazel invocation. The failed-Lua fix branch selects four exact symbols;
+# other pull requests retain all six binary censuses. Superseded runs cancel.
 concurrency:
   group: binary-census-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -17,7 +18,7 @@ env:
 
 jobs:
   census:
-    name: Six binary function censuses
+    name: ${{ github.head_ref == 'codex/lua-failed-functions' && 'Four failed Lua function extractions' || 'Six binary function censuses' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -34,7 +35,7 @@ jobs:
           name: wruh
           extraPullNames: ifrl,ayxg
           skipPush: true
-      - name: Build Nix inputs and run all six censuses through Bazel
+      - name: Build Nix inputs and run the selected census through Bazel
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
@@ -51,6 +52,7 @@ jobs:
           WRUH_CI_CHECKED_OUT_SHA: ${{ github.sha }}
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
+          WRUH_CENSUS_ONLY_FAILED_LUA_FUNCTIONS: ${{ github.head_ref == 'codex/lua-failed-functions' }}
         run: bash tools/run_census_ci.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
