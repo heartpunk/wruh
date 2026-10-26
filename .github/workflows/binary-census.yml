@@ -18,7 +18,7 @@ env:
 
 jobs:
   census:
-    name: ${{ github.head_ref == 'codex/lua-failed-functions' && 'Four failed Lua function extractions' || 'Six binary function censuses' }}
+    name: ${{ github.head_ref == 'codex/lua-failed-functions' && 'Three failed Lua function extractions' || 'Six binary function censuses' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:

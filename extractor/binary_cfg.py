@@ -399,10 +399,12 @@ def _walk_function(
             )
             fallthrough = block_address + block.size
             if not (entry <= fallthrough < extent_end):
-                raise InventoryError(
-                    f"{root_name}: call fallthrough leaves the function"
-                )
-            successors.add(fallthrough)
+                if not pinned.manifest.get("open_transfers"):
+                    raise InventoryError(
+                        f"{root_name}: call fallthrough leaves the function"
+                    )
+            else:
+                successors.add(fallthrough)
         elif jumpkind == "Ijk_Boring":
             target = _constant_target(block.vex.next)
             if target is not None:

@@ -10,7 +10,7 @@ only_symbols=()
 if [[ "${WRUH_CENSUS_ONLY_FAILED_LUA_FUNCTIONS:-false}" == "true" ]]; then
   target_ids=(lua)
   packages=(censusLua)
-  only_symbols=(luaG_getfuncline luaH_newkey.part.0 luaV_modf math_fmod)
+  only_symbols=(luaH_newkey.part.0 luaV_modf math_fmod)
 fi
 report_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/wruh-census"
 mkdir -p "$report_root"

@@ -1,10 +1,13 @@
 """Focused contracts for AMD64 finite-selector register reads."""
+import math
+import struct
 from types import SimpleNamespace
 import unittest
 
 from extractor.amd64_state import (
     Amd64AdapterError,
     _SelectorSplitRequired,
+    _install_x87_fprem_operations,
     _selector_read_hook,
 )
 from extractor.runtime import claripy
@@ -48,6 +51,54 @@ class SelectorReadHookTests(unittest.TestCase):
         sseround = claripy.BVS("sseround", 64, explicit_name=True)
         with self.assertRaisesRegex(Amd64AdapterError, "remained symbolic after splitting"):
             _selector_read_hook(self._state(sseround, {"sseround": 2}))
+
+
+class X87PartialRemainderTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        _install_x87_fprem_operations()
+        from angr.engines.vex.claripy.irop import vexop_to_simop
+
+        cls.vexop_to_simop = staticmethod(vexop_to_simop)
+
+    @staticmethod
+    def _value(op_name, dividend, divisor):
+        operation = X87PartialRemainderTests.vexop_to_simop(op_name)
+        return operation.calculate(
+            claripy.FPV(dividend, claripy.FSORT_DOUBLE),
+            claripy.FPV(divisor, claripy.FSORT_DOUBLE),
+        )
+
+    @staticmethod
+    def _evaluate(expression):
+        return claripy.Solver().eval(expression, 1)[0]
+
+    @staticmethod
+    def _double_bits(value):
+        return int.from_bytes(struct.pack(">d", value), "big")
+
+    def test_prem_uses_truncating_quotient_for_both_signs(self):
+        for dividend in (5.3, -5.3):
+            with self.subTest(dividend=dividend):
+                result = self._value("Iop_PRemF64", dividend, 2.0)
+                self.assertEqual(
+                    self._evaluate(result.raw_to_bv()),
+                    self._double_bits(math.fmod(dividend, 2.0)),
+                )
+
+    def test_prem_keeps_dividend_sign_on_exact_zero(self):
+        result = self._value("Iop_PRemF64", -6.0, 3.0)
+        self.assertEqual(self._evaluate(result.raw_to_bv()), 1 << 63)
+
+    def test_prem_reports_a_partial_chunk_for_large_exponent_gap(self):
+        result = self._value("Iop_PRemF64", 2.0**100, 3.0)
+        self.assertEqual(self._evaluate(result.raw_to_bv()), self._double_bits(2.0**40))
+        flags = self._value("Iop_PRemC3210F64", 2.0**100, 3.0)
+        self.assertEqual(self._evaluate(flags), 1 << 10)
+
+    def test_prem_flags_contain_low_signed_quotient_bits(self):
+        flags = self._value("Iop_PRemC3210F64", -5.3, 2.0)
+        self.assertEqual(self._evaluate(flags), (1 << 8) | (1 << 14))
 
 
 if __name__ == "__main__":
