@@ -50,7 +50,22 @@ jobs:
       - name: Check Python source syntax
         run: python3 -m compileall -q extractor tools
 
+      - name: Build pinned Apache binary for SIGTRAP regression
+        run: |
+          set -euo pipefail
+          apache_outputs="$(nix build --no-link --no-write-lock-file --print-out-paths .#packages.x86_64-linux.apacheHttpdPinned.out)"
+          if [[ -z "$apache_outputs" || "$apache_outputs" == *$'\n'* ]]; then
+            printf 'Expected exactly one Apache out path, got:\n%s\n' "$apache_outputs" >&2
+            exit 1
+          fi
+          apache_binary="$apache_outputs/bin/httpd"
+          if [[ ! -x "$apache_binary" ]]; then
+            printf 'Pinned Apache executable is missing: %s\n' "$apache_binary" >&2
+            exit 1
+          fi
+          printf 'WRUH_APACHE_HTTPD=%s\n' "$apache_binary" >> "$GITHUB_ENV"
+
       - name: Run Python unit and CLI metadata integration tests in the pinned development shell
         run: |
           # shellcheck disable=SC2016
-          nix develop --no-write-lock-file --command bash -c 'export PYTHONPATH="$GITHUB_WORKSPACE${PYTHONPATH:+:$PYTHONPATH}"; exec python3 -m unittest discover -s tests -p "test_*.py" -v'
+          nix develop --no-write-lock-file --command bash -c 'export PYTHONPATH="$GITHUB_WORKSPACE:${WRUH_AYXG_SOURCE:?pinned AYXG source is required}/python${PYTHONPATH:+:$PYTHONPATH}"; exec python3 -m unittest discover -s tests -p "test_*.py" -v'
