@@ -9,6 +9,7 @@ from extractor.amd64_state import (
     _SelectorSplitRequired,
     _encode_fp_remainder,
     _fp_components,
+    _fp_shift_left_bounded,
     _install_x87_fprem_operations,
     _selector_read_hook,
 )
@@ -90,11 +91,12 @@ class X87PartialRemainderTests(unittest.TestCase):
         self.assertEqual(self._evaluate(significand_y), expected_significand_y)
 
         exponent_diff = exponent_x - exponent_y
-        remainder = (
-            claripy.ZeroExt(75, significand_x)
-            << claripy.ZeroExt(112, exponent_diff)
+        remainder = _fp_shift_left_bounded(
+            claripy.ZeroExt(75, significand_x), exponent_diff, 63
         ) % claripy.ZeroExt(75, significand_y)
-        expected_remainder = (expected_significand_x << 1) % expected_significand_y
+        expected_remainder = (
+            expected_significand_x << 1
+        ) % expected_significand_y
         self.assertEqual(self._evaluate(exponent_diff), 1)
         self.assertEqual(self._evaluate(remainder), expected_remainder)
 

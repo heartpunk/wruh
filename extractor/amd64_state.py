@@ -68,6 +68,37 @@ _AMD64_FLAG_BIT: dict[str, int] = {
 }
 
 
+def _fp_shift_left_bounded(value: Any, amount: Any, maximum: int) -> Any:
+    """Expand a bounded shift into constant shifts; larger amounts yield zero."""
+    result = _claripy.BVV(0, value.size())
+    amount_width = amount.size()
+    for shift in range(maximum, -1, -1):
+        result = _claripy.If(
+            amount == _claripy.BVV(shift, amount_width),
+            value << shift,
+            result,
+        )
+    return result
+
+
+def _fp_shift_right_bounded(value: Any, amount: Any, maximum: int) -> Any:
+    """Expand a bounded logical shift; larger amounts yield zero."""
+    result = _claripy.BVV(0, value.size())
+    amount_width = amount.size()
+    for shift in range(maximum, -1, -1):
+        result = _claripy.If(
+            amount == _claripy.BVV(shift, amount_width),
+            _claripy.LShR(value, shift),
+            result,
+        )
+    return result
+
+
+def _fp_bv_negate(value: Any) -> Any:
+    """Negate a bitvector without introducing a separate bvneg operator."""
+    return (~value) + _claripy.BVV(1, value.size())
+
+
 def _fp_components(value: Any) -> tuple[Any, Any, Any]:
     """Return the raw sign, unbiased exponent, and normalized significand."""
     bits = value.raw_to_bv()
@@ -85,7 +116,9 @@ def _fp_components(value: Any) -> tuple[Any, Any, Any]:
     subnormal_exponent = _claripy.ZeroExt(10, leading_bit) - _claripy.BVV(1074, 16)
     exponent = _claripy.If(exponent_field == 0, subnormal_exponent, normal_exponent)
     normalization_shift = _claripy.ZeroExt(46, _claripy.BVV(52, 6) - leading_bit)
-    subnormal_fraction = (fraction << normalization_shift)[51:0]
+    subnormal_fraction = _fp_shift_left_bounded(
+        fraction, normalization_shift, 52
+    )[51:0]
     significand = _claripy.If(
         exponent_field == 0,
         _claripy.Concat(_claripy.BVV(1, 1), subnormal_fraction),
@@ -114,7 +147,9 @@ def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
     normal = _fp_signed_ge(exponent, -1022)
     exponent_field = (exponent + _claripy.BVV(1023, 16))[10:0]
     normalized_shift = _claripy.ZeroExt(47, _claripy.BVV(52, 6) - leading_bit)
-    normalized_fraction = (magnitude << normalized_shift)[51:0]
+    normalized_fraction = _fp_shift_left_bounded(
+        magnitude, normalized_shift, 52
+    )[51:0]
 
     subnormal_shift = base_exponent + _claripy.BVV(1074, 16)
     left_shift = _claripy.If(
@@ -124,13 +159,13 @@ def _encode_fp_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
     )
     right_shift = _claripy.If(
         subnormal_shift.SLT(_claripy.BVV(0, 16)),
-        -subnormal_shift,
+        _fp_bv_negate(subnormal_shift),
         _claripy.BVV(0, 16),
     )
     subnormal_fraction = _claripy.If(
         _fp_signed_ge(subnormal_shift, 0),
-        magnitude << _claripy.ZeroExt(37, left_shift),
-        _claripy.LShR(magnitude, _claripy.ZeroExt(37, right_shift)),
+        _fp_shift_left_bounded(magnitude, left_shift, 52),
+        _fp_shift_right_bounded(magnitude, right_shift, 52),
     )[51:0]
 
     bits = _claripy.Concat(
@@ -166,8 +201,8 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
             _claripy.BVV(0, 16),
         ),
     )
-    numerator = _claripy.ZeroExt(75, significand_x) << _claripy.ZeroExt(
-        112, quotient_shift
+    numerator = _fp_shift_left_bounded(
+        _claripy.ZeroExt(75, significand_x), quotient_shift, 63
     )
     denominator = _claripy.ZeroExt(75, significand_y)
     remainder = numerator % denominator
@@ -217,13 +252,17 @@ def _fprem_flags(args: tuple[Any, ...]) -> Any:
     negative_shift = _claripy.If(
         exponent_diff.SLT(_claripy.BVV(0, 16))
         & _fp_signed_ge(exponent_diff, -52),
-        -exponent_diff,
+        _fp_bv_negate(exponent_diff),
         _claripy.BVV(0, 16),
     )
-    numerator_positive = _claripy.ZeroExt(75, significand_x) << _claripy.ZeroExt(112, positive_shift)
+    numerator_positive = _fp_shift_left_bounded(
+        _claripy.ZeroExt(75, significand_x), positive_shift, 63
+    )
     denominator_positive = _claripy.ZeroExt(75, significand_y)
     numerator_negative = _claripy.ZeroExt(75, significand_x)
-    denominator_negative = _claripy.ZeroExt(75, significand_y) << _claripy.ZeroExt(112, negative_shift)
+    denominator_negative = _fp_shift_left_bounded(
+        _claripy.ZeroExt(75, significand_y), negative_shift, 52
+    )
     nonnegative_diff = _fp_signed_ge(exponent_diff, 0)
     numerator = _claripy.If(nonnegative_diff, numerator_positive, numerator_negative)
     denominator = _claripy.If(nonnegative_diff, denominator_positive, denominator_negative)
@@ -236,7 +275,11 @@ def _fprem_flags(args: tuple[Any, ...]) -> Any:
         _claripy.BVV(0, 128),
         quotient_magnitude,
     )
-    quotient = _claripy.If(sign_x != sign_y, -quotient_magnitude, quotient_magnitude)
+    quotient = _claripy.If(
+        sign_x != sign_y,
+        _fp_bv_negate(quotient_magnitude),
+        quotient_magnitude,
+    )
     c0 = _claripy.ZeroExt(15, quotient[2:2]) << 8
     c1 = _claripy.ZeroExt(15, quotient[0:0]) << 9
     c2 = _claripy.If(partial, _claripy.BVV(1 << 10, 16), _claripy.BVV(0, 16))
