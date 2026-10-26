@@ -7,6 +7,8 @@ import unittest
 from extractor.amd64_state import (
     Amd64AdapterError,
     _SelectorSplitRequired,
+    _fp_components,
+    _fp_shift,
     _install_x87_fprem_operations,
     _selector_read_hook,
 )
@@ -97,6 +99,21 @@ class X87PartialRemainderTests(unittest.TestCase):
         self.assertEqual(self._evaluate(flags), 1 << 10)
 
     def test_prem_flags_contain_low_signed_quotient_bits(self):
+        dividend = claripy.FPV(-5.3, claripy.FSORT_DOUBLE)
+        divisor = claripy.FPV(2.0, claripy.FSORT_DOUBLE)
+        _, exponent_x, significand_x = _fp_components(dividend)
+        _, exponent_y, significand_y = _fp_components(divisor)
+        difference = exponent_x - exponent_y
+        numerator = _fp_shift(
+            claripy.ZeroExt(75, significand_x),
+            difference,
+            left=True,
+        )
+        denominator = claripy.ZeroExt(75, significand_y)
+        quotient = claripy.UDiv(numerator, denominator)
+        self.assertEqual(self._evaluate(difference), 1)
+        self.assertEqual(self._evaluate(quotient), 2)
+
         flags = self._value("Iop_PRemC3210F64", -5.3, 2.0)
         self.assertEqual(self._evaluate(flags), (1 << 8) | (1 << 14))
 

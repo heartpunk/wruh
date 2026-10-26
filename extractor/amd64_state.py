@@ -198,7 +198,9 @@ def _fprem_value(args: tuple[Any, ...]) -> Any:
         _claripy.ZeroExt(75, significand_x), quotient_shift, left=True
     )
     denominator = _claripy.ZeroExt(75, significand_y)
-    remainder = _claripy.URem(numerator, denominator)
+    # Both operands are positive 128-bit values, so signed `%` has the same
+    # result as unsigned remainder and is available in this Claripy version.
+    remainder = numerator % denominator
     remainder = _claripy.If(nonnegative_diff, remainder, _claripy.BVV(0, 128))
 
     result_base_exponent = _claripy.If(
