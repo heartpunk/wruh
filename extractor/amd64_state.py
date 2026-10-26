@@ -68,6 +68,181 @@ _AMD64_FLAG_BIT: dict[str, int] = {
 }
 
 
+def _fp_components(value: Any) -> tuple[Any, Any, Any]:
+    """Return the raw sign, unbiased exponent, and normalized significand."""
+    bits = value.raw_to_bv()
+    sign = bits[63:63]
+    exponent_field = bits[62:52]
+    fraction = bits[51:0]
+    leading_bit = _claripy.BVV(0, 6)
+    for index in range(52):
+        leading_bit = _claripy.If(
+            fraction[index] == 1,
+            _claripy.BVV(index, 6),
+            leading_bit,
+        )
+    normal_exponent = _claripy.ZeroExt(5, exponent_field) - _claripy.BVV(1023, 16)
+    subnormal_exponent = _claripy.ZeroExt(10, leading_bit) - _claripy.BVV(1074, 16)
+    exponent = _claripy.If(exponent_field == 0, subnormal_exponent, normal_exponent)
+    normalization_shift = _claripy.ZeroExt(46, _claripy.BVV(52, 6) - leading_bit)
+    subnormal_fraction = (fraction << normalization_shift)[51:0]
+    significand = _claripy.If(
+        exponent_field == 0,
+        _claripy.Concat(_claripy.BVV(1, 1), subnormal_fraction),
+        _claripy.Concat(_claripy.BVV(1, 1), fraction),
+    )
+    return sign, exponent, significand
+
+
+def _scaled_fprem_divisor(divisor: Any, dividend_exponent: Any) -> Any:
+    """Scale the divisor so x87 FPREM produces a bounded quotient chunk."""
+    sign, _, significand = _fp_components(divisor)
+    scaled_exponent = dividend_exponent - _claripy.BVV(60, 16)
+    normal = scaled_exponent.SGE(_claripy.BVV(-1022, 16))
+    exponent_field = (scaled_exponent + _claripy.BVV(1023, 16))[10:0]
+    subnormal_shift = _claripy.BVV(-1022, 16) - scaled_exponent
+    subnormal_fraction = _claripy.LShR(
+        significand,
+        _claripy.ZeroExt(37, subnormal_shift),
+    )[51:0]
+    bits = _claripy.Concat(
+        sign,
+        _claripy.If(normal, exponent_field, _claripy.BVV(0, 11)),
+        _claripy.If(normal, significand[51:0], subnormal_fraction),
+    )
+    return bits.raw_to_fp()
+
+
+def _fprem_value(args: tuple[Any, ...]) -> Any:
+    dividend, divisor = args[-2:]
+    sign_x, exponent_x, _ = _fp_components(dividend)
+    _, exponent_y, _ = _fp_components(divisor)
+    partial = (exponent_x - exponent_y).SGE(_claripy.BVV(64, 16))
+    # Match Angr's deterministic fallback, which selects a 60-bit quotient
+    # chunk from the implementation-defined x87 range of 32 through 63 bits.
+    scaled_divisor = _scaled_fprem_divisor(divisor, exponent_x)
+    positive_divisor = _claripy.If(partial, scaled_divisor, _claripy.fpAbs(divisor))
+
+    # SMT fp.rem rounds the quotient to nearest-even. FPREM truncates it
+    # toward zero; when nearest-even chose the adjacent integer, correcting
+    # the remainder by one divisor recovers the truncating remainder.
+    nearest_remainder = _claripy.fpRem(dividend, positive_divisor)
+    x_is_negative = sign_x == 1
+    remainder_sign_differs = (
+        ~_claripy.fpIsZero(nearest_remainder)
+        & (_claripy.fpIsNegative(nearest_remainder) != x_is_negative)
+    )
+    correction = _claripy.If(
+        x_is_negative,
+        _claripy.fpNeg(_claripy.fpAbs(positive_divisor)),
+        _claripy.fpAbs(positive_divisor),
+    )
+    adjusted = _claripy.If(
+        remainder_sign_differs,
+        _claripy.fpAdd(
+            _claripy.fp.RM.RM_NearestTiesEven,
+            nearest_remainder,
+            correction,
+        ),
+        nearest_remainder,
+    )
+    signed_zero = _claripy.Concat(sign_x, _claripy.BVV(0, 63)).raw_to_fp()
+    finite_remainder = _claripy.If(_claripy.fpIsZero(adjusted), signed_zero, adjusted)
+    nan = _claripy.FPV(float("nan"), _claripy.FSORT_DOUBLE)
+    invalid = (
+        _claripy.fpIsNaN(dividend)
+        | _claripy.fpIsNaN(divisor)
+        | _claripy.fpIsInf(dividend)
+        | _claripy.fpIsZero(divisor)
+    )
+    passthrough = _claripy.fpIsInf(divisor) | _claripy.fpIsZero(dividend)
+    return _claripy.If(
+        invalid,
+        nan,
+        _claripy.If(passthrough, dividend, finite_remainder),
+    )
+
+
+def _fprem_flags(args: tuple[Any, ...]) -> Any:
+    dividend, divisor = args[-2:]
+    sign_x, exponent_x, significand_x = _fp_components(dividend)
+    sign_y, exponent_y, significand_y = _fp_components(divisor)
+    exponent_diff = exponent_x - exponent_y
+    partial = exponent_diff.SGE(_claripy.BVV(64, 16))
+
+    positive_shift = _claripy.If(
+        exponent_diff.SGE(_claripy.BVV(0, 16)),
+        exponent_diff,
+        _claripy.BVV(0, 16),
+    )
+    negative_shift = _claripy.If(
+        exponent_diff.SLT(_claripy.BVV(0, 16))
+        & exponent_diff.SGE(_claripy.BVV(-52, 16)),
+        -exponent_diff,
+        _claripy.BVV(0, 16),
+    )
+    numerator_positive = _claripy.ZeroExt(75, significand_x) << _claripy.ZeroExt(112, positive_shift)
+    denominator_positive = _claripy.ZeroExt(75, significand_y)
+    numerator_negative = _claripy.ZeroExt(75, significand_x)
+    denominator_negative = _claripy.ZeroExt(75, significand_y) << _claripy.ZeroExt(112, negative_shift)
+    nonnegative_diff = exponent_diff.SGE(_claripy.BVV(0, 16))
+    numerator = _claripy.If(nonnegative_diff, numerator_positive, numerator_negative)
+    denominator = _claripy.If(nonnegative_diff, denominator_positive, denominator_negative)
+    quotient_magnitude = _claripy.UDiv(
+        numerator,
+        _claripy.If(denominator == 0, _claripy.BVV(1, 128), denominator),
+    )
+    quotient_magnitude = _claripy.If(
+        exponent_diff.SLT(_claripy.BVV(-52, 16)) | partial,
+        _claripy.BVV(0, 128),
+        quotient_magnitude,
+    )
+    quotient = _claripy.If(sign_x != sign_y, -quotient_magnitude, quotient_magnitude)
+    c0 = _claripy.ZeroExt(15, quotient[2:2]) << 8
+    c1 = _claripy.ZeroExt(15, quotient[0:0]) << 9
+    c2 = _claripy.If(partial, _claripy.BVV(1 << 10, 16), _claripy.BVV(0, 16))
+    c3 = _claripy.ZeroExt(15, quotient[1:1]) << 14
+    flags = c0 | c1 | c2 | c3
+    invalid = (
+        _claripy.fpIsNaN(dividend)
+        | _claripy.fpIsNaN(divisor)
+        | _claripy.fpIsInf(dividend)
+        | _claripy.fpIsZero(divisor)
+        | _claripy.fpIsInf(divisor)
+        | _claripy.fpIsZero(dividend)
+    )
+    return _claripy.If(invalid, _claripy.BVV(0, 16), flags)
+
+
+def _install_x87_fprem_operations() -> None:
+    """Register the two x87 FPREM operations missing from Angr's generic table."""
+    from angr.engines.vex.claripy import irop
+
+    operations = (
+        (
+            "Iop_PRemF64",
+            _fprem_value,
+            {"generic_name": "PRem", "from_type": "F", "from_size": 64},
+        ),
+        (
+            "Iop_PRemC3210F64",
+            _fprem_flags,
+            {"generic_name": "PRemC3210", "from_type": "F", "from_size": 64},
+        ),
+    )
+    for name, implementation, fallback_attrs in operations:
+        if name in irop.operations:
+            continue
+        attrs = fallback_attrs
+        setattr(irop.SimIROp, f"_op_{name}", staticmethod(implementation))
+        try:
+            irop.operations[name] = irop.SimIROp(name, **attrs)
+        except Exception:
+            delattr(irop.SimIROp, f"_op_{name}")
+            raise
+        irop.unsupported.discard(name)
+
+
 @dataclass(frozen=True)
 class CanonicalDeclaration:
     name: str
@@ -782,6 +957,7 @@ def step_instruction_outcomes(
 ) -> InstructionOutcomeFamily:
     """Translate the complete successor relation of one real instruction."""
     source = _u64(source, "source")
+    _install_x87_fprem_operations()
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")

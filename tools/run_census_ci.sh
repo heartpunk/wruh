@@ -56,7 +56,7 @@ write_run_manifest() {
   local temporary="$report_root/run-manifest.json.tmp"
   local completed_targets=()
   for target_id in "${target_ids[@]}"; do
-    if find "$report_root/$target_id" -name .collected -type f -print -quit 2>/dev/null | rg -q .; then
+    if [[ -n "$(find "$report_root/$target_id" -name .collected -type f -print -quit 2>/dev/null)" ]]; then
       completed_targets+=("$target_id")
     fi
   done
@@ -134,7 +134,7 @@ stop_collector
 collect_completed_outputs
 
 for target_id in "${target_ids[@]}"; do
-  if ! find "$report_root/$target_id" -name summary.json -type f -print -quit | rg -q .; then
+  if [[ -z "$(find "$report_root/$target_id" -name summary.json -type f -print -quit)" ]]; then
     echo "No completed census summary was collected for $target_id" >&2
     if [[ $test_status -eq 0 ]]; then
       test_status=1
