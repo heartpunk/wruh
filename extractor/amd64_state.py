@@ -88,7 +88,9 @@ def _fp_shift(value: Any, amount: Any, *, left: bool) -> Any:
             if left
             else _claripy.LShR(shifted, constant_shift)
         )
-        shifted = _claripy.If(amount[bit:bit] == 1, candidate, shifted)
+        shifted = _claripy.If(
+            amount[bit:bit] == _claripy.BVV(1, 1), candidate, shifted
+        )
     if shift_bits < value.size():
         out_of_range = amount[value.size() - 1 : shift_bits] != _claripy.BVV(
             0, value.size() - shift_bits
@@ -106,7 +108,7 @@ def _fp_components(value: Any) -> tuple[Any, Any, Any]:
     highest_fraction_bit = _claripy.BVV(0, 6)
     for index in range(52):
         highest_fraction_bit = _claripy.If(
-            fraction[index] == 1,
+            fraction[index] == _claripy.BVV(1, 1),
             _claripy.BVV(index, 6),
             highest_fraction_bit,
         )
@@ -141,7 +143,7 @@ def _fp_encode_remainder(sign: Any, magnitude: Any, base_exponent: Any) -> Any:
     highest_bit = _claripy.BVV(0, 6)
     for index in range(53):
         highest_bit = _claripy.If(
-            magnitude[index] == 1,
+            magnitude[index] == _claripy.BVV(1, 1),
             _claripy.BVV(index, 6),
             highest_bit,
         )
