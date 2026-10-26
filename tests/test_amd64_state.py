@@ -114,6 +114,11 @@ class X87PartialRemainderTests(unittest.TestCase):
         quotient = claripy.UDiv(numerator, denominator)
         expected_significand = (1 << 52) | (self._double_bits(5.3) & ((1 << 52) - 1))
         self.assertEqual(self._evaluate(difference), 1)
+        self.assertTrue(
+            self._evaluate(
+                difference[0:0] == claripy.BVV(1, 1)
+            )
+        )
         self.assertEqual(self._evaluate(significand_x), expected_significand)
         self.assertEqual(self._evaluate(significand_y), 1 << 52)
         self.assertEqual(self._evaluate(numerator), expected_significand << 1)

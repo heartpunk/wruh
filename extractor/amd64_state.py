@@ -83,11 +83,19 @@ def _fp_shift(value: Any, amount: Any, *, left: bool) -> Any:
     shifted = value
     for bit in range(shift_bits):
         constant_shift = 1 << bit
-        candidate = (
-            shifted << constant_shift
-            if left
-            else _claripy.LShR(shifted, constant_shift)
-        )
+        width = shifted.size()
+        if constant_shift >= width:
+            candidate = _claripy.BVV(0, width)
+        elif left:
+            candidate = _claripy.Concat(
+                shifted[width - constant_shift - 1 : 0],
+                _claripy.BVV(0, constant_shift),
+            )
+        else:
+            candidate = _claripy.Concat(
+                _claripy.BVV(0, constant_shift),
+                shifted[width - 1 : constant_shift],
+            )
         shifted = _claripy.If(
             amount[bit:bit] == _claripy.BVV(1, 1), candidate, shifted
         )
