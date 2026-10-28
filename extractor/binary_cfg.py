@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from itertools import pairwise
 from typing import Any
 
 import capstone
@@ -140,7 +141,7 @@ def _partition_discovered_blocks(
         cuts = [0] + [index for index, item in enumerate(records)
                       if index and item["address"] in boundaries]
         cuts.append(len(records))
-        for first, end in zip(cuts, cuts[1:]):
+        for first, end in pairwise(cuts):
             segment = records[first:end]
             address = segment[0]["address"]
             successors = ([records[end]["address"]] if end < len(records)
