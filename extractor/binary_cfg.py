@@ -413,6 +413,18 @@ def _walk_function(
                     successors.add(target)
             else:
                 site = instructions[-1]["address"]
+                if pinned.manifest.get("open_transfers"):
+                    from extractor.dispatch_discovery import recover_block_dispatch
+
+                    discovered = recover_block_dispatch(pinned, instructions)
+                    boundaries = {item.address for item in linear_instructions}
+                    local_targets = {
+                        address for address in discovered
+                        if entry <= address < extent_end and address in boundaries
+                    }
+                    if local_targets:
+                        jump_tables[site] = sorted(local_targets)
+                        stop_points.update(local_targets)
                 if site not in jump_tables and not pinned.manifest.get("open_transfers"):
                     raise InventoryError(
                         f"{root_name}: undeclared indirect jump at {site:#x}"
