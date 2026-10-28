@@ -12,7 +12,7 @@ preload_libstdcxx()
 
 import angr
 
-from extractor.binary_cfg import build_static_cfg
+from extractor.binary_cfg import _partition_discovered_blocks, build_static_cfg
 from extractor.binary_inventory import PinnedBinary
 from extractor.dispatch_discovery import recover_block_dispatch
 from extractor.fresh import extract_fresh_function
@@ -145,6 +145,21 @@ class DispatchDiscoveryTests(unittest.TestCase):
         pinned.manifest["open_transfers"] = False
         with self.assertRaisesRegex(InventoryError, "call fallthrough leaves"):
             build_static_cfg(pinned)
+
+    def test_identical_suffix_from_implicit_block_split_is_shared(self):
+        instructions = [{"address": BASE + index, "size": 1, "bytes": "90"}
+                        for index in range(4)]
+        blocks = [
+            {"address": BASE, "size": 4, "instructions": instructions,
+             "successors": [FIRST]},
+            {"address": BASE + 2, "size": 2, "instructions": instructions[2:],
+             "successors": [SECOND]},
+        ]
+        partitioned = _partition_discovered_blocks(blocks, {BASE + 1})
+        self.assertEqual([b["address"] for b in partitioned], [BASE, BASE + 1, BASE + 2])
+        self.assertEqual([b["size"] for b in partitioned], [1, 1, 2])
+        self.assertEqual(partitioned[-1]["successors"], [FIRST, SECOND])
+        self.assertEqual(sum(len(b["instructions"]) for b in partitioned), 4)
 
 
 if __name__ == "__main__":
