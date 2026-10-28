@@ -281,6 +281,7 @@ def _walk_function(
     blocks: list[dict[str, Any]] = []
     calls: list[dict[str, int]] = []
     walked_indirect_sites: set[int] = set()
+    discovered_stop_points: set[int] = set()
 
     code = pinned.project.loader.memory.load(entry, root["size"])
     linear_instructions = list(
@@ -398,11 +399,12 @@ def _walk_function(
                 }
             )
             fallthrough = block_address + block.size
-            if not (entry <= fallthrough < extent_end):
+            if entry <= fallthrough < extent_end:
+                successors.add(fallthrough)
+            elif not pinned.manifest.get("open_transfers"):
                 raise InventoryError(
                     f"{root_name}: call fallthrough leaves the function"
                 )
-            successors.add(fallthrough)
         elif jumpkind == "Ijk_Boring":
             target = _constant_target(block.vex.next)
             if target is not None:
@@ -425,6 +427,15 @@ def _walk_function(
                     if local_targets:
                         jump_tables[site] = sorted(local_targets)
                         stop_points.update(local_targets)
+                        discovered_stop_points.update(local_targets)
+                        # Already decoded instruction streams will be split
+                        # below; do not decode their suffixes a second time.
+                        decoded = {item["address"] for item in instructions}
+                        decoded.update(
+                            item["address"] for previous in blocks
+                            for item in previous["instructions"]
+                        )
+                        seen.update(local_targets & decoded)
                 if site not in jump_tables and not pinned.manifest.get("open_transfers"):
                     raise InventoryError(
                         f"{root_name}: undeclared indirect jump at {site:#x}"
@@ -449,6 +460,28 @@ def _walk_function(
             if successor not in seen:
                 queue.append(successor)
 
+    if discovered_stop_points:
+        partitioned = []
+        for record in blocks:
+            records = record["instructions"]
+            cuts = [0] + [index for index, item in enumerate(records)
+                          if index and item["address"] in discovered_stop_points]
+            cuts.append(len(records))
+            for first, end in zip(cuts, cuts[1:]):
+                segment = records[first:end]
+                partitioned.append({
+                    "address": segment[0]["address"],
+                    "instructions": segment,
+                    "size": sum(item["size"] for item in segment),
+                    "successors": ([records[end]["address"]] if end < len(records)
+                                   else record["successors"]),
+                })
+        blocks = partitioned
+        for call in calls:
+            call["block"] = next(
+                record["address"] for record in blocks
+                if record["address"] <= call["address"] < record["address"] + record["size"]
+            )
     blocks.sort(key=lambda record: record["address"])
     calls.sort(key=lambda call: call["address"])
     _validate_block_partition(

@@ -21,7 +21,7 @@ def recover_block_dispatch(
     from ayxg.expr import TypedExpr
     from ayxg.z3 import declaration_variables, expr_to_z3
 
-    from extractor.amd64_state import step_instruction_outcomes
+    from extractor.amd64_state import Amd64AdapterError, step_instruction_outcomes
     from extractor.artifact import StaticOccurrenceId
     from extractor.fresh import _local_edges, artifact_declarations
     from extractor.fresh_composition import _apply
@@ -30,7 +30,10 @@ def recover_block_dispatch(
     state = {item.name: TypedExpr.var(item.name, item.sort) for item in declarations}
     target = None
     for index, instruction in enumerate(instructions):
-        family = step_instruction_outcomes(pinned.project, instruction["address"])
+        try:
+            family = step_instruction_outcomes(pinned.project, instruction["address"])
+        except Amd64AdapterError:
+            return []
         # A straight-line computation must have one ordinary outcome.
         if len(family.outcomes) != 1 or family.outcomes[0].jumpkind != "Ijk_Boring":
             return []
@@ -59,14 +62,23 @@ def recover_block_dispatch(
     solver = z3.Solver(ctx=context)
     solver.set(timeout=100)
     obj = pinned.project.loader.find_object_containing(instructions[0]["address"])
-    targets = set()
-    # A per-query timeout and entry budget bound optional discovery. Even a
-    # partial enumeration supplies useful hints without asserting closure.
+    addresses = []
+    # Bound the address computation before reading memory. An unconstrained
+    # register must not turn into a sample of arbitrary loaded pointers.
     for _ in range(max_entries):
-        if solver.check() != z3.sat:
+        result = solver.check()
+        if result == z3.unsat:
             break
+        if result != z3.sat:
+            return []
         value = solver.model().eval(address, model_completion=True).as_long()
         solver.add(address != value)
+        addresses.append(value)
+    else:
+        if solver.check() != z3.unsat:
+            return []
+    targets = set()
+    for value in addresses:
         if not (obj.contains_addr(value) and obj.contains_addr(value + 7)):
             continue
         try:
