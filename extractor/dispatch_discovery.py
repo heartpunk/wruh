@@ -62,6 +62,16 @@ def recover_block_dispatch(
     solver = z3.Solver(ctx=context)
     solver.set(timeout=100)
     obj = pinned.project.loader.find_object_containing(instructions[0]["address"])
+    # Reject unknown table bases before enumerating. Candidate reads must be
+    # wholly within this loaded object; a free base register cannot establish
+    # that, even when an index happens to be small.
+    solver.push()
+    solver.add(z3.Or(z3.ULT(address, obj.min_addr),
+                     z3.UGT(address, obj.max_addr - 7)))
+    within_object = solver.check() == z3.unsat
+    solver.pop()
+    if not within_object:
+        return []
     addresses = []
     # Bound the address computation before reading memory. An unconstrained
     # register must not turn into a sample of arbitrary loaded pointers.

@@ -40,11 +40,13 @@ def fixture(*, copied=False, clobbered=False, bounded=True, byte_index=False,
     code += b"\xff\x24\xc2" if copied else b"\xff\x24\xc7"
     if terminal_call:
         code = b"\xe8" + struct.pack("<i", FIRST - (BASE + 5))
-    raw = bytearray(b"\x90" * 0x110)
+    raw = bytearray(b"\x90" * (0x900 if byte_index else 0x110))
     raw[:len(code)] = code
     raw[0x40:0x46] = b"\xb8\x11\0\0\0\xc3"
     raw[0x50:0x56] = b"\xb8\x22\0\0\0\xc3"
     raw[0x100:0x110] = struct.pack("<QQ", FIRST, SECOND)
+    if byte_index:
+        raw[0x100:0x900] = struct.pack("<QQ", FIRST, SECOND) * 128
     return bytes(raw), code
 
 
