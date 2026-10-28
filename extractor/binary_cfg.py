@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from itertools import pairwise
 from typing import Any
 
 import capstone
@@ -127,6 +128,36 @@ def _constant_target(expression: Any) -> int | None:
     if hasattr(expression, "value"):
         return int(expression.value)
     return None
+
+
+def _partition_discovered_blocks(
+    blocks: list[dict[str, Any]], stop_points: set[int]
+) -> list[dict[str, Any]]:
+    """Split new boundaries and share identical suffixes reached by VEX splits."""
+    boundaries = stop_points | {record["address"] for record in blocks}
+    partitioned: dict[int, dict[str, Any]] = {}
+    for record in blocks:
+        records = record["instructions"]
+        cuts = [0] + [index for index, item in enumerate(records)
+                      if index and item["address"] in boundaries]
+        cuts.append(len(records))
+        for first, end in pairwise(cuts):
+            segment = records[first:end]
+            address = segment[0]["address"]
+            successors = ([records[end]["address"]] if end < len(records)
+                          else record["successors"])
+            previous = partitioned.get(address)
+            if previous is not None:
+                if previous["instructions"] != segment:
+                    raise InventoryError(f"conflicting decoded suffix at {address:#x}")
+                previous["successors"] = sorted(set(previous["successors"]) | set(successors))
+            else:
+                partitioned[address] = {
+                    "address": address, "instructions": segment,
+                    "size": sum(item["size"] for item in segment),
+                    "successors": successors,
+                }
+    return sorted(partitioned.values(), key=lambda record: record["address"])
 
 
 def _recover_relative_jump_tables(
@@ -281,6 +312,7 @@ def _walk_function(
     blocks: list[dict[str, Any]] = []
     calls: list[dict[str, int]] = []
     walked_indirect_sites: set[int] = set()
+    discovered_stop_points: set[int] = set()
 
     code = pinned.project.loader.memory.load(entry, root["size"])
     linear_instructions = list(
@@ -398,11 +430,12 @@ def _walk_function(
                 }
             )
             fallthrough = block_address + block.size
-            if not (entry <= fallthrough < extent_end):
+            if entry <= fallthrough < extent_end:
+                successors.add(fallthrough)
+            elif not pinned.manifest.get("open_transfers"):
                 raise InventoryError(
                     f"{root_name}: call fallthrough leaves the function"
                 )
-            successors.add(fallthrough)
         elif jumpkind == "Ijk_Boring":
             target = _constant_target(block.vex.next)
             if target is not None:
@@ -413,6 +446,27 @@ def _walk_function(
                     successors.add(target)
             else:
                 site = instructions[-1]["address"]
+                if pinned.manifest.get("open_transfers"):
+                    from extractor.dispatch_discovery import recover_block_dispatch
+
+                    discovered = recover_block_dispatch(pinned, instructions)
+                    boundaries = {item.address for item in linear_instructions}
+                    local_targets = {
+                        address for address in discovered
+                        if entry <= address < extent_end and address in boundaries
+                    }
+                    if local_targets:
+                        jump_tables[site] = sorted(set(jump_tables.get(site, ())) | local_targets)
+                        stop_points.update(local_targets)
+                        discovered_stop_points.update(local_targets)
+                        # Already decoded instruction streams will be split
+                        # below; do not decode their suffixes a second time.
+                        decoded = {item["address"] for item in instructions}
+                        decoded.update(
+                            item["address"] for previous in blocks
+                            for item in previous["instructions"]
+                        )
+                        seen.update(local_targets & decoded)
                 if site not in jump_tables and not pinned.manifest.get("open_transfers"):
                     raise InventoryError(
                         f"{root_name}: undeclared indirect jump at {site:#x}"
@@ -437,6 +491,15 @@ def _walk_function(
             if successor not in seen:
                 queue.append(successor)
 
+    if discovered_stop_points:
+        blocks = _partition_discovered_blocks(blocks, discovered_stop_points)
+        for call in calls:
+            call["block"] = next(
+                record["address"] for record in blocks
+                if record["address"] <= call["address"] < record["address"] + record["size"]
+            )
+        # The same call can occur in shared decoded suffixes.
+        calls = list({call["address"]: call for call in calls}.values())
     blocks.sort(key=lambda record: record["address"])
     calls.sort(key=lambda call: call["address"])
     _validate_block_partition(
