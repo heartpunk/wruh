@@ -129,6 +129,36 @@ def _constant_target(expression: Any) -> int | None:
     return None
 
 
+def _partition_discovered_blocks(
+    blocks: list[dict[str, Any]], stop_points: set[int]
+) -> list[dict[str, Any]]:
+    """Split new boundaries and share identical suffixes reached by VEX splits."""
+    boundaries = stop_points | {record["address"] for record in blocks}
+    partitioned: dict[int, dict[str, Any]] = {}
+    for record in blocks:
+        records = record["instructions"]
+        cuts = [0] + [index for index, item in enumerate(records)
+                      if index and item["address"] in boundaries]
+        cuts.append(len(records))
+        for first, end in zip(cuts, cuts[1:]):
+            segment = records[first:end]
+            address = segment[0]["address"]
+            successors = ([records[end]["address"]] if end < len(records)
+                          else record["successors"])
+            previous = partitioned.get(address)
+            if previous is not None:
+                if previous["instructions"] != segment:
+                    raise InventoryError(f"conflicting decoded suffix at {address:#x}")
+                previous["successors"] = sorted(set(previous["successors"]) | set(successors))
+            else:
+                partitioned[address] = {
+                    "address": address, "instructions": segment,
+                    "size": sum(item["size"] for item in segment),
+                    "successors": successors,
+                }
+    return sorted(partitioned.values(), key=lambda record: record["address"])
+
+
 def _recover_relative_jump_tables(
     pinned: PinnedBinary,
     *,
@@ -425,7 +455,7 @@ def _walk_function(
                         if entry <= address < extent_end and address in boundaries
                     }
                     if local_targets:
-                        jump_tables[site] = sorted(local_targets)
+                        jump_tables[site] = sorted(set(jump_tables.get(site, ())) | local_targets)
                         stop_points.update(local_targets)
                         discovered_stop_points.update(local_targets)
                         # Already decoded instruction streams will be split
@@ -461,27 +491,14 @@ def _walk_function(
                 queue.append(successor)
 
     if discovered_stop_points:
-        partitioned = []
-        for record in blocks:
-            records = record["instructions"]
-            cuts = [0] + [index for index, item in enumerate(records)
-                          if index and item["address"] in discovered_stop_points]
-            cuts.append(len(records))
-            for first, end in zip(cuts, cuts[1:]):
-                segment = records[first:end]
-                partitioned.append({
-                    "address": segment[0]["address"],
-                    "instructions": segment,
-                    "size": sum(item["size"] for item in segment),
-                    "successors": ([records[end]["address"]] if end < len(records)
-                                   else record["successors"]),
-                })
-        blocks = partitioned
+        blocks = _partition_discovered_blocks(blocks, discovered_stop_points)
         for call in calls:
             call["block"] = next(
                 record["address"] for record in blocks
                 if record["address"] <= call["address"] < record["address"] + record["size"]
             )
+        # The same call can occur in shared decoded suffixes.
+        calls = list({call["address"]: call for call in calls}.values())
     blocks.sort(key=lambda record: record["address"])
     calls.sort(key=lambda call: call["address"])
     _validate_block_partition(
