@@ -10,18 +10,21 @@ from ayxg.z3 import declaration_variables, expr_to_z3
 
 from extractor.corpus_runner import RETURN, STACK, STORAGE
 from extractor.fresh import FreshFunction
-from extractor.fresh_composition import compose_fresh_paths
+from extractor.fresh_composition import ComposedPath, compose_fresh_paths
 
 
 def solve_samples(model: dict, count: int, *, timeout_ms: int = 30000, seed: int = 1,
-                  path_indices: set[int] | None = None, statistics: bool = False):
+                  path_indices: set[int] | None = None, statistics: bool = False,
+                  functions: tuple[FreshFunction, ...] | None = None,
+                  paths: tuple[ComposedPath, ...] | None = None):
     """Solve path guards under exactly the concrete runner's entry state.
 
     UNSAT and UNKNOWN are recorded per path. The finite path/step bounds and
     solver timeouts make this an explicitly bounded exploration.
     """
     function = FreshFunction.from_data(model["fresh_model"])
-    paths = compose_fresh_paths(model["cfg"], (function,), function.function_id)
+    if paths is None:
+        paths = compose_fresh_paths(model["cfg"], functions or (function,), function.function_id)
     ctx = z3.Context()
     variables = declaration_variables(function.declarations, ctx)
     x = z3.BitVec("wruh_input_x", 32, ctx=ctx)
