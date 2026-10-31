@@ -1,6 +1,8 @@
 exports_files([
     "ghot_inputs.bzl",
     "nix_native_deps.bzl",
+    "run_census_ci.sh",
+    "write_census_run_manifest.py",
 ])
 
 platform(
@@ -16,4 +18,10 @@ platform(
         "memory_mb": "1024",
     },
     visibility = ["//visibility:public"],
+)
+
+py_library(
+    name = "test_helpers",
+    srcs = glob(["*.py"]),
+    visibility = ["//tests:__pkg__"],
 )

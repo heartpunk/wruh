@@ -16,10 +16,10 @@ from extractor.binary_cfg import build_static_cfg
 from extractor.fresh import extract_fresh_function
 
 
-def main():
+def main(argv=None):
     parser=argparse.ArgumentParser(); parser.add_argument('--entry',type=Path,required=True)
     parser.add_argument('--library',type=Path,required=True); parser.add_argument('--output',type=Path,required=True)
-    args=parser.parse_args(); compiler=shutil.which('clang')
+    args=parser.parse_args(argv); compiler=shutil.which('clang')
     if compiler is None: raise RuntimeError('declared clang runtime absent')
     with tempfile.TemporaryDirectory() as temp:
         directory=Path(temp); library=directory/'libfixture.so'; entry=directory/'fixture.elf'
