@@ -137,6 +137,23 @@
         "type": "github"
       }
     },
+    "revizor": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793373085,
+        "narHash": "sha256-taWhXX1voTeM+OA/x1LFXMmj4fP5VB6hvtEPzSaUJvA=",
+        "owner": "microsoft",
+        "repo": "side-channel-fuzzer",
+        "rev": "cc9fa2e53d92c496586689f44d6ea1740d95bd1d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "microsoft",
+        "repo": "side-channel-fuzzer",
+        "rev": "cc9fa2e53d92c496586689f44d6ea1740d95bd1d",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "ayxg": "ayxg",
@@ -144,7 +161,8 @@
         "nixpkgs": [
           "ifrl",
           "nixpkgs"
-        ]
+        ],
+        "revizor": "revizor"
       }
     },
     "rust-overlay": {

@@ -37,7 +37,8 @@ class CorpusRunner:
                 for d in self.context.declarations))
             self.edges.setdefault(edge.source,[]).append((edge,guard,update))
 
-    def run(self, inputs: tuple[int,int,int,int,int], limit: int = 256) -> dict:
+    def run(self, inputs: tuple[int,int,int,int,int], limit: int = 256, *,
+            storage_size: int = 32, extra_registers: dict[str, int] | None = None) -> dict:
         if len(inputs)!=5 or any(type(v) is not int or not 0 <= v <= 0xffffffff for v in inputs):
             raise ValueError("input outside audited uint32 domain")
         case,a,b,x,initial = inputs
@@ -57,6 +58,8 @@ class CorpusRunner:
         elif case==1:values.update(rdi=STORAGE+a,rsi=x)
         elif case==2:values.update(rdi=x,rsi=initial)
         else:raise ValueError('case outside harness domain')
+        if extra_registers:
+            values.update(extra_registers)
         values['mem']=QFAbvArrayValue(ArraySort(64,8),0,tuple(sorted((k,v) for k,v in memory.items() if v)))
         state=QFAbvValuation(self.context,tuple(values[d.name] for d in self.context.declarations))
         trace=[]
@@ -66,7 +69,7 @@ class CorpusRunner:
             if pc==RETURN:
                 result=values['rax'] if case==2 else values['rax']&0xffffffff
                 mem=dict(values['mem'].entries)
-                return {'status':'RETURN','result':result,'memory':[mem.get(STORAGE+i,values['mem'].default) for i in range(32)],'trace':trace}
+                return {'status':'RETURN','result':result,'memory':[mem.get(STORAGE+i,values['mem'].default) for i in range(storage_size)],'trace':trace}
             enabled=[e for e in self.edges.get(pc,[]) if eval_expr(e[1],state)]
             if len(enabled)!=1:
                 return {'status':'AMBIGUOUS' if enabled else 'STUCK','pc':pc,'enabled':len(enabled),'trace':trace}
