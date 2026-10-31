@@ -3,6 +3,14 @@ load(":binary_census_targets.bzl", "binary_census_remote_tests")
 
 package(default_visibility = ["//visibility:private"])
 
+py_library(
+    name = "test_runtime",
+    srcs = glob(["*.py"]),
+    data = ["amd64_smoke.hex"],
+    visibility = ["//tests:__pkg__"],
+    deps = ["@shared_angr//:pkg", "@wruh_ayxg//:z3"],
+)
+
 py_test(
     name = "angr_runtime_smoke",
     srcs = glob(["*.py"], exclude = ["binary_census.py"]),
@@ -42,3 +50,5 @@ py_binary(
 )
 
 binary_census_remote_tests()
+
+exports_files(["binary_census_targets.bzl", "BUILD.bazel"], visibility = ["//visibility:public"])

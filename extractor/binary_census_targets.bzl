@@ -47,6 +47,7 @@ def _binary_census_remote_test(target_id, target_kind, implementation):
         main = "binary_census.py",
         size = "enormous",
         timeout = "eternal",
+        tags = ["manual"],
         args = args,
         data = [
             "@nix_native_deps//:libstdcxx",

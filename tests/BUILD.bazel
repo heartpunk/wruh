@@ -1,0 +1,25 @@
+load("@rules_python//python:defs.bzl", "py_test")
+
+py_test(
+    name = "python_tests",
+    srcs = glob(["test_*.py"]) + ["pytest_main.py"],
+    main = "pytest_main.py",
+    data = [
+        "//:.github/workflows/binary-census.yml",
+        "//:pytest.ini",
+        "//corpus/open-transfers:entry.c",
+        "//corpus/open-transfers:library.c",
+        "//extractor:BUILD.bazel",
+        "//extractor:binary_census_targets.bzl",
+        "//tools:run_census_ci.sh",
+        "//tools:write_census_run_manifest.py",
+        "@nix_native_deps//:libstdcxx",
+    ],
+    env = {
+        "GHOT_LIBSTDCXX_RLOCATION": "$(rlocationpath @nix_native_deps//:libstdcxx)",
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONSAFEPATH": "1",
+    },
+    target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    deps = ["//extractor:test_runtime", "//tools:test_helpers", "@shared_angr//:pkg"],
+)
