@@ -39,6 +39,28 @@ class CorpusRunner:
 
     def run(self, inputs: tuple[int,int,int,int,int], limit: int = 256, *,
             storage_size: int = 32, extra_registers: dict[str, int] | None = None) -> dict:
+        state = self.initial_state(inputs, extra_registers=extra_registers)
+        case = inputs[0]
+        trace=[]
+        for _ in range(limit):
+            values=dict(zip((d.name for d in self.context.declarations),state.values))
+            pc=values[self.pc_name]
+            if pc==RETURN:
+                result=values['rax'] if case==2 else values['rax']&0xffffffff
+                mem=dict(values['mem'].entries)
+                return {'status':'RETURN','result':result,'memory':[mem.get(STORAGE+i,values['mem'].default) for i in range(storage_size)],'trace':trace}
+            enabled=[e for e in self.edges.get(pc,[]) if eval_expr(e[1],state)]
+            if len(enabled)!=1:
+                return {'status':'AMBIGUOUS' if enabled else 'STUCK','pc':pc,'enabled':len(enabled),'trace':trace}
+            edge,_,update=enabled[0]
+            trace.append({'pc':pc,'outcome':edge.id.outcome.value})
+            if edge.summary.target.kind in ('error','halt','stuck'):
+                return {'status':edge.summary.target.kind.upper(),'pc':pc,'trace':trace}
+            state=eval_update(update,state)
+        return {'status':'STEP_LIMIT','trace':trace}
+
+    def initial_state(self, inputs: tuple[int,int,int,int,int], *,
+                      extra_registers: dict[str, int] | None = None) -> QFAbvValuation:
         if len(inputs)!=5 or any(type(v) is not int or not 0 <= v <= 0xffffffff for v in inputs):
             raise ValueError("input outside audited uint32 domain")
         case,a,b,x,initial = inputs
@@ -61,21 +83,4 @@ class CorpusRunner:
         if extra_registers:
             values.update(extra_registers)
         values['mem']=QFAbvArrayValue(ArraySort(64,8),0,tuple(sorted((k,v) for k,v in memory.items() if v)))
-        state=QFAbvValuation(self.context,tuple(values[d.name] for d in self.context.declarations))
-        trace=[]
-        for _ in range(limit):
-            values=dict(zip((d.name for d in self.context.declarations),state.values))
-            pc=values[self.pc_name]
-            if pc==RETURN:
-                result=values['rax'] if case==2 else values['rax']&0xffffffff
-                mem=dict(values['mem'].entries)
-                return {'status':'RETURN','result':result,'memory':[mem.get(STORAGE+i,values['mem'].default) for i in range(storage_size)],'trace':trace}
-            enabled=[e for e in self.edges.get(pc,[]) if eval_expr(e[1],state)]
-            if len(enabled)!=1:
-                return {'status':'AMBIGUOUS' if enabled else 'STUCK','pc':pc,'enabled':len(enabled),'trace':trace}
-            edge,_,update=enabled[0]
-            trace.append({'pc':pc,'outcome':edge.id.outcome.value})
-            if edge.summary.target.kind in ('error','halt','stuck'):
-                return {'status':edge.summary.target.kind.upper(),'pc':pc,'trace':trace}
-            state=eval_update(update,state)
-        return {'status':'STEP_LIMIT','trace':trace}
+        return QFAbvValuation(self.context,tuple(values[d.name] for d in self.context.declarations))
