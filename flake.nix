@@ -2,6 +2,10 @@
   description = "Wruh fresh handler extraction environment";
 
   inputs = {
+    revizor = {
+      url = "github:microsoft/side-channel-fuzzer/cc9fa2e53d92c496586689f44d6ea1740d95bd1d";
+      flake = false;
+    };
     ifrl.url = "github:heartpunk/ifrl/main";
     ayxg = {
       url = "github:heartpunk/ayxg/main";
@@ -10,7 +14,7 @@
     nixpkgs.follows = "ifrl/nixpkgs";
   };
 
-  outputs = { nixpkgs, ifrl, ayxg, ... }:
+  outputs = { nixpkgs, ifrl, ayxg, revizor, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
       censusPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
@@ -84,6 +88,9 @@
       packages = censusPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
+            revizorPython = pkgs.python312.withPackages (python: with python; [
+              pyyaml numpy pyelftools xxhash scipy cffi typing-extensions unicorn
+            ]);
             buildbuddyRbe = pkgs.mkShell {
               packages = [
                 ifrl.packages.${system}.angr-python
@@ -108,6 +115,8 @@
           IFRL_ANGR_ENVIRONMENT = "${ifrl.packages.${system}.angr-python}";
           GHOT_NIX_ANGR_ROOT = "${ifrl.packages.${system}.angr-python}";
           WRUH_AYXG_SOURCE = "${ayxg.outPath}";
+          WRUH_REVIZOR_SOURCE = "${revizor}";
+          WRUH_REVIZOR_PYTHON = "${revizorPython}/bin/python";
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
