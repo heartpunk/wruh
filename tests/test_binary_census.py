@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -6,6 +7,7 @@ from extractor.binary_census import (
     _candidate_manifest,
     _entry_nodes,
     _function_candidates,
+    _select_candidates,
 )
 
 
@@ -97,6 +99,42 @@ class FunctionCandidateAddressTests(unittest.TestCase):
         )
         self._assert_candidate(project, expected_object_va=0x1000, expected_rebased=0x70001000)
 
+
+class ExplicitCandidateIdSelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.candidates = [
+            {"id": "fn_1", "symbol": "first", "aliases": ["first", "shared"]},
+            {"id": "fn_2", "symbol": "second", "aliases": ["second", "shared"]},
+            {"id": "fn_3", "symbol": "third", "aliases": ["third"]},
+        ]
+
+    def test_exact_ids_select_one_candidate_even_when_symbols_are_ambiguous(self):
+        selected, metadata = _select_candidates(
+            self.candidates,
+            "00" * 32,
+            None,
+            None,
+            ["fn_2", "fn_1", "fn_2"],
+        )
+
+        self.assertEqual(selected, {"fn_1", "fn_2"})
+        self.assertEqual(metadata["selectedCount"], 2)
+        self.assertEqual(metadata["samplingPolicy"], "explicit-candidate-ids-v1")
+        self.assertEqual(metadata["selectedCandidateIds"], ["fn_1", "fn_2"])
+
+    def test_unknown_candidate_ids_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unknown candidate IDs=\\['missing'\\]"):
+            _select_candidates(self.candidates, "00" * 32, None, None, ["missing"])
+
+    def test_explicit_ids_cannot_be_combined_with_sampling(self):
+        with self.assertRaisesRegex(ValueError, "cannot be combined with sampling"):
+            _select_candidates(
+                self.candidates,
+                "00" * 32,
+                "seed",
+                Decimal("50"),
+                ["fn_1"],
+            )
 
 if __name__ == "__main__":
     unittest.main()
