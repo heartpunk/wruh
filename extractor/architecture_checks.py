@@ -8,9 +8,11 @@ from extractor.runtime_trace import start_runtime_trace
 
 start_runtime_trace()
 
+from extractor import runtime
+
+# ruff: isort: split
 import z3
 
-from extractor import runtime
 from extractor.amd64_state import (
     AMD64_LAYOUT,
     FLAG_NAMES,
