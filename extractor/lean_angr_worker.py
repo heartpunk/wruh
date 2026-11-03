@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from ayxg.codec import typed_expr_roots_dag
 from ayxg.expr import TypedExpr
@@ -136,6 +136,7 @@ def _step(pinned: PinnedBinary, address: int) -> dict:
                 "target": target,
                 "target_value": outcome.target_value,
                 "jumpkind": outcome.jumpkind,
+                "fault_kind": outcome.fault_kind,
             })
     return {
         "kind": "step", "address": address, "source_guard": source_guard,

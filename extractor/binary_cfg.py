@@ -347,8 +347,8 @@ def _walk_function(
         for statement in block.vex.statements:
             if not isinstance(statement, pyvex.stmt.Exit):
                 continue
-            if statement.jumpkind == "Ijk_SigFPE_IntDiv":
-                continue  # Fault successors are terminal STS errors, not CFG nodes.
+            if statement.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP"}:
+                continue  # Fault successors are terminal errors, not CFG nodes.
             target = _constant_target(statement.dst)
             if target is None:
                 raise InventoryError(
@@ -361,7 +361,7 @@ def _walk_function(
                 raise InventoryError(f"{root_name}: conditional edge leaves function")
 
         jumpkind = block.vex.jumpkind
-        if jumpkind == "Ijk_Ret":
+        if jumpkind in {"Ijk_Ret", "Ijk_SigTRAP"}:
             pass
         elif jumpkind == "Ijk_Call":
             target = _constant_target(block.vex.next)

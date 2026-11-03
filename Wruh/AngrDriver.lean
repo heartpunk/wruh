@@ -10,7 +10,32 @@ open Lean Ayxg.QfAbv Ayxg.QfAbv.JsonCodec Wruh.Observation Wruh.FreshExtraction
 
 inductive FaultKind where
   | integerDivision
+  | signalTrap
+  | generalProtection
   deriving DecidableEq, Repr
+
+def faultKindName : FaultKind → String
+  | .integerDivision => "integer_division"
+  | .signalTrap => "signal_trap"
+  | .generalProtection => "general_protection"
+
+def parseFaultKind (jumpkind : String) (faultKind? : Option String) :
+    Except String (Option FaultKind) := do
+  match jumpkind, faultKind? with
+  | "Ijk_SigFPE_IntDiv", some "integer_division" =>
+      pure (some .integerDivision)
+  | "Ijk_SigFPE_IntDiv", none =>
+      throw "missing fault_kind for integer division fault"
+  | "Ijk_SigTRAP", some "signal_trap" =>
+      pure (some .signalTrap)
+  | "Ijk_SigTRAP", some "general_protection" =>
+      pure (some .generalProtection)
+  | "Ijk_SigTRAP", none =>
+      throw "missing fault_kind for Ijk_SigTRAP"
+  | _, none =>
+      pure none
+  | _, some _ =>
+      throw "fault_kind conflicts with angr jumpkind"
 
 structure Metadata (Γ : Ctx) where
   occurrenceId : Nat
@@ -60,11 +85,16 @@ private def parseOutcome (Γ : Ctx) (sourceGuard : Expr Γ .bool)
   let targetValue ← if targetValue? == Json.null then pure none else some <$> targetValue?.getNat?
   let outcomeId ← natField item "outcome_id"
   let jumpkind ← (← field item "jumpkind").getStr?
+  let faultKindValue ← field item "fault_kind"
+  let faultKind? ← if faultKindValue == Json.null then
+    pure none
+  else
+    some <$> faultKindValue.getStr?
+  let faultKind ← parseFaultKind jumpkind faultKind?
   let kind : OutcomeKind Γ FaultKind :=
-    if jumpkind == "Ijk_SigFPE_IntDiv" then
-      .fault ⟨.integerDivision, .boolAnd sourceGuard guard⟩
-    else
-      .ordinary
+    match faultKind with
+    | some value => .fault ⟨value, .boolAnd sourceGuard guard⟩
+    | none => .ordinary
   let metadata : Metadata Γ := {
     occurrenceId
     outcomeId
@@ -132,7 +162,12 @@ private def edgeJson {Γ : Ctx} (address : Nat)
     | .ordinary | .recovery _ => match metadata.targetValue with
       | some value => Json.mkObj [("kind", toJson "address"), ("value", toJson value)]
       | none => Json.mkObj [("kind", toJson "symbolic"), ("value", mirroredPc)]
-  pure <| Json.mkObj [
+  let provenanceFields := match metadata.kind with
+    | .fault event => [
+        ("jumpkind", toJson metadata.jumpkind),
+        ("fault_kind", toJson (faultKindName event.kind))]
+    | .ordinary | .recovery _ => []
+  pure <| Json.mkObj ([
     ("edge_id", Json.mkObj [
       ("static_occurrence_id", toJson metadata.occurrenceId),
       ("outcome_id", toJson metadata.outcomeId)]),
@@ -141,7 +176,7 @@ private def edgeJson {Γ : Ctx} (address : Nat)
       ("guard", guard),
       ("simultaneous_update", toJson assignments),
       ("target", target),
-      ("mirrored_pc", mirroredPc)])]
+      ("mirrored_pc", mirroredPc)])] ++ provenanceFields)
 
 /-- The actual WRUH extractor constructs the guarded complete-state edges. -/
 def functionJson {Γ : Ctx} (declarations architecture : Json)

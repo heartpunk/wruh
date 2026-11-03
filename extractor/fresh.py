@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from ayxg.expr import Declaration, TermSort
-
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Any
 
 import z3
+from ayxg.expr import Declaration, TermSort
 
 from extractor.amd64_state import (
     InstructionOutcomeFamily,
     canonical_declarations,
     step_instruction_outcomes,
 )
+from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.artifact import (
     DecodedInstructionEvidence,
     EdgeId,
@@ -23,7 +23,6 @@ from extractor.artifact import (
     OutcomeId,
     StaticOccurrenceId,
 )
-from extractor.architecture import ArchitectureLayout, architecture_layout
 from extractor.binary_inventory import PinnedBinary
 from extractor.typed_z3 import step_summary_from_z3
 
@@ -163,8 +162,16 @@ def _local_edges(
             if outcome.target_value is not None
             else outcome.target
         )
-        if outcome.jumpkind == "Ijk_SigFPE_IntDiv":
+        is_fault = outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP"}
+        if is_fault:
             target = "error"
+        fault_kind = outcome.fault_kind
+        if is_fault and fault_kind is None:
+            fault_kind = (
+                "integer_division"
+                if outcome.jumpkind == "Ijk_SigFPE_IntDiv"
+                else "signal_trap"
+            )
         result.append(
             LocalEdge(
                 id=EdgeId(
@@ -179,6 +186,8 @@ def _local_edges(
                     target=target,
                     mirrored_pc=outcome.target,
                 ),
+                jumpkind=outcome.jumpkind if is_fault else None,
+                fault_kind=fault_kind if is_fault else None,
             )
         )
     return tuple(result)
