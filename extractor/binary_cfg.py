@@ -8,6 +8,7 @@ from typing import Any
 import capstone
 import pyvex
 
+from extractor.amd64_terminals import is_ud2_no_decode_terminal
 from extractor.binary_inventory import (
     InventoryError,
     PinnedBinary,
@@ -420,6 +421,18 @@ def _walk_function(
                 if site in jump_tables:
                     walked_indirect_sites.add(site)
                     successors.update(jump_tables[site])
+        elif is_ud2_no_decode_terminal(
+            jumpkind,
+            instructions,
+            block_end=block_address + block.size,
+            has_zero_length_imark=any(
+                isinstance(statement, pyvex.stmt.IMark) and statement.len == 0
+                for statement in block.vex.statements
+            ),
+        ):
+            # x86 UD2 is an architecturally defined invalid-opcode trap. Keep
+            # it as a terminal CFG node; arbitrary NoDecode remains rejected.
+            pass
         else:
             raise InventoryError(
                 f"{root_name}: unsupported jumpkind {jumpkind!r} at "
