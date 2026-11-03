@@ -233,10 +233,10 @@ def check_rejection_controls(function, fixture):
     return list(corruptions)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     assert tuple((name, is_call, symbolic) for name, _, _, is_call, symbolic in FIXTURES) == (
         ('direct_call', True, False), ('indirect_call', True, True),
         ('direct_tail', False, False), ('indirect_tail', False, True),

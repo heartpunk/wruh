@@ -1,23 +1,5 @@
 {
-  "sources": [
-    "extractor",
-    "corpus"
-  ],
-  "pythonpath": [
-    "."
-  ],
-  "tests": [
-    [
-      "tests/test_cli_smoke.py"
-    ],
-    [
-      "extractor/angr_smt_smoke.py"
-    ],
-    [
-      "extractor/architecture_checks.py"
-    ],
-    [
-      "extractor/open_transfers_smoke.py"
-    ]
-  ]
+  "sources": ["extractor", "corpus"],
+  "pythonpath": ["."],
+  "tests": [["-m", "pytest", "tests"]]
 }

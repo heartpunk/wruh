@@ -1,1 +1,1 @@
-exports_files(["flake.lock"])
+exports_files(["flake.lock", "pytest.ini", ".github/workflows/binary-census.yml"])

@@ -1,31 +1,68 @@
-"""Compile trusted fixture as data, then load/inventory/extract; never execute it."""
+"""Load or compile trusted fixture as data, then load/inventory/extract; never execute it."""
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
-import argparse, hashlib, json, shutil, subprocess, tempfile
+import argparse
+import hashlib
+import json
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
-from extractor.loaded_image import load_object_set, loaded_image_data, relocation_write_size, skipped_elf_relocations
-from cle.backends.elf.relocation.amd64 import R_X86_64_PC32, R_X86_64_64, R_X86_64_COPY
-from cle.backends.relocation import Relocation
 from types import SimpleNamespace
+
+from cle.backends.elf.relocation.amd64 import R_X86_64_64, R_X86_64_COPY, R_X86_64_PC32
+from cle.backends.relocation import Relocation
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-from extractor.binary_inventory import inventory_project, exact_symbol_inventory_policy, PinnedBinary
+
 from extractor.binary_cfg import build_static_cfg
+from extractor.binary_inventory import (
+    PinnedBinary,
+    exact_symbol_inventory_policy,
+    inventory_project,
+)
 from extractor.fresh import extract_fresh_function
+from extractor.loaded_image import (
+    load_object_set,
+    loaded_image_data,
+    relocation_write_size,
+    skipped_elf_relocations,
+)
 
 
-def main():
+def main(argv=None):
     parser=argparse.ArgumentParser(); parser.add_argument('--entry',type=Path,required=True)
     parser.add_argument('--library',type=Path,required=True); parser.add_argument('--output',type=Path,required=True)
-    args=parser.parse_args(); compiler=shutil.which('clang')
-    if compiler is None: raise RuntimeError('declared clang runtime absent')
+    parser.add_argument('--fixture-directory', type=Path)
+    args=parser.parse_args(argv)
     with tempfile.TemporaryDirectory() as temp:
         directory=Path(temp); library=directory/'libfixture.so'; entry=directory/'fixture.elf'
-        commands=[[compiler,'-O2','-fno-stack-protector','-fno-builtin','-fPIC','-shared','-nostdlib',str(args.library),'-o',str(library)],
-            [compiler,'-O2','-fno-stack-protector','-fno-builtin','-nostdlib','-no-pie','-Wl,-e,direct_root',str(args.entry),'-L'+temp,'-lfixture','-o',str(entry)]]
-        for command in commands: subprocess.run(command,check=True)
+        if args.fixture_directory:
+            metadata = json.loads((args.fixture_directory / 'manifest.json').read_text())
+            for name, source in [('entry.c', args.entry), ('library.c', args.library)]:
+                if hashlib.sha256(source.read_bytes()).hexdigest() != metadata['sources'][name]:
+                    raise ValueError(f'fixture source hash mismatch: {name}')
+            for name, destination in [('fixture.elf', entry), ('libfixture.so', library)]:
+                data = (args.fixture_directory / name).read_bytes()
+                if hashlib.sha256(data).hexdigest() != metadata['outputs'][name]:
+                    raise ValueError(f'fixture output hash mismatch: {name}')
+                # ELF64 little-endian AMD64; never execute these data files.
+                if data[:6] != b'\x7fELF\x02\x01' or int.from_bytes(data[18:20], 'little') != 62:
+                    raise ValueError(f'fixture is not AMD64 ELF64: {name}')
+                destination.write_bytes(data)
+            commands = metadata['generation_commands']
+        else:
+            compiler = shutil.which('clang')
+            if compiler is None:
+                raise RuntimeError('declared clang runtime absent')
+            commands=[[compiler,'-O2','-fno-stack-protector','-fno-builtin','-fPIC','-shared','-nostdlib',str(args.library),'-o',str(library)],
+                [compiler,'-O2','-fno-stack-protector','-fno-builtin','-nostdlib','-no-pie','-Wl,-e,direct_root',str(args.entry),'-L'+temp,'-lfixture','-o',str(entry)]]
+            for command in commands:
+                subprocess.run(command,check=True)
         specification=directory/'objects.json'; specification.write_text(json.dumps([
             {'path':str(library),'base_addr':0x900000,'sha256':hashlib.sha256(library.read_bytes()).hexdigest()}]))
         project=load_object_set(entry,specification)
