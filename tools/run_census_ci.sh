@@ -6,6 +6,12 @@ cd "$repo_root"
 
 target_ids=(lua quickjs cpython apache node bun)
 packages=(censusLua censusQuickjs censusCpython censusApache censusNode censusBun)
+only_symbols=()
+if [[ "${WRUH_CENSUS_ONLY_FAILED_LUA_FUNCTIONS:-false}" == "true" ]]; then
+  target_ids=(lua)
+  packages=(censusLua)
+  only_symbols=(luaH_newkey.part.0 luaV_modf math_fmod)
+fi
 report_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/wruh-census"
 mkdir -p "$report_root"
 
@@ -50,7 +56,7 @@ write_run_manifest() {
   local temporary="$report_root/run-manifest.json.tmp"
   local completed_targets=()
   for target_id in "${target_ids[@]}"; do
-    if find "$report_root/$target_id" -name .collected -type f -print -quit 2>/dev/null | rg -q .; then
+    if [[ -n "$(find "$report_root/$target_id" -name .collected -type f -print -quit 2>/dev/null)" ]]; then
       completed_targets+=("$target_id")
     fi
   done
@@ -109,6 +115,9 @@ bazel_args=(
 for target_id in "${target_ids[@]}"; do
   bazel_args+=("//extractor:binary_census_${target_id}_remote_test")
 done
+for symbol in "${only_symbols[@]}"; do
+  bazel_args+=("--test_arg=--only-symbol=$symbol")
+done
 
 bash tools/ci_bazel.sh "${bazel_args[@]}" &
 bazel_pid=$!
@@ -125,7 +134,7 @@ stop_collector
 collect_completed_outputs
 
 for target_id in "${target_ids[@]}"; do
-  if ! find "$report_root/$target_id" -name summary.json -type f -print -quit | rg -q .; then
+  if [[ -z "$(find "$report_root/$target_id" -name summary.json -type f -print -quit)" ]]; then
     echo "No completed census summary was collected for $target_id" >&2
     if [[ $test_status -eq 0 ]]; then
       test_status=1

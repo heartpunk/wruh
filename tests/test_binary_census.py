@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -6,6 +7,7 @@ from extractor.binary_census import (
     _candidate_manifest,
     _entry_nodes,
     _function_candidates,
+    _select_candidates,
 )
 
 
@@ -96,6 +98,49 @@ class FunctionCandidateAddressTests(unittest.TestCase):
             pic=True,
         )
         self._assert_candidate(project, expected_object_va=0x1000, expected_rebased=0x70001000)
+
+
+class ExplicitFunctionSelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.candidates = [
+            {"id": "fn_1", "symbol": "first", "aliases": ["first", "first_alias"]},
+            {"id": "fn_2", "symbol": "second", "aliases": ["second"]},
+            {"id": "fn_3", "symbol": "third", "aliases": ["third"]},
+        ]
+
+    def test_only_named_candidates_are_selected(self):
+        selected, metadata = _select_candidates(
+            self.candidates,
+            "00" * 32,
+            None,
+            None,
+            ["first_alias", "second"],
+        )
+        self.assertEqual(selected, {"fn_1", "fn_2"})
+        self.assertEqual(metadata["selectedCount"], 2)
+        self.assertEqual(metadata["samplingPolicy"], "explicit-symbols-v1")
+        self.assertEqual(metadata["selectedSymbols"], ["first_alias", "second"])
+
+    def test_unknown_and_ambiguous_symbols_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unknown symbols"):
+            _select_candidates(self.candidates, "00" * 32, None, None, ["missing"])
+
+        ambiguous = [
+            *self.candidates,
+            {"id": "fn_4", "symbol": "other", "aliases": ["other", "second"]},
+        ]
+        with self.assertRaisesRegex(ValueError, "ambiguous symbols"):
+            _select_candidates(ambiguous, "00" * 32, None, None, ["second"])
+
+    def test_only_symbols_cannot_be_combined_with_sampling(self):
+        with self.assertRaisesRegex(ValueError, "cannot be combined with sampling"):
+            _select_candidates(
+                self.candidates,
+                "00" * 32,
+                "seed",
+                Decimal("50"),
+                ["first"],
+            )
 
 
 if __name__ == "__main__":
