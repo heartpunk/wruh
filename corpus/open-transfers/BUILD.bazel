@@ -1,1 +1,30 @@
+load("@nix_native_deps//:runtime.bzl", "REAPI_WORKER_RUNTIME_ROOT")
+
 exports_files(["entry.c", "library.c"])
+
+# Compilation runs on the existing qualified Linux worker runtime. The outputs
+# are data: the portable pytest suite consumes the reviewed checked-in copy.
+genrule(
+    name = "generate_fixture",
+    srcs = ["entry.c", "library.c"],
+    outs = ["generated/fixture.elf", "generated/libfixture.so", "generated/compiler.txt"],
+    cmd = """
+set -eu
+export PATH="{runtime}/bin"
+{runtime}/bin/clang --version > $(location generated/compiler.txt)
+{runtime}/bin/ld --version >> $(location generated/compiler.txt)
+readlink -f {runtime}/bin/clang >> $(location generated/compiler.txt)
+readlink -f {runtime}/bin/ld >> $(location generated/compiler.txt)
+{runtime}/bin/clang --target=x86_64-unknown-linux-gnu --ld-path={runtime}/bin/ld -O2 -fno-stack-protector -fno-builtin -fPIC -shared -nostdlib -Wl,--build-id=none -Wl,-soname,libfixture.so $(location library.c) -o $(location generated/libfixture.so)
+{runtime}/bin/clang --target=x86_64-unknown-linux-gnu --ld-path={runtime}/bin/ld -O2 -fno-stack-protector -fno-builtin -nostdlib -no-pie -Wl,--build-id=none -Wl,-e,direct_root $(location entry.c) -L$(@D)/generated -lfixture -o $(location generated/fixture.elf)
+""".format(runtime = REAPI_WORKER_RUNTIME_ROOT),
+    exec_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "fixture_data",
+    srcs = glob(["fixture/*"], allow_empty = True),
+    visibility = ["//tests:__pkg__"],
+)
