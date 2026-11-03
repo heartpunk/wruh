@@ -12,6 +12,10 @@ from extractor.binary_inventory import (
     InventoryError,
     PinnedBinary,
 )
+from extractor.cfg_blocks import (
+    CfgBlockValidationError,
+    validate_block_partition,
+)
 
 
 def _instruction_records(
@@ -49,63 +53,15 @@ def _validate_block_partition(
     extent_end: int,
     blocks: list[dict[str, Any]],
 ) -> None:
-    if not blocks or blocks[0]["address"] != entry:
-        raise InventoryError(f"{root_name}: CFG omits the entry block")
-
-    addresses = [block["address"] for block in blocks]
-    if len(addresses) != len(set(addresses)):
-        raise InventoryError(f"{root_name}: duplicate static block address")
-    address_set = set(addresses)
-
-    instruction_addresses: set[int] = set()
-    previous_end = entry
-    for block in blocks:
-        block_start = block["address"]
-        block_end = block_start + block["size"]
-        if (
-            block["size"] <= 0
-            or block_start < entry
-            or block_end > extent_end
-        ):
-            raise InventoryError(
-                f"{root_name}: block [{block_start:#x}, {block_end:#x}) "
-                f"leaves [{entry:#x}, {extent_end:#x})"
-            )
-        if block_start < previous_end:
-            raise InventoryError(
-                f"{root_name}: overlapping static block at {block_start:#x}"
-            )
-        previous_end = block_end
-        records = block["instructions"]
-        if not records or records[0]["address"] != block_start:
-            raise InventoryError(
-                f"{root_name}: block {block_start:#x} has no entry instruction"
-            )
-        cursor = block_start
-        for instruction in records:
-            if instruction["address"] != cursor or instruction["size"] <= 0:
-                raise InventoryError(
-                    f"{root_name}: noncontiguous instruction roster in "
-                    f"block {block_start:#x}"
-                )
-            if instruction["address"] in instruction_addresses:
-                raise InventoryError(
-                    f"{root_name}: instruction {instruction['address']:#x} "
-                    "belongs to multiple blocks"
-                )
-            instruction_addresses.add(instruction["address"])
-            cursor += instruction["size"]
-        if cursor != block_end:
-            raise InventoryError(
-                f"{root_name}: instruction roster does not cover "
-                f"block {block_start:#x}"
-            )
-        unknown = set(block["successors"]) - address_set
-        if unknown:
-            raise InventoryError(
-                f"{root_name}: local successors are not block entries: "
-                f"{sorted(hex(address) for address in unknown)}"
-            )
+    try:
+        validate_block_partition(
+            root_name=root_name,
+            entry=entry,
+            extent_end=extent_end,
+            blocks=blocks,
+        )
+    except CfgBlockValidationError as error:
+        raise InventoryError(str(error)) from error
 
 
 def _resolve_call_target(
@@ -279,7 +235,7 @@ def _walk_function(
     queue = [entry]
     seen: set[int] = set()
     blocks: list[dict[str, Any]] = []
-    calls: list[dict[str, int]] = []
+    calls_by_address: dict[int, dict[str, int]] = {}
     walked_indirect_sites: set[int] = set()
 
     code = pinned.project.loader.memory.load(entry, root["size"])
@@ -390,13 +346,23 @@ def _walk_function(
                     f"{root_name}: encoded and VEX call targets disagree "
                     f"at {call_instruction['address']:#x}"
                 )
-            calls.append(
-                {
-                    "address": call_instruction["address"],
-                    "block": block_address,
-                    "target": target,
-                }
-            )
+            call_record = {
+                "address": call_instruction["address"],
+                "block": block_address,
+                "target": target,
+            }
+            previous_call = calls_by_address.get(call_record["address"])
+            if previous_call is not None:
+                if previous_call["target"] != target:
+                    raise InventoryError(
+                        f"{root_name}: conflicting call target at "
+                        f"{call_record['address']:#x}"
+                    )
+                previous_call["block"] = min(
+                    previous_call["block"], block_address
+                )
+            else:
+                calls_by_address[call_record["address"]] = call_record
             fallthrough = block_address + block.size
             if not (entry <= fallthrough < extent_end):
                 raise InventoryError(
@@ -438,7 +404,9 @@ def _walk_function(
                 queue.append(successor)
 
     blocks.sort(key=lambda record: record["address"])
-    calls.sort(key=lambda call: call["address"])
+    calls = sorted(
+        calls_by_address.values(), key=lambda call: call["address"]
+    )
     _validate_block_partition(
         root_name=root_name,
         entry=entry,
