@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS tools
+FROM ubuntu:26.04 AS tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash ca-certificates curl git nix-bin xz-utils \
     && rm -rf /var/lib/apt/lists/* \
