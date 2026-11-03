@@ -7,6 +7,7 @@ py_test(
     data = [
         "//:.github/workflows/binary-census.yml",
         "//:pytest.ini",
+        "//corpus/open-transfers:fixture_data",
         "//corpus/open-transfers:entry.c",
         "//corpus/open-transfers:library.c",
         "//extractor:BUILD.bazel",

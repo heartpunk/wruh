@@ -1,0 +1,11 @@
+clang version 21.1.8
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /nix/store/kfhjmd11ml2i4kpn57577k89ag4makaw-clang-21.1.8/bin
+GNU ld (GNU Binutils) 2.46
+Copyright (C) 2026 Free Software Foundation, Inc.
+This program is free software; you may redistribute it under the terms of
+the GNU General Public License version 3 or (at your option) a later version.
+This program has absolutely no warranty.
+/nix/store/m59w5gavjx8db0ay3m1yzbw02l54109b-clang-wrapper-21.1.8/bin/clang
+/nix/store/nhjmc8clp6igx6n6zrjxlh7zri78p7ng-binutils-wrapper-2.46/bin/ld

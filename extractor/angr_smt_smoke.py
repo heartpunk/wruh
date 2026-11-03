@@ -1,7 +1,12 @@
 """Public Angr SMT boundary checks; no candidate binary execution."""
-from extractor.amd64_state import claripy_to_z3, LTS_EXTRACTION_CONTEXT
+# Initialize the native runtime before importing Z3.
 from extractor.runtime import claripy as c
+
+# ruff: isort: split
 import z3
+
+from extractor.amd64_state import LTS_EXTRACTION_CONTEXT, claripy_to_z3
+
 
 def check():
     x, y, b = c.BVS('x', 64, explicit_name=True), c.BVS('y', 64, explicit_name=True), c.BoolS('b', explicit_name=True)

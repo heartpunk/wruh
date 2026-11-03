@@ -1,0 +1,19 @@
+{
+  "generator_commit": "3a39d123ddd67ae5d8a12c9869870cfe84b6491d",
+  "bazel_target": "//corpus/open-transfers:generate_fixture",
+  "runtime": "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime",
+  "target": "x86_64-unknown-linux-gnu",
+  "sources": {
+    "entry.c": "e13154390f3ad9c8e18e663dfd0529b390eda2e40cef8a7ac59a2acb9e352555",
+    "library.c": "5130b8ff1eaa5c78a8c24f3459024897969cf58a75b8d4857c3608ef891e9f8b"
+  },
+  "outputs": {
+    "fixture.elf": "9dbdb7a99b6c6643afa1a80f1ac55f762d47328db6aa9518b3edfb82d9c88c8d",
+    "libfixture.so": "94d0f9335e0c99e17ba5f86ea9345f14d4dbb09e30b65a83b372a81049ace52e",
+    "compiler.txt": "4b96d5fee491e7677d01350767258d57f5df9e0204d6d51d784bd5d13ad19968"
+  },
+  "generation_commands": [
+    "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/clang --target=x86_64-unknown-linux-gnu --ld-path=/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/ld -O2 -fno-stack-protector -fno-builtin -fPIC -shared -nostdlib -Wl,--build-id=none -Wl,-soname,libfixture.so $(location library.c) -o $(location generated/libfixture.so)",
+    "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/clang --target=x86_64-unknown-linux-gnu --ld-path=/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin/ld -O2 -fno-stack-protector -fno-builtin -nostdlib -no-pie -Wl,--build-id=none -Wl,-e,direct_root $(location entry.c) -L$(@D)/generated -lfixture -o $(location generated/fixture.elf)"
+  ]
+}
