@@ -8,9 +8,14 @@ from typing import Any
 import capstone
 import pyvex
 
+from extractor.amd64_terminals import is_ud2_no_decode_terminal
 from extractor.binary_inventory import (
     InventoryError,
     PinnedBinary,
+)
+from extractor.cfg_blocks import (
+    CfgBlockValidationError,
+    validate_block_partition,
 )
 
 
@@ -49,63 +54,15 @@ def _validate_block_partition(
     extent_end: int,
     blocks: list[dict[str, Any]],
 ) -> None:
-    if not blocks or blocks[0]["address"] != entry:
-        raise InventoryError(f"{root_name}: CFG omits the entry block")
-
-    addresses = [block["address"] for block in blocks]
-    if len(addresses) != len(set(addresses)):
-        raise InventoryError(f"{root_name}: duplicate static block address")
-    address_set = set(addresses)
-
-    instruction_addresses: set[int] = set()
-    previous_end = entry
-    for block in blocks:
-        block_start = block["address"]
-        block_end = block_start + block["size"]
-        if (
-            block["size"] <= 0
-            or block_start < entry
-            or block_end > extent_end
-        ):
-            raise InventoryError(
-                f"{root_name}: block [{block_start:#x}, {block_end:#x}) "
-                f"leaves [{entry:#x}, {extent_end:#x})"
-            )
-        if block_start < previous_end:
-            raise InventoryError(
-                f"{root_name}: overlapping static block at {block_start:#x}"
-            )
-        previous_end = block_end
-        records = block["instructions"]
-        if not records or records[0]["address"] != block_start:
-            raise InventoryError(
-                f"{root_name}: block {block_start:#x} has no entry instruction"
-            )
-        cursor = block_start
-        for instruction in records:
-            if instruction["address"] != cursor or instruction["size"] <= 0:
-                raise InventoryError(
-                    f"{root_name}: noncontiguous instruction roster in "
-                    f"block {block_start:#x}"
-                )
-            if instruction["address"] in instruction_addresses:
-                raise InventoryError(
-                    f"{root_name}: instruction {instruction['address']:#x} "
-                    "belongs to multiple blocks"
-                )
-            instruction_addresses.add(instruction["address"])
-            cursor += instruction["size"]
-        if cursor != block_end:
-            raise InventoryError(
-                f"{root_name}: instruction roster does not cover "
-                f"block {block_start:#x}"
-            )
-        unknown = set(block["successors"]) - address_set
-        if unknown:
-            raise InventoryError(
-                f"{root_name}: local successors are not block entries: "
-                f"{sorted(hex(address) for address in unknown)}"
-            )
+    try:
+        validate_block_partition(
+            root_name=root_name,
+            entry=entry,
+            extent_end=extent_end,
+            blocks=blocks,
+        )
+    except CfgBlockValidationError as error:
+        raise InventoryError(str(error)) from error
 
 
 def _resolve_call_target(
@@ -265,6 +222,100 @@ def _recover_relative_jump_tables(
     return result
 
 
+def _recover_open_jump_tables(
+    pinned: PinnedBinary, *, root: dict[str, Any]
+) -> dict[int, list[int]]:
+    """Seed discovery from sized ELF data objects, without claiming closure.
+
+    Recognize AMD64 RIP-relative LEA followed by either JMP [base+index*8]
+    or MOVSXD/ADD/JMP with signed 32-bit relative entries. Object extents
+    bound reads; repeated and external entries are legitimate. Neither the
+    loaded bytes nor the index constrain the symbolic instruction relation.
+    Unsupported patterns and unsized tables remain unresolved.
+    """
+    if pinned.project.arch.name != "AMD64":
+        return {}
+    entry, size = root["address"], root["size"]
+    instructions = list(pinned.project.arch.capstone.disasm(
+        pinned.project.loader.memory.load(entry, size), entry))
+    boundaries = {item.address for item in instructions}
+    obj = pinned.project.loader.find_object_containing(entry)
+    objects: dict[int, set[int]] = {}
+    for symbol in obj.symbols:
+        if (symbol.size > 0 and not symbol.is_import
+                and getattr(symbol.type, "name", "") == "TYPE_OBJECT"):
+            objects.setdefault(symbol.rebased_addr, set()).add(symbol.size)
+    result = {}
+    reg, mem = capstone.x86.X86_OP_REG, capstone.x86.X86_OP_MEM
+    invalid = capstone.x86.X86_REG_INVALID
+    for index, lea in enumerate(instructions):
+        if (lea.mnemonic != "lea" or len(lea.operands) != 2
+                or lea.operands[0].type != reg or lea.operands[0].size != 8
+                or lea.operands[1].type != mem
+                or lea.operands[1].mem.base != capstone.x86.X86_REG_RIP
+                or lea.operands[1].mem.index != invalid):
+            continue
+        base_register = lea.operands[0].reg
+        table = lea.address + lea.size + lea.operands[1].mem.disp
+        sizes = objects.get(table, set())
+        if len(sizes) != 1:
+            continue
+        table_size = next(iter(sizes))
+        following = instructions[index + 1:index + 4]
+        if not following:
+            continue
+        jump = following[0]
+        width = None
+        relative = False
+        if (jump.mnemonic == "jmp" and len(jump.operands) == 1
+                and jump.operands[0].type == mem):
+            operand = jump.operands[0]
+            if (operand.size == 8 and operand.mem.base == base_register
+                    and operand.mem.index not in (invalid, base_register) and operand.mem.scale == 8
+                    and operand.mem.disp == 0 and operand.mem.segment == invalid):
+                width = 8
+        elif len(following) == 3:
+            load, add, jump = following
+            if (load.mnemonic == "movsxd" and add.mnemonic == "add"
+                    and jump.mnemonic == "jmp" and len(load.operands) == 2
+                    and len(add.operands) == 2 and len(jump.operands) == 1
+                    and load.operands[0].type == reg and load.operands[0].size == 8
+                    and load.operands[1].type == mem and load.operands[1].size == 4
+                    and add.operands[0].type == reg and add.operands[1].type == reg
+                    and jump.operands[0].type == reg
+                    and load.operands[0].reg == add.operands[0].reg == jump.operands[0].reg
+                    and load.operands[0].reg != base_register
+                    and add.operands[1].reg == base_register
+                    and load.operands[1].mem.base == base_register
+                    and load.operands[1].mem.index not in (invalid, base_register)
+                    and load.operands[1].mem.scale == 4
+                    and load.operands[1].mem.disp == 0
+                    and load.operands[1].mem.segment == invalid):
+                width, relative = 4, True
+        if width is None or table_size % width:
+            continue
+        # A named object must actually lie in this loaded object's memory.
+        if not (obj.contains_addr(table) and obj.contains_addr(table + table_size - 1)):
+            continue
+        try:
+            table_bytes = pinned.project.loader.memory.load(table, table_size)
+        except KeyError:
+            # Optional discovery hints may span unmapped loader-memory gaps.
+            # Preserve the symbolic jump and report it unresolved instead.
+            continue
+        if len(table_bytes) != table_size:
+            continue
+        targets = set()
+        for offset in range(0, table_size, width):
+            raw = table_bytes[offset:offset + width]
+            value = int.from_bytes(raw, "little", signed=relative)
+            target = (table + value) & ((1 << 64) - 1) if relative else value
+            if entry <= target < entry + size and target in boundaries:
+                targets.add(target)
+        result[jump.address] = sorted(targets)
+    return result
+
+
 def _walk_function(
     pinned: PinnedBinary,
     *,
@@ -279,7 +330,7 @@ def _walk_function(
     queue = [entry]
     seen: set[int] = set()
     blocks: list[dict[str, Any]] = []
-    calls: list[dict[str, int]] = []
+    calls_by_address: dict[int, dict[str, int]] = {}
     walked_indirect_sites: set[int] = set()
 
     code = pinned.project.loader.memory.load(entry, root["size"])
@@ -347,8 +398,8 @@ def _walk_function(
         for statement in block.vex.statements:
             if not isinstance(statement, pyvex.stmt.Exit):
                 continue
-            if statement.jumpkind == "Ijk_SigFPE_IntDiv":
-                continue  # Fault successors are terminal STS errors, not CFG nodes.
+            if statement.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP"}:
+                continue  # Fault successors are terminal errors, not CFG nodes.
             target = _constant_target(statement.dst)
             if target is None:
                 raise InventoryError(
@@ -361,7 +412,7 @@ def _walk_function(
                 raise InventoryError(f"{root_name}: conditional edge leaves function")
 
         jumpkind = block.vex.jumpkind
-        if jumpkind == "Ijk_Ret":
+        if jumpkind in {"Ijk_Ret", "Ijk_SigTRAP"}:
             pass
         elif jumpkind == "Ijk_Call":
             target = _constant_target(block.vex.next)
@@ -390,19 +441,30 @@ def _walk_function(
                     f"{root_name}: encoded and VEX call targets disagree "
                     f"at {call_instruction['address']:#x}"
                 )
-            calls.append(
-                {
-                    "address": call_instruction["address"],
-                    "block": block_address,
-                    "target": target,
-                }
-            )
+            call_record = {
+                "address": call_instruction["address"],
+                "block": block_address,
+                "target": target,
+            }
+            previous_call = calls_by_address.get(call_record["address"])
+            if previous_call is not None:
+                if previous_call["target"] != target:
+                    raise InventoryError(
+                        f"{root_name}: conflicting call target at "
+                        f"{call_record['address']:#x}"
+                    )
+                previous_call["block"] = min(
+                    previous_call["block"], block_address
+                )
+            else:
+                calls_by_address[call_record["address"]] = call_record
             fallthrough = block_address + block.size
-            if not (entry <= fallthrough < extent_end):
+            if entry <= fallthrough < extent_end:
+                successors.add(fallthrough)
+            elif not pinned.manifest.get("open_transfers"):
                 raise InventoryError(
                     f"{root_name}: call fallthrough leaves the function"
                 )
-            successors.add(fallthrough)
         elif jumpkind == "Ijk_Boring":
             target = _constant_target(block.vex.next)
             if target is not None:
@@ -417,9 +479,21 @@ def _walk_function(
                     raise InventoryError(
                         f"{root_name}: undeclared indirect jump at {site:#x}"
                     )
+                walked_indirect_sites.add(site)
                 if site in jump_tables:
-                    walked_indirect_sites.add(site)
                     successors.update(jump_tables[site])
+        elif is_ud2_no_decode_terminal(
+            jumpkind,
+            instructions,
+            block_end=block_address + block.size,
+            has_zero_length_imark=any(
+                isinstance(statement, pyvex.stmt.IMark) and statement.len == 0
+                for statement in block.vex.statements
+            ),
+        ):
+            # x86 UD2 is an architecturally defined invalid-opcode trap. Keep
+            # it as a terminal CFG node; arbitrary NoDecode remains rejected.
+            pass
         else:
             raise InventoryError(
                 f"{root_name}: unsupported jumpkind {jumpkind!r} at "
@@ -438,7 +512,9 @@ def _walk_function(
                 queue.append(successor)
 
     blocks.sort(key=lambda record: record["address"])
-    calls.sort(key=lambda call: call["address"])
+    calls = sorted(
+        calls_by_address.values(), key=lambda call: call["address"]
+    )
     _validate_block_partition(
         root_name=root_name,
         entry=entry,
@@ -472,15 +548,16 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
     for root_name in ordered_roots:
         root = roots[root_name]
         entry = root["address"]
-        jump_tables = {} if pinned.manifest.get("open_transfers") else _recover_relative_jump_tables(
-            pinned, root_name=root_name, root=root)
+        jump_tables = (_recover_open_jump_tables(pinned, root=root)
+                       if pinned.manifest.get("open_transfers")
+                       else _recover_relative_jump_tables(pinned, root_name=root_name, root=root))
         blocks, raw_calls, walked_indirect_sites = _walk_function(
             pinned,
             root_name=root_name,
             root=root,
             jump_tables=jump_tables,
         )
-        if walked_indirect_sites != set(jump_tables):
+        if not pinned.manifest.get("open_transfers") and walked_indirect_sites != set(jump_tables):
             raise InventoryError(
                 f"{root_name}: pinned jump table is unreachable: expected="
                 f"{sorted(hex(site) for site in jump_tables)}, actual="
@@ -526,7 +603,7 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
                     "address": address,
                     "targets": jump_tables[address],
                 }
-                for address in sorted(jump_tables)
+                for address in sorted(set(jump_tables) & walked_indirect_sites)
             ]
 
         output_roots[root_name] = {
@@ -535,6 +612,12 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
             "calls": calls,
             "size": root["size"],
             "symbol": root["symbol"],
+            "extraction_coverage": {
+                "scope": "intraprocedural-jumps-only",
+                "status": "partial-indirect" if walked_indirect_sites else "direct-cfg",
+                "unresolved_indirect_sites": sorted(walked_indirect_sites),
+                "discovery": "loaded-table-seeds-do-not-bound-symbolic-targets",
+            },
             **({key: root[key] for key in ("image_sha256", "object_path") if key in root}),
         }
 

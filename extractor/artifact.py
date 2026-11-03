@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import re
-from typing import Any, Callable, Mapping, TypeVar
-
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from typing import Any, TypeVar
 
 from ayxg.expr import ArtifactError, Declaration, TermSort, TypedExpr
 
-
-_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]*\Z")
+_ID_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._:-]*\Z")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 _HEX_BYTES_RE = re.compile(r"(?:[0-9a-f]{2})+\Z")
 _U64_MAX = (1 << 64) - 1
+_FAULT_KIND_PAIRS = {
+    ("Ijk_SigFPE_IntDiv", "integer_division"),
+    ("Ijk_SigTRAP", "signal_trap"),
+    ("Ijk_SigTRAP", "general_protection"),
+    ("Ijk_SigILL", "invalid_opcode"),
+}
 
 
 def _nonnegative(value: Any, field: str) -> int:
@@ -40,6 +45,15 @@ def _text(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value:
         raise ArtifactError(f"{field} must be a nonempty string")
     return value
+
+
+def _function_name(value: Any, field: str) -> str:
+    """Preserve an external function identity; it is not an SMT identifier.
+
+    ELF names and provider root IDs may contain punctuation, whitespace and
+    Unicode. Never normalize them: distinct spellings are distinct references.
+    """
+    return _text(value, field)
 
 
 def _sha256(value: Any, field: str) -> str:
@@ -297,7 +311,7 @@ class DecodedInstructionEvidence:
         if not self.function_owners:
             raise ArtifactError("decoded.function_owners must be nonempty")
         for owner in self.function_owners:
-            _identifier(owner, "decoded.function_owners[]")
+            _function_name(owner, "decoded.function_owners[]")
         _unique(self.function_owners, "decoded.function_owners")
         if self.function_owners != tuple(sorted(self.function_owners)):
             raise ArtifactError("decoded.function_owners must be sorted")
@@ -353,7 +367,7 @@ class DecodedInstructionEvidence:
                 obj["instruction_identity"], "decoded.instruction_identity"
             ),
             function_owners=tuple(
-                _identifier(owner, "decoded.function_owners[]")
+                _function_name(owner, "decoded.function_owners[]")
                 for owner in _array(
                     obj["function_owners"], "decoded.function_owners"
                 )
@@ -380,7 +394,7 @@ class PrimitiveModelEvidence:
     def __post_init__(self) -> None:
         _sha256(self.image_sha256, "primitive.image_sha256")
         _u64(self.boundary_address, "primitive.boundary_address")
-        _identifier(self.symbol, "primitive.symbol")
+        _function_name(self.symbol, "primitive.symbol")
         _identifier(self.boundary_resolution, "primitive.boundary_resolution")
         _identifier(self.abi, "primitive.abi")
         _identifier(self.model_name, "primitive.model_name")
@@ -452,7 +466,7 @@ class PrimitiveModelEvidence:
             boundary_address=_u64(
                 obj["boundary_address"], "primitive.boundary_address"
             ),
-            symbol=_identifier(obj["symbol"], "primitive.symbol"),
+            symbol=_function_name(obj["symbol"], "primitive.symbol"),
             boundary_resolution=_identifier(
                 obj["boundary_resolution"], "primitive.boundary_resolution"
             ),
@@ -736,8 +750,8 @@ class Root:
     initial_admissible: str
 
     def __post_init__(self) -> None:
-        _identifier(self.root_id, "root.root_id")
-        _identifier(self.function_id, "root.function_id")
+        _function_name(self.root_id, "root.root_id")
+        _function_name(self.function_id, "root.function_id")
         _u64(self.entry_control, "root.entry_control")
         _identifier(self.abi, "root.abi")
         _text(self.initial_admissible, "root.initial_admissible")
@@ -766,8 +780,8 @@ class Root:
             "root",
         )
         return cls(
-            root_id=_identifier(obj["root_id"], "root.root_id"),
-            function_id=_identifier(obj["function_id"], "root.function_id"),
+            root_id=_function_name(obj["root_id"], "root.root_id"),
+            function_id=_function_name(obj["function_id"], "root.function_id"),
             entry_control=_u64(obj["entry_control"], "root.entry_control"),
             abi=_identifier(obj["abi"], "root.abi"),
             initial_admissible=_text(
@@ -781,26 +795,57 @@ class LocalEdge:
     id: EdgeId
     source: int
     summary: StepSummary
+    jumpkind: str | None = None
+    fault_kind: str | None = None
 
     def __post_init__(self) -> None:
         _u64(self.source, "local_edge.source")
+        if (self.jumpkind is None) != (self.fault_kind is None):
+            raise ArtifactError(
+                "local_edge.jumpkind and local_edge.fault_kind must appear together"
+            )
+        if self.jumpkind is not None:
+            _identifier(self.jumpkind, "local_edge.jumpkind")
+            if (self.jumpkind, self.fault_kind) not in _FAULT_KIND_PAIRS:
+                raise ArtifactError(
+                    "local_edge fault_kind conflicts with jumpkind"
+                )
 
     def to_data(self) -> dict[str, Any]:
-        return {
+        result = {
             "edge_id": self.id.to_data(),
             "source": self.source,
             "summary": self.summary.to_data(),
         }
+        if self.jumpkind is not None:
+            result["jumpkind"] = self.jumpkind
+            result["fault_kind"] = self.fault_kind
+        return result
 
     @classmethod
     def from_data(cls, value: Any) -> LocalEdge:
         obj = _object(value, "local_edge")
-        _fields(obj, {"edge_id", "source", "summary"}, "local_edge")
+        expected = {"edge_id", "source", "summary"}
+        if "jumpkind" in obj:
+            expected.add("jumpkind")
+        if "fault_kind" in obj:
+            expected.add("fault_kind")
+        _fields(obj, expected, "local_edge")
         return cls(
             id=EdgeId.from_data(obj["edge_id"], "local_edge.edge_id"),
             source=_u64(obj["source"], "local_edge.source"),
             summary=StepSummary.from_data(
                 obj["summary"], "local_edge.summary"
+            ),
+            jumpkind=(
+                _identifier(obj["jumpkind"], "local_edge.jumpkind")
+                if "jumpkind" in obj
+                else None
+            ),
+            fault_kind=(
+                _text(obj["fault_kind"], "local_edge.fault_kind")
+                if "fault_kind" in obj
+                else None
             ),
         )
 
@@ -816,7 +861,7 @@ class ContextObservation:
 
     def __post_init__(self) -> None:
         _identifier(self.observation_id, "observation.observation_id")
-        _identifier(self.root_id, "observation.root_id")
+        _function_name(self.root_id, "observation.root_id")
         _text(self.path_condition, "observation.path_condition")
 
     def to_data(self) -> dict[str, Any]:
@@ -848,7 +893,7 @@ class ContextObservation:
             observation_id=_identifier(
                 obj["observation_id"], "observation.observation_id"
             ),
-            root_id=_identifier(obj["root_id"], "observation.root_id"),
+            root_id=_function_name(obj["root_id"], "observation.root_id"),
             edge_id=EdgeId.from_data(
                 obj["edge_id"], "observation.edge_id"
             ),
@@ -873,8 +918,8 @@ class FunctionSummary:
 
     def __post_init__(self) -> None:
         _identifier(self.summary_id, "function_summary.summary_id")
-        _identifier(self.function_id, "function_summary.function_id")
-        _identifier(self.root_id, "function_summary.root_id")
+        _function_name(self.function_id, "function_summary.function_id")
+        _function_name(self.root_id, "function_summary.root_id")
         _text(self.precondition, "function_summary.precondition")
         for dependency in self.dependency_summary_ids:
             _identifier(
@@ -920,10 +965,10 @@ class FunctionSummary:
             summary_id=_identifier(
                 obj["summary_id"], "function_summary.summary_id"
             ),
-            function_id=_identifier(
+            function_id=_function_name(
                 obj["function_id"], "function_summary.function_id"
             ),
-            root_id=_identifier(
+            root_id=_function_name(
                 obj["root_id"], "function_summary.root_id"
             ),
             precondition=_text(
@@ -961,8 +1006,8 @@ class SummaryApplication:
 
     def __post_init__(self) -> None:
         _identifier(self.application_id, "summary_application.application_id")
-        _identifier(self.root_id, "summary_application.root_id")
-        _identifier(
+        _function_name(self.root_id, "summary_application.root_id")
+        _function_name(
             self.callee_function_id,
             "summary_application.callee_function_id",
         )
@@ -1026,13 +1071,13 @@ class SummaryApplication:
                 obj["application_id"],
                 "summary_application.application_id",
             ),
-            root_id=_identifier(
+            root_id=_function_name(
                 obj["root_id"], "summary_application.root_id"
             ),
             call_edge_id=EdgeId.from_data(
                 obj["call_edge_id"], "summary_application.call_edge_id"
             ),
-            callee_function_id=_identifier(
+            callee_function_id=_function_name(
                 obj["callee_function_id"],
                 "summary_application.callee_function_id",
             ),
@@ -1098,7 +1143,7 @@ class ContextRun:
 
     def __post_init__(self) -> None:
         _identifier(self.run_id, "run.run_id")
-        _identifier(self.root_id, "run.root_id")
+        _function_name(self.root_id, "run.root_id")
         if not self.events:
             raise ArtifactError("run.events must be nonempty")
         event_keys = tuple((event.kind, event.evidence_id) for event in self.events)
@@ -1117,7 +1162,7 @@ class ContextRun:
         _fields(obj, {"run_id", "root_id", "events"}, "run")
         return cls(
             run_id=_identifier(obj["run_id"], "run.run_id"),
-            root_id=_identifier(obj["root_id"], "run.root_id"),
+            root_id=_function_name(obj["root_id"], "run.root_id"),
             events=tuple(
                 RunEvent.from_data(event)
                 for event in _array(obj["events"], "run.events")

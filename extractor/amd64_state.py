@@ -11,10 +11,12 @@ from functools import cache
 from typing import Any
 
 from extractor import runtime
+from extractor.amd64_terminals import is_ud2_instruction
+from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
+from extractor.division import unsigned_divide_irsb
 
 archinfo = importlib.import_module("archinfo")
 z3 = importlib.import_module("z3")
-from extractor.architecture import NORMALIZED_AMD64_FLAGS, architecture_layout
 
 
 class Amd64AdapterError(RuntimeError):
@@ -92,6 +94,7 @@ class InstructionOutcome:
     target_value: int | None
     jumpkind: str
     writes: tuple[MemoryWrite, ...]
+    fault_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -759,6 +762,16 @@ class _EngineFallbackCapture(logging.Handler):
             self.messages.append(message)
 
 
+def _architectural_fault_kind(mnemonic: str, jumpkind: str) -> str | None:
+    if jumpkind == "Ijk_SigFPE_IntDiv":
+        return "integer_division"
+    if jumpkind == "Ijk_SigTRAP":
+        if mnemonic == "hlt":
+            return "general_protection"
+        return "signal_trap"
+    return None
+
+
 def step_instruction_outcomes(
     project: Any,
     source: int,
@@ -766,8 +779,60 @@ def step_instruction_outcomes(
     """Translate the complete successor relation of one real instruction."""
     source = _u64(source, "source")
     block = project.factory.block(source, num_inst=1)
+    decoded_instruction = block.capstone.insns
+    if (
+        len(decoded_instruction) == 1
+        and decoded_instruction[0].address == source
+        and decoded_instruction[0].size == 2
+        and is_ud2_instruction(
+            {
+                "mnemonic": decoded_instruction[0].mnemonic,
+                "bytes": decoded_instruction[0].bytes.hex(),
+                "size": decoded_instruction[0].size,
+            }
+        )
+    ):
+        # UD2 has no normal successor: its sole architectural result is #UD.
+        return InstructionOutcomeFamily(
+            source,
+            source_rip_guard(source),
+            (
+                InstructionOutcome(
+                    outcome_id=0,
+                    guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
+                    updates={},
+                    target=z3.BitVecVal(source, 64, ctx=LTS_EXTRACTION_CONTEXT),
+                    target_value=source,
+                    jumpkind="Ijk_SigILL",
+                    writes=(),
+                    fault_kind="invalid_opcode",
+                ),
+            ),
+        )
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
+    if (
+        block.vex.jumpkind == "Ijk_SigTRAP"
+        and block.capstone.insns[0].mnemonic == "hlt"
+    ):
+        # VEX may return an engine successor for HLT, but this privileged
+        # instruction faults at CPL 3, retaining its faulting instruction IP.
+        target = z3.BitVecVal(source, 64, ctx=LTS_EXTRACTION_CONTEXT)
+        outcome = InstructionOutcome(
+            outcome_id=0,
+            guard=z3.BoolVal(True, ctx=LTS_EXTRACTION_CONTEXT),
+            updates={AMD64_LAYOUT.ip_view: target},
+            target=target,
+            target_value=source,
+            jumpkind=block.vex.jumpkind,
+            writes=(),
+            fault_kind="general_protection",
+        )
+        return InstructionOutcomeFamily(
+            source, source_rip_guard(source), (outcome,)
+        )
+    guarded_division = unsigned_divide_irsb(block)
+    execution = {} if guarded_division is None else {"irsb": guarded_division}
     pending: list[dict[str, int]] = [{}]
     successors = []
     while pending:
@@ -778,7 +843,7 @@ def step_instruction_outcomes(
         logger.addHandler(capture)
         try:
             try:
-                selected_successors = project.factory.successors(state, num_inst=1).all_successors
+                selected_successors = project.factory.successors(state, num_inst=1, **execution).all_successors
             except _SelectorSplitRequired as split:
                 pending[0:0] = [dict(assignments, **{split.name: value})
                                 for value in _SELECTOR_DOMAINS[split.name]]
@@ -817,5 +882,9 @@ def step_instruction_outcomes(
             target_value=target_value,
             jumpkind=post.history.jumpkind,
             writes=writes,
+            fault_kind=_architectural_fault_kind(
+                block.capstone.insns[0].mnemonic,
+                post.history.jumpkind,
+            ),
         ))
     return InstructionOutcomeFamily(source, source_rip_guard(source), tuple(outcomes))
