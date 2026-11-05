@@ -38,8 +38,9 @@ def _binary_census_remote_test(target_id, target_kind, implementation):
         "--ayxg-revision",
         metadata["ayxg_revision"],
     ]
-    if target_id == "bun":
-        args.extend(["--inventory-mode", "cfgfast"])
+    # Apply the bounded generic discovery provider uniformly to every pinned
+    # main-object census target. Symbols remain in the inventory as before.
+    args.extend(["--inventory-mode", "cfgfast"])
     if implementation:
         args.extend(["--target-implementation", implementation])
 
