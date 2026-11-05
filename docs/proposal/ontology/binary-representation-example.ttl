@@ -1,0 +1,24 @@
+@prefix br: <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-representation.ttl#> .
+@prefix bfe: <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-function-extraction.ttl#> .
+@prefix ex: <urn:wruh:ontology-draft:example:> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Illustrative mapping of one recorded Apache occurrence and two catalogue
+# classifications. The example resources are newly minted, not source IDs.
+ex:occurrence a br:InstructionOccurrence ;
+    br:occurrenceInImage ex:apacheImage ;
+    br:occurrenceInFunctionArtifact ex:functionArtifact ;
+    br:canonicalAddress "4562745"^^xsd:nonNegativeInteger ;
+    br:staticOccurrenceId "169"^^xsd:nonNegativeInteger ;
+    br:occurrenceEncoding ex:encoding .
+ex:apacheImage a bfe:AnalyzedImage .
+ex:functionArtifact a bfe:ExtractionArtifact .
+ex:encoding a br:InstructionEncoding ; br:encodingBytes ex:bytes ; br:encodingMode ex:amd64Long64 .
+ex:bytes a br:ByteSequence ; br:byteValue "01c0"^^xsd:hexBinary .
+ex:amd64Long64 a br:DecodeMode .
+ex:xedClassification a br:DecoderClassification ; br:classificationOf ex:encoding ; br:classificationForm ex:xedForm ; br:classificationTool ex:xedRelease .
+ex:xedForm a br:DecoderForm ; br:formIdentifier "ADD_GPRv_GPRv_01" .
+ex:xedRelease a br:ToolRelease .
+ex:icedClassification a br:DecoderClassification ; br:classificationOf ex:encoding ; br:classificationForm ex:icedForm ; br:classificationTool ex:icedRelease .
+ex:icedForm a br:DecoderForm ; br:formNumericCode "7"^^xsd:nonNegativeInteger .
+ex:icedRelease a br:ToolRelease .
