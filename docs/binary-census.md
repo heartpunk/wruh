@@ -40,7 +40,7 @@ This is an auditable binary-symbol inventory, not a claim to find anonymous func
 
 ## CFGFast discovery
 
-`--inventory-mode cfgfast` augments the symbol inventory with angr CFGFast entry candidates in the main object’s executable, file-backed ranges. The Bun remote census selects this mode because its packaged binary retains compatibility exports while omitting most internal engine symbols. The other remote targets retain symbol inventory mode.
+`--inventory-mode cfgfast` augments the symbol inventory with angr CFGFast entry candidates in the main object’s executable, file-backed ranges. All six pinned remote census targets (Lua, QuickJS, CPython, Apache, Node.js, and Bun) select this mode. The same bounded discovery policy therefore applies to shared libraries and executables; each analysis remains scoped to the target's main object.
 
 Discovery preserves every existing sized-symbol candidate and its aliases. Additional entries use address-based names, exclude PLT/import stubs and simulated procedures, and retain their recovered block ranges. Their reported extent is a recovered block envelope, recorded as `bfe:recoveredExtentBytes` with identity basis `bfe:CFGFastEntry`; it is not a declared symbol extent or proof that a whole semantic function has been recovered. Entries with unusable or out-of-image block bounds are rejected and counted in discovery metadata.
 
