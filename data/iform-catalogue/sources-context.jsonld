@@ -1,0 +1,56 @@
+{
+  "@context": {
+    "SourceFileSet": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#SourceFileSet",
+    "SourceFile": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#SourceFile",
+    "CatalogueFile": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#CatalogueFile",
+    "files": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#sourceFile",
+      "@container": "@set"
+    },
+    "source_run": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#sourceRun",
+      "@type": "@id"
+    },
+    "extraction_revision": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#extractionRevision",
+      "@type": "@id"
+    },
+    "target_id": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#targetId",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "binary_sha256": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#binarySha256",
+      "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+    },
+    "sha256": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#fileSha256",
+      "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+    },
+    "size_bytes": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#fileSizeBytes",
+      "@type": "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    },
+    "media_type": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#mediaType",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "purpose": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#filePurpose",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "xed_version": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#xedVersion",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "iced_version": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#icedVersion",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "source_sets": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#sourceFileSet",
+      "@type": "@id",
+      "@container": "@set"
+    }
+  }
+}

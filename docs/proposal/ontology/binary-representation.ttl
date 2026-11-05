@@ -1,0 +1,114 @@
+@prefix br: <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-representation.ttl#> .
+@prefix bfe: <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-function-extraction.ttl#> .
+@prefix cco: <https://www.commoncoreontologies.org/> .
+@prefix bfo: <http://purl.obolibrary.org/obo/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-representation.ttl>
+    a owl:Ontology ;
+    owl:imports <http://www.w3.org/ns/prov-o>, <https://www.commoncoreontologies.org/2026-08-13/InformationEntityOntology> ;
+    rdfs:label "Binary representation and extraction ontology"@en ;
+    rdfs:comment "Discussion draft. Repository namespace is provisional. It separates observed records and provenance from claims that information content represents another entity."@en .
+
+# Digital objects, bytes and ELF metadata.  A file span and a mapped address
+# range are distinct: a section can be NOBITS and a segment can have a memory
+# extent larger than its file extent.
+br:BinaryFile a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "binary file"@en ; rdfs:comment "A particular finite binary file as an entity in an analysis or build record."@en .
+br:ELFFile a owl:Class ; rdfs:subClassOf br:BinaryFile ;
+    rdfs:label "ELF file"@en ; rdfs:comment "A binary file identified as an ELF object under a stated parsing or validation activity."@en .
+br:ByteSequence a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "byte sequence"@en ; rdfs:comment "A finite ordered sequence of bytes; this class alone does not assert that the sequence has representational content."@en .
+br:FileByteRegion a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "file byte region"@en ; rdfs:comment "A region identified by a byte offset and length within a particular binary file."@en .
+br:AddressRange a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "address range"@en ; rdfs:comment "An extent in a stated address space and context; it is not automatically a file byte region."@en .
+br:AddressSpace a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "address space descriptor"@en ; rdfs:comment "A descriptor of the coordinate system in which an address or range is interpreted."@en .
+br:ELFMetadataRecord a owl:Class ; rdfs:subClassOf prov:Entity, cco:ont00000958 ;
+    rdfs:label "ELF metadata record"@en ; rdfs:comment "The parsed information content of an ELF metadata record, such as a file header, program header, section header, symbol or relocation entry; distinct from its carrier bytes."@en .
+br:ELFHeaderRecord a owl:Class ; rdfs:subClassOf br:ELFMetadataRecord ; rdfs:label "ELF header record"@en .
+br:ELFSectionHeaderRecord a owl:Class ; rdfs:subClassOf br:ELFMetadataRecord ; rdfs:label "ELF section header record"@en .
+br:ELFProgramHeaderRecord a owl:Class ; rdfs:subClassOf br:ELFMetadataRecord ; rdfs:label "ELF program header record"@en .
+br:ELFSymbolRecord a owl:Class ; rdfs:subClassOf br:ELFMetadataRecord ;
+    rdfs:label "ELF symbol record"@en ; rdfs:comment "A parsed ELF symbol-table entry, distinct from the function candidate it may support."@en .
+br:ELFRelocationRecord a owl:Class ; rdfs:subClassOf br:ELFMetadataRecord ; rdfs:label "ELF relocation record"@en .
+
+# Candidate and instruction records describe analysis units, not necessarily
+# source-level functions, unique machine instructions or executable behavior.
+br:FunctionCandidate a owl:Class ; rdfs:subClassOf bfe:FunctionCandidate ;
+    rdfs:label "binary function candidate"@en ; rdfs:comment "A candidate selected by a stated inventory policy; symbol aliases and extents remain policy-specific."@en .
+br:InstructionEncoding a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "instruction encoding"@en ; rdfs:comment "A recorded byte sequence interpreted as one instruction under a stated architecture and decode mode."@en .
+br:InstructionOccurrence a owl:Class ; rdfs:subClassOf prov:Entity, cco:ont00000958 ;
+    rdfs:label "instruction occurrence record"@en ; rdfs:comment "A recorded static occurrence in a function artifact and image, with its recorded address and bytes."@en .
+br:DecoderClassification a owl:Class ; rdfs:subClassOf prov:Entity, cco:ont00000958 ;
+    rdfs:label "decoder classification"@en ; rdfs:comment "A decoder's recorded classification of an encoding under a stated mode and tool release; it does not assert semantic correctness."@en .
+br:DecoderForm a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "decoder form"@en ; rdfs:comment "A form or code identifier as defined by a particular decoder release; cross-tool or cross-version identity is not assumed."@en .
+br:ToolRelease a owl:Class ; rdfs:subClassOf bfe:ToolRelease ; rdfs:label "tool release"@en .
+
+# Computation and outputs. Provenance alone does not prove correspondence.
+br:DecodeActivity a owl:Class ; rdfs:subClassOf prov:Activity ; rdfs:label "decode activity"@en .
+br:LiftActivity a owl:Class ; rdfs:subClassOf prov:Activity ;
+    rdfs:label "instruction lift activity"@en ; rdfs:comment "An activity that applies a stated lifter to a stated instruction input and produces a recorded lift result."@en .
+br:LiftResult a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "lift result"@en ; rdfs:comment "A recorded result of lifting, including an intermediate representation or a failure; success or semantic preservation is not entailed."@en .
+br:IntermediateRepresentation a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "intermediate representation artifact"@en ; rdfs:comment "A recorded intermediate representation output by a lifter, with language and version recorded when known."@en .
+br:ModelConstructionActivity a owl:Class ; rdfs:subClassOf prov:Activity ; rdfs:label "model construction activity"@en .
+br:TransitionModelArtifact a owl:Class ; rdfs:subClassOf prov:Entity ;
+    rdfs:label "transition model artifact"@en ; rdfs:comment "A recorded artifact containing a proposed transition system or transition fragment; no equivalence is implied."@en .
+br:TransitionModelContent a owl:Class ; rdfs:subClassOf prov:Entity, cco:ont00000958 ;
+    rdfs:label "transition model information content"@en ; rdfs:comment "The information content of a proposed transition model, distinct from its artifact. It is not automatically a CCO representational information content entity."@en .
+br:EvidenceItem a owl:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "evidence item"@en ;
+    rdfs:comment "A source artifact, test result, proof or observation explicitly cited in support of a claim."@en .
+br:CorrespondenceClaim a owl:Class ; rdfs:subClassOf prov:Entity, cco:ont00000958 ;
+    rdfs:label "correspondence claim"@en ; rdfs:comment "A recorded assertion of a specified relation between two referents under stated conditions; the assertion is not itself proof that the relation holds."@en .
+br:ClaimRelationKind a owl:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "correspondence relation kind"@en ; rdfs:comment "The kind of relation asserted by a claim; identifying a kind does not assert that relation."@en .
+br:ClaimScope a owl:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "claim scope"@en ; rdfs:comment "A structured description of the assumptions or domain restricting a correspondence claim."@en .
+br:DecodeMode a owl:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "decode mode"@en ; rdfs:comment "A decoder's architecture and execution-mode context for interpreting bytes."@en .
+br:RepresentationContent a owl:Class ; rdfs:subClassOf cco:ont00001069 ;
+    rdfs:label "representational information content"@en ; rdfs:comment "Information content for which CCO's represents relation holds. Assert membership only when that stronger condition is justified; a constructed model or successful lift alone does not establish it."@en .
+
+# Object relations. Subproperties of PROV retain activity/entity directions.
+br:hasFileBytes a owl:ObjectProperty ; rdfs:domain br:BinaryFile ; rdfs:range br:ByteSequence ; rdfs:label "has file bytes"@en .
+br:regionInFile a owl:ObjectProperty ; rdfs:domain br:FileByteRegion ; rdfs:range br:BinaryFile ; rdfs:label "region in file"@en .
+br:regionBytes a owl:ObjectProperty ; rdfs:domain br:FileByteRegion ; rdfs:range br:ByteSequence ; rdfs:label "region bytes"@en .
+br:rangeInAddressSpace a owl:ObjectProperty ; rdfs:domain br:AddressRange ; rdfs:range br:AddressSpace ; rdfs:label "range in address space"@en .
+br:metadataForFile a owl:ObjectProperty ; rdfs:subPropertyOf cco:ont00001808 ; rdfs:domain br:ELFMetadataRecord ; rdfs:range br:ELFFile ; rdfs:label "metadata for file"@en .
+br:symbolSupportsCandidate a owl:ObjectProperty ; rdfs:domain br:ELFSymbolRecord ; rdfs:range br:FunctionCandidate ; rdfs:label "symbol supports candidate"@en ; rdfs:comment "A stated inventory policy associates this symbol record with this candidate; it does not assert a one-to-one relationship."@en .
+br:encodingBytes a owl:ObjectProperty ; rdfs:domain br:InstructionEncoding ; rdfs:range br:ByteSequence ; rdfs:label "encoding bytes"@en .
+br:encodingMode a owl:ObjectProperty ; rdfs:domain br:InstructionEncoding ; rdfs:range br:DecodeMode ; rdfs:label "encoding decode mode"@en .
+br:occurrenceEncoding a owl:ObjectProperty ; rdfs:subPropertyOf cco:ont00001808 ; rdfs:domain br:InstructionOccurrence ; rdfs:range br:InstructionEncoding ; rdfs:label "occurrence encoding"@en .
+br:occurrenceInFunctionArtifact a owl:ObjectProperty ; rdfs:domain br:InstructionOccurrence ; rdfs:range bfe:ExtractionArtifact ; rdfs:label "occurrence in function artifact"@en .
+br:occurrenceInImage a owl:ObjectProperty ; rdfs:domain br:InstructionOccurrence ; rdfs:range bfe:AnalyzedImage ; rdfs:label "occurrence in image"@en .
+br:classificationOf a owl:ObjectProperty ; rdfs:subPropertyOf cco:ont00001808 ; rdfs:domain br:DecoderClassification ; rdfs:range br:InstructionEncoding ; rdfs:label "classification of encoding"@en .
+br:classificationForm a owl:ObjectProperty ; rdfs:domain br:DecoderClassification ; rdfs:range br:DecoderForm ; rdfs:label "classification form"@en .
+br:classificationTool a owl:ObjectProperty ; rdfs:domain br:DecoderClassification ; rdfs:range br:ToolRelease ; rdfs:label "classification tool release"@en .
+br:liftInput a owl:ObjectProperty ; rdfs:subPropertyOf prov:used ; rdfs:domain br:LiftActivity ; rdfs:range br:InstructionEncoding ; rdfs:label "lift input encoding"@en .
+br:liftOutput a owl:ObjectProperty ; rdfs:subPropertyOf prov:generated ; rdfs:domain br:LiftActivity ; rdfs:range br:LiftResult ; rdfs:label "lift output"@en .
+br:liftIntermediateRepresentation a owl:ObjectProperty ; rdfs:domain br:LiftResult ; rdfs:range br:IntermediateRepresentation ; rdfs:label "lift intermediate representation"@en .
+br:modelInput a owl:ObjectProperty ; rdfs:subPropertyOf prov:used ; rdfs:domain br:ModelConstructionActivity ; rdfs:range prov:Entity ; rdfs:label "model construction input"@en .
+br:modelOutput a owl:ObjectProperty ; rdfs:subPropertyOf prov:generated ; rdfs:domain br:ModelConstructionActivity ; rdfs:range br:TransitionModelArtifact ; rdfs:label "model construction output"@en .
+br:modelContent a owl:ObjectProperty ; rdfs:domain br:TransitionModelArtifact ; rdfs:range br:TransitionModelContent ; rdfs:label "model information content"@en ; rdfs:comment "Relates a model artifact to its described model content, when that relation has been established."@en .
+br:claimSubject a owl:ObjectProperty ; rdfs:subPropertyOf cco:ont00001808 ; rdfs:domain br:CorrespondenceClaim ; rdfs:range prov:Entity ; rdfs:label "claim subject"@en .
+br:claimObject a owl:ObjectProperty ; rdfs:subPropertyOf cco:ont00001808 ; rdfs:domain br:CorrespondenceClaim ; rdfs:range prov:Entity ; rdfs:label "claim object"@en .
+br:claimRelationKind a owl:ObjectProperty ; rdfs:domain br:CorrespondenceClaim ; rdfs:range br:ClaimRelationKind ; rdfs:label "claimed relation kind"@en .
+br:claimScope a owl:ObjectProperty ; rdfs:domain br:CorrespondenceClaim ; rdfs:range br:ClaimScope ; rdfs:label "claim scope"@en .
+br:claimEvidence a owl:ObjectProperty ; rdfs:domain br:CorrespondenceClaim ; rdfs:range br:EvidenceItem ; rdfs:label "claim evidence"@en .
+br:represents a owl:ObjectProperty ; rdfs:subPropertyOf cco:ont00001938 ; rdfs:domain br:RepresentationContent ; rdfs:range bfo:BFO_0000001 ; rdfs:label "represents under CCO"@en ; rdfs:comment "The stronger CCO represents relation; do not infer it solely from provenance or a decoder/lifter result."@en .
+
+# Literals are deliberately scoped by their property and units.
+br:byteValue a owl:DatatypeProperty ; rdfs:domain br:ByteSequence ; rdfs:range xsd:hexBinary ; rdfs:label "byte sequence value"@en .
+br:fileOffsetBytes a owl:DatatypeProperty ; rdfs:domain br:FileByteRegion ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "file offset in bytes"@en .
+br:regionLengthBytes a owl:DatatypeProperty ; rdfs:domain br:FileByteRegion ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "region length in bytes"@en .
+br:canonicalAddress a owl:DatatypeProperty ; rdfs:domain br:InstructionOccurrence ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "recorded canonical address"@en ; rdfs:comment "Address as recorded by the source artifact; do not infer an address space from this property alone."@en .
+br:staticOccurrenceId a owl:DatatypeProperty ; rdfs:domain br:InstructionOccurrence ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "static occurrence identifier"@en .
+br:formIdentifier a owl:DatatypeProperty ; rdfs:domain br:DecoderForm ; rdfs:range xsd:string ; rdfs:label "decoder form identifier"@en .
+br:releaseVersion a owl:DatatypeProperty ; rdfs:domain br:ToolRelease ; rdfs:range xsd:string ; rdfs:label "tool version identifier"@en .
+br:formNumericCode a owl:DatatypeProperty ; rdfs:domain br:DecoderForm ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "decoder numeric form code"@en .
