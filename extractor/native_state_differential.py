@@ -56,7 +56,13 @@ def compare_native_state(model: Any, capture: dict, initial_memory: bytes) -> di
             if before_xstate[:160] + before_xstate[416:] != after_xstate[:160] + after_xstate[416:]:
                 raise IncompleteEvaluation('unmapped native floating-point state changed')
         elif before_xstate != after_xstate:
-            raise IncompleteEvaluation('native extended state changed and has no model mapping')
+            changed = [i for i, (before_byte, after_byte) in
+                       enumerate(zip(before_xstate, after_xstate)) if before_byte != after_byte]
+            raise IncompleteEvaluation(
+                f'native extended state changed and has no model mapping: '
+                f'before_length={len(before_xstate)} after_length={len(after_xstate)} '
+                f'changed_count={len(changed)} first_changed_offsets={changed[:64]}'
+            )
         stable_fields = ('cs', 'ss', 'ds', 'es', 'fs', 'gs')
         if any(before[name] != after[name] for name in stable_fields):
             return {'status': 'MISMATCH', 'reason': 'native segment state changed'}

@@ -74,7 +74,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo '```'
     echo 'Incomplete rows are coverage gaps, not matches; full reasons and witnesses are in the shard artifact.'
     echo '```text'
-    grep '^INCOMPLETE ' "$results/campaign.log" | cut -c1-500 | head -10 || true
+    awk '/^INCOMPLETE / && ++count <= 10 {print substr($0, 1, 500)}' "$results/campaign.log"
     echo '```'
   } >> "$GITHUB_STEP_SUMMARY"
 fi

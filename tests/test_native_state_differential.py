@@ -47,7 +47,13 @@ def test_match_and_register_mismatch(rax, rbx):
 def test_changed_extended_state_is_incomplete():
     native = capture(0, 1)
     native['after_xstate'] = '01' + '00' * 511
-    assert compare_native_state(mov_model(), native, bytes(8192))['status'] == 'INCOMPLETE'
+    result = compare_native_state(mov_model(), native, bytes(8192))
+    assert result['status'] == 'INCOMPLETE'
+    assert 'changed_count=1 first_changed_offsets=[0]' in result['reason']
+    native['after_xstate'] += '00'
+    result = compare_native_state(mov_model(), native, bytes(8192))
+    assert result['status'] == 'INCOMPLETE'
+    assert 'before_length=512 after_length=513' in result['reason']
 
 
 def test_undefined_flags_are_reported_but_defined_flags_are_compared():

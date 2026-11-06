@@ -80,6 +80,8 @@ static void print_regs(const struct user_regs_struct *r) {
 }
 
 static int capture_xstate(pid_t child, unsigned char *buffer, size_t *length, int *format) {
+    /* The kernel may leave parts of an extended-state buffer untouched. */
+    memset(buffer, 0, XSTATE_LIMIT);
     struct iovec iov = {buffer, XSTATE_LIMIT};
     if (ptrace(PTRACE_GETREGSET, child, (void *)(uintptr_t)NT_X86_XSTATE, &iov) != -1) {
         *length = iov.iov_len;
