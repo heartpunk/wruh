@@ -52,3 +52,14 @@ py_binary(
 binary_census_remote_tests()
 
 exports_files(["binary_census_targets.bzl", "BUILD.bazel"], visibility = ["//visibility:public"])
+
+py_binary(
+    name = "native_catalogue_campaign",
+    srcs = ["native_catalogue_campaign.py"],
+    main = "native_catalogue_campaign.py",
+    data = ["//:flake.lock", "//:flake.nix", "//:MODULE.bazel", "//:MODULE.bazel.lock",
+            "//:BUILD.bazel", "//:.bazelrc", "//corpus:BUILD.bazel",
+            "//corpus:native/step_runner.c", "//corpus:native_step_runner", ":BUILD.bazel"],
+    deps = [":test_runtime", "@wruh_pbt_python//:pkg"],
+    target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+)

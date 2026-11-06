@@ -16,3 +16,6 @@ ci-mutation-cache/
 .ifrl-ci/
 __pycache__/
 .pytest_cache/
+
+# Local Hypothesis replay cache.
+.hypothesis/
