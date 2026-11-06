@@ -1,0 +1,17 @@
+{
+  "@context": "sources-context.jsonld",
+  "@id": "catalogue.jsonl",
+  "@type": "CatalogueFile",
+  "sha256": "b721303d94d81e56244154fdb4cbefff93cbe11eb9f6de1da81d7c571980bcfc",
+  "size_bytes": 23901451,
+  "media_type": "application/x-ndjson",
+  "purpose": "Generated records of decoded instruction byte sequences and their source occurrences.",
+  "xed_version": "2026.07.15",
+  "iced_version": "1.21.0",
+  "source_sets": [
+    "quickjs/sources.jsonld",
+    "lua/sources.jsonld",
+    "bun/sources.jsonld",
+    "apache/sources.jsonld"
+  ]
+}

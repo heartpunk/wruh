@@ -7,6 +7,12 @@ py_test(
     data = [
         "//:.github/workflows/binary-census.yml",
         "//:pytest.ini",
+        "//data/iform-catalogue:catalogue.jsonl",
+        "//data/iform-catalogue:context.jsonld",
+        "//data/iform-catalogue:catalogue-info.jsonld",
+        "//data/iform-catalogue:sources-context.jsonld",
+        "//data/iform-catalogue:source_descriptors",
+        "//data/iform-catalogue:vocabulary.ttl",
         "//corpus/open-transfers:fixture_data",
         "//corpus/open-transfers:entry.c",
         "//corpus/open-transfers:library.c",
@@ -22,5 +28,5 @@ py_test(
         "PYTHONSAFEPATH": "1",
     },
     target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
-    deps = ["//extractor:test_runtime", "//tools:test_helpers", "@shared_angr//:pkg"],
+    deps = ["//extractor:test_runtime", "//tools:test_helpers", "//tools/iform_catalogue:generator", "@shared_angr//:pkg", "@wruh_pbt_python//:pkg"],
 )

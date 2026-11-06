@@ -1,0 +1,10 @@
+load("@rules_python//python:defs.bzl", "py_library")
+
+exports_files(["pbt_repository.bzl"])
+
+py_library(
+    name = "generator",
+    srcs = ["generate.py"],
+    visibility = ["//tests:__pkg__"],
+    deps = ["@wruh_pbt_python//:pkg"],
+)
