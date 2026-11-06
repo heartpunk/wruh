@@ -233,6 +233,21 @@ def test_campaign_preflight_rejects_missing_resource_boundary():
         workers.assert_not_called()
 
 
+def test_native_preflight_requires_single_step_and_propagates_isolation_errors():
+    from unittest.mock import patch
+    from extractor.isolated_native import NativeIsolationError
+    from extractor.native_catalogue_campaign import _preflight_native
+    with patch('extractor.native_catalogue_campaign.capture_step', return_value={'signal': 5, 'signal_code': 2}) as capture:
+        _preflight_native(None, None, ())
+        assert capture.call_args.args[3] == b'\x90'
+    with patch('extractor.native_catalogue_campaign.capture_step', return_value={'signal': 11, 'signal_code': 1}):
+        with pytest.raises(NativeIsolationError, match='did not single-step'):
+            _preflight_native(None, None, ())
+    with patch('extractor.native_catalogue_campaign.capture_step', side_effect=NativeIsolationError('blocked')):
+        with pytest.raises(NativeIsolationError, match='blocked'):
+            _preflight_native(None, None, ())
+
+
 def test_address_binding_respects_32_bit_address_size():
     instruction = ice.Decoder(64, bytes.fromhex('67488b448b10')).decode()
     registers, ip, stack = _address_registers(instruction)

@@ -190,6 +190,15 @@ def _campaign_failed(counts: Counter, compared: int) -> bool:
     return bool(counts['ERROR'] or counts['MISMATCH'] or not compared)
 
 
+def _preflight_native(bwrap: Path, runner: Path, runtime: tuple[Path, ...]) -> None:
+    """Fail before the catalogue sweep if isolation cannot execute one NOP."""
+    registers = {name: 0 for name in REGISTERS}
+    registers['rsp'] = 0x200800
+    capture = capture_step(bwrap, runner, runtime, b'\x90', registers, 0, bytes(8192))
+    if capture.get('signal') != 5 or capture.get('signal_code') != 2:
+        raise NativeIsolationError('native isolation preflight did not single-step NOP')
+
+
 def _row_worker(row: dict, args: argparse.Namespace, sender) -> None:
     """Keep each row's extractor and native attempts in a disposable process."""
     try:
@@ -419,6 +428,7 @@ def main() -> None:
         parser.error('XED helper must be an executable absolute path')
     bubblewrap_command(args.bwrap, args.runner, tuple(args.runtime))
     require_bounded_cgroup()
+    _preflight_native(args.bwrap, args.runner, tuple(args.runtime))
     raw = args.catalogue.read_bytes()
     rows = [json.loads(line) for line in raw.splitlines()]
     if not rows:

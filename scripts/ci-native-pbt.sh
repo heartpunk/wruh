@@ -17,7 +17,24 @@ nix develop --no-write-lock-file --command bazel build --jobs=2 \
   //corpus:native_step_runner //extractor:native_catalogue_campaign
 runner="$(readlink -f bazel-bin/corpus/native_step_runner)"
 bwrap_root="$(nix build --no-link --print-out-paths 'github:NixOS/nixpkgs/e79d204daf01f8a877f7b2ce7324874ce9c84676#bubblewrap')"
-bwrap="$bwrap_root/bin/bwrap"
+bwrap="$(readlink -f "$bwrap_root/bin/bwrap")"
+
+# Ubuntu 24.04 restricts user-namespace capabilities for unconfined
+# executables. Permit them only for this exact immutable bubblewrap binary;
+# leave the global restriction enabled and remove the temporary profile.
+if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]] &&
+   [[ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" == 1 ]]; then
+  profile="$results/bwrap.apparmor"
+  cat > "$profile" <<EOF
+abi <abi/4.0>,
+include <tunables/global>
+profile wruh-native-pbt-bwrap "$bwrap" flags=(unconfined) {
+  userns,
+}
+EOF
+  sudo apparmor_parser -r "$profile"
+  trap 'sudo apparmor_parser -R "$profile" || echo "Failed to unload temporary AppArmor profile" >&2' EXIT
+fi
 mapfile -t runtimes < <(ldd "$runner" | grep -oE '/nix/store/[^/[:space:]]+' | sort -u)
 if (( ${#runtimes[@]} == 0 )); then
   echo 'No Nix runtime closure found for native runner' >&2
