@@ -8,6 +8,7 @@ work="${RUNNER_TEMP:-$results}/wruh-native-pbt-$SHARD_INDEX"
 mkdir -p "$results/replay" "$work"
 revision="${WRUH_SOURCE_REVISION:-$(git rev-parse HEAD)}"
 [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid source revision' >&2; exit 1; }
+nix_bin="$(command -v nix)"
 
 # Keep the XED version and build procedure identical to the catalogue.
 nix-shell tools/iform_catalogue/shell.nix --run \
@@ -38,7 +39,7 @@ sudo systemd-run --quiet --wait --pipe --collect \
   --property=CPUQuota=200% --property=TasksMax=512 \
   --setenv="HOME=$HOME" --setenv="PATH=$PATH" \
   --setenv="HYPOTHESIS_STORAGE_DIRECTORY=$results/replay" \
-  nix develop --no-write-lock-file --command python -m extractor.native_catalogue_campaign \
+  "$nix_bin" develop --no-write-lock-file --command python -m extractor.native_catalogue_campaign \
     data/iform-catalogue/catalogue.jsonl --xed "$work/xed-decode" \
     --bwrap "$bwrap" --runner "$runner" "${runtime_args[@]}" \
     --source-revision "$revision" --examples 4 --row-seconds 30 \
