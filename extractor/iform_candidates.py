@@ -5,8 +5,8 @@ bindings are reported to the caller instead of being silently filtered.
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Callable, Mapping
 
 import iced_x86 as ice
 

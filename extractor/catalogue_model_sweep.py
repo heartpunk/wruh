@@ -6,9 +6,9 @@ counted as a model. This is extraction coverage, not a native correctness test.
 from __future__ import annotations
 
 import argparse
+import json
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-import json
 from pathlib import Path
 
 
@@ -21,7 +21,7 @@ def attempt(item: tuple[dict, str]) -> tuple[str, str, str, str]:
         from extractor.iform_candidates import xed_iform_decoder
         model = prepare_model(row, xed_iform_decoder(xed))
         return form, encoded, 'MODEL', f'{len(model.relation.outcomes)} outcomes'
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - report each failed sweep row
         return form, encoded, 'INCOMPLETE', f'{type(exc).__name__}: {exc}'
 
 

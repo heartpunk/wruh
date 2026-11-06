@@ -6,8 +6,9 @@ an explicit incomplete result; this module does not silently skip instructions.
 from __future__ import annotations
 
 from typing import Any
-import z3
+
 import iced_x86 as ice
+import z3
 from z3.z3util import get_vars
 
 from extractor.concrete_instruction import IncompleteEvaluation, evaluate_instruction
@@ -21,8 +22,12 @@ _FLAG_MASK = sum(1 << bit for bit in _FLAG_BITS.values())
 
 def compare_native_state(model: Any, capture: dict, initial_memory: bytes) -> dict:
     """Compare mapped integer and memory state; reject unmapped effects."""
-    from extractor.amd64_state import (canonical_declarations, canonical_flag,
-                                       canonical_memory, canonical_register)
+    from extractor.amd64_state import (
+        canonical_declarations,
+        canonical_flag,
+        canonical_memory,
+        canonical_register,
+    )
 
     try:
         before, after = capture['before'], capture['after']

@@ -6,26 +6,38 @@ state. Unsupported state or outcomes are reported as INCOMPLETE.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 import hashlib
 import importlib.metadata
 import json
 import math
+import multiprocessing
 import os
 import platform
 import re
 import time
-import multiprocessing
+from collections import Counter
 from pathlib import Path
 
-from hypothesis import HealthCheck, assume, given, settings, strategies as st
+import iced_x86 as ice
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
 from hypothesis.database import DirectoryBasedExampleDatabase
 from hypothesis.errors import Unsatisfiable
-import iced_x86 as ice
 
 from extractor.catalogue_models import prepare_model
-from extractor.iform_candidates import CandidateBindingError, CandidateDecoderError, CandidateError, CandidateTemplate, inspect_operands, xed_iform_decoder
-from extractor.isolated_native import NativeIsolationError, bubblewrap_command, require_bounded_cgroup
+from extractor.iform_candidates import (
+    CandidateBindingError,
+    CandidateDecoderError,
+    CandidateError,
+    CandidateTemplate,
+    inspect_operands,
+    xed_iform_decoder,
+)
+from extractor.isolated_native import (
+    NativeIsolationError,
+    bubblewrap_command,
+    require_bounded_cgroup,
+)
 from extractor.native_memory_scope import MemoryScopeError
 from extractor.native_state_differential import compare_native_state
 from extractor.native_step import REGISTERS, capture_step
@@ -183,7 +195,7 @@ def _row_worker(row: dict, args: argparse.Namespace, sender) -> None:
     try:
         status, detail = _execute_row(row, args, lambda value: sender.send(('PROGRESS', value)))
         sender.send(('RESULT', status, detail))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - surface unexpected worker failures
         sender.send(('RESULT', 'ERROR', f'worker: {type(exc).__name__}: {exc}'))
     finally:
         sender.close()
@@ -198,7 +210,7 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
         return 'ERROR', f'decoder: {type(exc).__name__}: {exc}'
     except CandidateError as exc:
         return 'INCOMPLETE', f'model: {type(exc).__name__}: {exc}'
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - unexpected model failure is an error
         return 'ERROR', f'model: {type(exc).__name__}: {exc}'
     operand_error = None
     try:
@@ -207,7 +219,7 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
         # Still compare the observed seed even when mutations are unsupported.
         operand_strategy = st.just({})
         operand_error = f'operand strategy: {type(exc).__name__}: {exc}'
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - unexpected strategy failure is an error
         return 'ERROR', f'operand strategy: {type(exc).__name__}: {exc}'
     outcomes = Counter()
     reasons = {}
@@ -255,7 +267,7 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
             reason = f'candidate model: {type(exc).__name__}: {exc}'
             reasons.setdefault(reason, {'bindings': bindings})
             return
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - unexpected extraction failure is an error
             outcomes['ERROR'] += 1
             reasons.setdefault(f'candidate model: {type(exc).__name__}: {exc}', {'bindings': bindings})
             return
@@ -285,8 +297,8 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
         context = {'candidate': candidate.encoded.hex(), 'bindings': bindings,
                    'registers': registers, 'flags': flags_word, 'memory_bytes': memory_bytes.hex(),
                    'xmm': xmm.hex(), 'fs_base': fs_base, 'gs_base': gs_base}
-        for flag, values in result.get('undefined_differences', {}).items():
-            undefined_witnesses.setdefault(flag, {**context, 'values': values})
+        for flag, comparison_values in result.get('undefined_differences', {}).items():
+            undefined_witnesses.setdefault(flag, {**context, 'values': comparison_values})
         if result['status'] in ('INCOMPLETE', 'ERROR'):
             reasons.setdefault(result['reason'], context)
         elif result['status'] == 'MISMATCH':
@@ -307,7 +319,7 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
     except Unsatisfiable as exc:
         generation_incomplete = True
         reasons[f'no valid generated examples: {type(exc).__name__}: {exc}'] = {}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - unexpected property failure is an error
         return 'ERROR', f'campaign: {type(exc).__name__}: {exc}'
     if not operand_error and not generated_compared and not outcomes['ERROR']:
         generation_incomplete = True
@@ -463,7 +475,7 @@ def main() -> None:
         form, encoded = row['iform'], row['bytes']
         try:
             status, detail = _run_with_deadline(row, args)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - worker launch failure is an error
             status, detail = 'ERROR', f'worker launch: {type(exc).__name__}: {exc}'
         counts[status] += 1
         match = re.search(r'(?:^| )compared=(\d+)(?: |$)', detail)

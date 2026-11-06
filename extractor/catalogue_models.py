@@ -5,11 +5,16 @@ No claim is made that a relation covers a different operand encoding.
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Mapping
+from typing import Any
 
-from extractor.iform_candidates import CandidateBindingError, CandidateError, CandidateTemplate
+from extractor.iform_candidates import (
+    CandidateBindingError,
+    CandidateError,
+    CandidateTemplate,
+)
 
 SOURCE = 0x400000
 

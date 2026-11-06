@@ -6,10 +6,10 @@ on stdout. This module does not itself create or execute instruction bytes.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import resource
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Any
 
 

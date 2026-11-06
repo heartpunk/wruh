@@ -6,11 +6,16 @@ Failures and unsupported operands are counted, never skipped.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 import json
+from collections import Counter
 from pathlib import Path
 
-from extractor.iform_candidates import CandidateError, CandidateTemplate, inspect_operands, xed_iform_decoder
+from extractor.iform_candidates import (
+    CandidateError,
+    CandidateTemplate,
+    inspect_operands,
+    xed_iform_decoder,
+)
 
 
 def inspect_catalogue(path: Path, xed: str) -> dict:
