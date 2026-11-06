@@ -38,10 +38,25 @@ bazel run //extractor:native_catalogue_campaign -- \
 
 Each row runs in a disposable worker with its own deadline; a timed-out
 worker is stopped before the next row, and its latest generated input is logged
-when available. A row is `MATCH` only if all generated
-examples in that row are compared and match. `INCOMPLETE` includes unsupported state, sandbox, address, decoding,
-model, and timeout conditions. `MISMATCH` retains the shrunk input. The command
-returns nonzero if any row is incomplete or mismatches. The run header records
+when available. A row is `MATCH` only if all attempted native comparisons
+match and no attempted case is incomplete; invalid generated bindings are
+reported separately. `INCOMPLETE` includes unsupported state, address,
+decoding, model, and timeout conditions. `MISMATCH` retains the shrunk input;
+`ERROR` reports infrastructure failures. The command returns nonzero for a
+mismatch, infrastructure error, or no successful comparisons. The run header records
 the supplied revision, source-file fingerprint, catalogue and executable
 hashes, CPU and runtime context, and Hypothesis storage location. A supplied
 revision is a declaration; the fingerprint identifies the actual files used.
+
+The native PBT GitHub Actions workflow partitions the ordered catalogue into
+128 disjoint shards, with every row assigned to exactly one job. Each job
+retains its campaign log and Hypothesis replay database. A failed or incomplete
+row is retained as a coverage gap; unsupported cases do not become matches.
+Definite mismatches, infrastructure errors, or a shard with no successful
+comparisons fail the job. The 30-second row
+deadline bounds each row, not the total campaign. Replay or shrinking can
+execute more than the nominal four generated examples. Each row also attempts
+one native comparison of its exact observed encoding. Invalid generated
+bindings are rejected by Hypothesis and recorded, not counted as generated
+examples or successful native comparisons. If valid generated examples cannot
+be produced, the row remains incomplete even when its seed matched.

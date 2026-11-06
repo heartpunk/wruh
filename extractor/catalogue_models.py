@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Callable, Mapping
 
-from extractor.iform_candidates import CandidateError, CandidateTemplate
+from extractor.iform_candidates import CandidateBindingError, CandidateError, CandidateTemplate
 
 SOURCE = 0x400000
 
@@ -51,6 +51,6 @@ def prepare_model(row: Mapping[str, Any], identify_iform: Callable[[bytes], str]
     if not bindings:
         candidate = encoded
     if identify_iform.operand_width(candidate) != operand_width:
-        raise CandidateError('candidate changed XED operand width')
+        raise CandidateBindingError('candidate changed XED operand width')
     return EncodingModel(row['iform'], row['iced_code'], candidate, source,
                          _extract(candidate, source))

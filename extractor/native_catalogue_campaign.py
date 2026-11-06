@@ -18,12 +18,13 @@ import time
 import multiprocessing
 from pathlib import Path
 
-from hypothesis import given, settings, strategies as st
+from hypothesis import HealthCheck, assume, given, settings, strategies as st
 from hypothesis.database import DirectoryBasedExampleDatabase
+from hypothesis.errors import Unsatisfiable
 import iced_x86 as ice
 
 from extractor.catalogue_models import prepare_model
-from extractor.iform_candidates import CandidateError, CandidateTemplate, inspect_operands, xed_iform_decoder
+from extractor.iform_candidates import CandidateBindingError, CandidateDecoderError, CandidateError, CandidateTemplate, inspect_operands, xed_iform_decoder
 from extractor.isolated_native import NativeIsolationError, bubblewrap_command, require_bounded_cgroup
 from extractor.native_memory_scope import MemoryScopeError
 from extractor.native_state_differential import compare_native_state
@@ -130,7 +131,7 @@ def _operand_strategy(row: dict):
             suffix = row['iform'].rsplit('_', 1)[-1]
             bits = {'RELBRb': 8, 'RELBRw': 16, 'RELBRd': 32}.get(suffix)
             if bits is None:
-                raise ValueError(f'unknown encoded branch width in {row["iform"]}')
+                raise CandidateError(f'unknown encoded branch width in {row["iform"]}')
             next_ip = 0x400000 + len(encoded)
             values = st.integers(next_ip - (1 << (bits - 1)), next_ip + (1 << (bits - 1)) - 1).map(
                 lambda value: value & ((1 << 64) - 1))
@@ -165,13 +166,25 @@ def _encoding_database(root: Path, iform: str, encoded: str) -> DirectoryBasedEx
     return DirectoryBasedExampleDatabase(root / 'native-encodings' / key)
 
 
+def _shard_rows(rows: list[dict], index: int, count: int) -> list[dict]:
+    """Partition the complete ordered catalogue without duplicating rows."""
+    if count < 1 or not 0 <= index < count or count > len(rows):
+        raise ValueError('shard index/count must select a nonempty catalogue partition')
+    return rows[index::count]
+
+
+def _campaign_failed(counts: Counter, compared: int) -> bool:
+    """Incomplete coverage is reported; mismatches and broken jobs fail."""
+    return bool(counts['ERROR'] or counts['MISMATCH'] or not compared)
+
+
 def _row_worker(row: dict, args: argparse.Namespace, sender) -> None:
     """Keep each row's extractor and native attempts in a disposable process."""
     try:
         status, detail = _execute_row(row, args, lambda value: sender.send(('PROGRESS', value)))
         sender.send(('RESULT', status, detail))
     except Exception as exc:
-        sender.send(('RESULT', 'INCOMPLETE', f'worker: {type(exc).__name__}: {exc}'))
+        sender.send(('RESULT', 'ERROR', f'worker: {type(exc).__name__}: {exc}'))
     finally:
         sender.close()
 
@@ -181,17 +194,38 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
     identify = xed_iform_decoder(args.xed)
     try:
         model = prepare_model(row, identify)
-        operand_strategy = _operand_strategy(row)
-    except Exception as exc:
+    except CandidateDecoderError as exc:
+        return 'ERROR', f'decoder: {type(exc).__name__}: {exc}'
+    except CandidateError as exc:
         return 'INCOMPLETE', f'model: {type(exc).__name__}: {exc}'
+    except Exception as exc:
+        return 'ERROR', f'model: {type(exc).__name__}: {exc}'
+    operand_error = None
+    try:
+        operand_strategy = _operand_strategy(row)
+    except CandidateError as exc:
+        # Still compare the observed seed even when mutations are unsupported.
+        operand_strategy = st.just({})
+        operand_error = f'operand strategy: {type(exc).__name__}: {exc}'
+    except Exception as exc:
+        return 'ERROR', f'operand strategy: {type(exc).__name__}: {exc}'
     outcomes = Counter()
     reasons = {}
+    rejected = Counter()
+    rejected_examples = {}
+    undefined_flags = Counter()
+    undefined_differences = Counter()
+    undefined_witnesses = {}
+    generated_compared = 0
+    generating = False
+    generation_incomplete = False
     # Each encoding has its own replay database because the dynamically
     # defined Python test otherwise has the same Hypothesis database key.
     database_root = Path(os.environ.get('HYPOTHESIS_STORAGE_DIRECTORY', '.hypothesis'))
     database = _encoding_database(database_root, form, encoded)
 
-    @settings(max_examples=args.examples, deadline=None, report_multiple_bugs=False, database=database)
+    @settings(max_examples=args.examples, deadline=None, report_multiple_bugs=False, database=database,
+              suppress_health_check=[HealthCheck.filter_too_much])
     @given(st.fixed_dictionaries({name: st.integers(0, 2**64 - 1) for name in REGISTERS}),
            st.integers(0, 127), operand_strategy, st.binary(min_size=64, max_size=64),
            st.one_of(st.just(0), st.integers(0x100000, 0x100fff), st.integers(0x200000, 0x200fff)),
@@ -199,12 +233,31 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
            st.binary(min_size=256, max_size=256))
     def check(values: dict[str, int], flags_value: int, bindings: dict[str, int],
               memory_bytes: bytes, fs_base: int, gs_base: int, xmm: bytes) -> None:
+        nonlocal generated_compared
+        # Send the generated input before extraction or native execution, either
+        # of which can consume the row deadline. This is also useful when a
+        # candidate fails before its adjusted register state is constructed.
+        report_progress({'registers': values, 'flags_value': flags_value,
+                         'bindings': bindings, 'memory_bytes': memory_bytes.hex(),
+                         'fs_base': fs_base, 'gs_base': gs_base, 'xmm': xmm.hex()})
         try:
             candidate = prepare_model(row, identify, bindings=bindings) if bindings else model
-        except Exception as exc:
+        except CandidateBindingError as exc:
+            rejected[str(exc)] += 1
+            rejected_examples.setdefault(str(exc), {'bindings': bindings})
+            assume(False)
+        except CandidateDecoderError as exc:
+            outcomes['ERROR'] += 1
+            reasons.setdefault(f'decoder: {type(exc).__name__}: {exc}', {'bindings': bindings})
+            return
+        except CandidateError as exc:
             outcomes['INCOMPLETE'] += 1
             reason = f'candidate model: {type(exc).__name__}: {exc}'
             reasons.setdefault(reason, {'bindings': bindings})
+            return
+        except Exception as exc:
+            outcomes['ERROR'] += 1
+            reasons.setdefault(f'candidate model: {type(exc).__name__}: {exc}', {'bindings': bindings})
             return
         registers = _candidate_registers(candidate.encoded, values, fs_base, gs_base)
         flag_bits = (0, 2, 4, 6, 7, 11, 10)
@@ -218,29 +271,62 @@ def _execute_row(row: dict, args: argparse.Namespace, report_progress) -> tuple[
                                    candidate.encoded, registers, flags_word, memory,
                                    fs_base=fs_base, gs_base=gs_base, xmm=xmm)
             result = compare_native_state(candidate, capture, memory)
-        except (NativeIsolationError, MemoryScopeError, CandidateError) as exc:
+        except NativeIsolationError as exc:
+            result = {'status': 'ERROR', 'reason': f'{type(exc).__name__}: {exc}'}
+        except (MemoryScopeError, CandidateError) as exc:
             result = {'status': 'INCOMPLETE', 'reason': f'{type(exc).__name__}: {exc}'}
-        if result.get('status') not in ('MATCH', 'MISMATCH', 'INCOMPLETE'):
-            result = {'status': 'INCOMPLETE', 'reason': 'comparator returned an invalid status'}
+        if result.get('status') not in ('MATCH', 'MISMATCH', 'INCOMPLETE', 'ERROR'):
+            result = {'status': 'ERROR', 'reason': 'comparator returned an invalid status'}
         outcomes[result['status']] += 1
+        if generating and result['status'] == 'MATCH':
+            generated_compared += 1
+        undefined_flags.update(result.get('undefined_flags', ()))
+        undefined_differences.update(result.get('undefined_differences', {}).keys())
         context = {'candidate': candidate.encoded.hex(), 'bindings': bindings,
                    'registers': registers, 'flags': flags_word, 'memory_bytes': memory_bytes.hex(),
                    'xmm': xmm.hex(), 'fs_base': fs_base, 'gs_base': gs_base}
-        if result['status'] == 'INCOMPLETE':
+        for flag, values in result.get('undefined_differences', {}).items():
+            undefined_witnesses.setdefault(flag, {**context, 'values': values})
+        if result['status'] in ('INCOMPLETE', 'ERROR'):
             reasons.setdefault(result['reason'], context)
         elif result['status'] == 'MISMATCH':
-            raise AssertionError(json.dumps({**context, 'comparison': result}, sort_keys=True))
+            raise NativeMismatch(json.dumps({**context, 'comparison': result}, sort_keys=True))
 
     try:
-        check()
-    except AssertionError as exc:
+        # Guarantee a native comparison of the exact observed encoding; the
+        # generated strategy may otherwise choose only mutated operands.
+        check.hypothesis.inner_test({name: 0 for name in REGISTERS}, 0, {}, bytes(64), 0, 0, bytes(256))
+        if operand_error:
+            generation_incomplete = True
+            reasons[operand_error] = {}
+        else:
+            generating = True
+            check()
+    except NativeMismatch as exc:
         return 'MISMATCH', str(exc)
+    except Unsatisfiable as exc:
+        generation_incomplete = True
+        reasons[f'no valid generated examples: {type(exc).__name__}: {exc}'] = {}
     except Exception as exc:
-        return 'INCOMPLETE', f'campaign: {type(exc).__name__}: {exc}'
+        return 'ERROR', f'campaign: {type(exc).__name__}: {exc}'
+    if not operand_error and not generated_compared and not outcomes['ERROR']:
+        generation_incomplete = True
+        reasons.setdefault('no successful generated comparisons', {})
     if not outcomes:
-        return 'INCOMPLETE', 'Hypothesis produced no examples'
-    status = 'INCOMPLETE' if outcomes['INCOMPLETE'] else 'MATCH'
-    return status, f'examples={sum(outcomes.values())} reasons={json.dumps(reasons, sort_keys=True)}'
+        return 'INCOMPLETE', f'no native comparisons; rejected={dict(rejected)}'
+    status = 'ERROR' if outcomes['ERROR'] else 'INCOMPLETE' if outcomes['INCOMPLETE'] or generation_incomplete else 'MATCH'
+    return status, (f'examples={sum(outcomes.values())} compared={outcomes["MATCH"]} '
+                    f'generated_compared={generated_compared} seed_attempted=true '
+                    f'rejected={json.dumps(rejected, sort_keys=True)} '
+                    f'rejected_examples={json.dumps(rejected_examples, sort_keys=True)} '
+                    f'undefined_flags={json.dumps(undefined_flags, sort_keys=True)} '
+                    f'undefined_differences={json.dumps(undefined_differences, sort_keys=True)} '
+                    f'undefined_witnesses={json.dumps(undefined_witnesses, sort_keys=True)} '
+                    f'reasons={json.dumps(reasons, sort_keys=True)}')
+
+
+class NativeMismatch(AssertionError):
+    """A defined architectural output differs from native execution."""
 
 
 class WorkerCleanupError(BaseException):
@@ -267,7 +353,7 @@ def _run_with_deadline(row: dict, args: argparse.Namespace) -> tuple[str, str]:
             try:
                 event = receiver.recv()
             except EOFError:
-                status, detail = 'INCOMPLETE', 'model worker exited without a result'
+                status, detail = 'ERROR', 'model worker exited without a result'
                 break
             if isinstance(event, tuple) and len(event) == 2 and event[0] == 'PROGRESS':
                 latest_input = event[1]
@@ -275,7 +361,7 @@ def _run_with_deadline(row: dict, args: argparse.Namespace) -> tuple[str, str]:
             if isinstance(event, tuple) and len(event) == 3 and event[0] == 'RESULT':
                 _, status, detail = event
                 break
-            status, detail = 'INCOMPLETE', 'row worker returned an invalid result'
+            status, detail = 'ERROR', 'row worker returned an invalid result'
             break
     except BaseException:
         if started and process.is_alive():
@@ -291,10 +377,10 @@ def _run_with_deadline(row: dict, args: argparse.Namespace) -> tuple[str, str]:
                 process.join(timeout=2)
             if process.is_alive():
                 raise WorkerCleanupError('row worker could not be stopped; aborting campaign')
-    if status not in ('MATCH', 'MISMATCH', 'INCOMPLETE') or not isinstance(detail, str):
-        return 'INCOMPLETE', 'row worker returned an invalid result'
+    if status not in ('MATCH', 'MISMATCH', 'INCOMPLETE', 'ERROR') or not isinstance(detail, str):
+        return 'ERROR', 'row worker returned an invalid result'
     if process.exitcode != 0 and not detail.startswith('row deadline exceeded'):
-        return 'INCOMPLETE', f'row worker exited with status {process.exitcode}'
+        return 'ERROR', f'row worker exited with status {process.exitcode}'
     return status, detail
 
 
@@ -307,6 +393,8 @@ def main() -> None:
     parser.add_argument('--runtime', action='append', type=Path, required=True)
     parser.add_argument('--examples', type=int, default=4)
     parser.add_argument('--row-seconds', type=int, default=30)
+    parser.add_argument('--shard-index', type=int, default=0)
+    parser.add_argument('--shard-count', type=int, default=1)
     parser.add_argument('--source-revision', required=True, help='immutable source revision for this run')
     args = parser.parse_args()
     if not 1 <= args.examples <= 100:
@@ -323,6 +411,11 @@ def main() -> None:
     rows = [json.loads(line) for line in raw.splitlines()]
     if not rows:
         parser.error('catalogue is empty')
+    total_rows = len(rows)
+    try:
+        rows = _shard_rows(rows, args.shard_index, args.shard_count)
+    except ValueError as exc:
+        parser.error(str(exc))
     cpu = {}
     try:
         for line in Path('/proc/cpuinfo').read_text().splitlines():
@@ -348,7 +441,9 @@ def main() -> None:
                                'xed_sha256': digest(Path(args.xed)),
                                'runner_sha256': digest(args.runner),
                                'bubblewrap_sha256': digest(args.bwrap),
-                               'rows': len(rows), 'platform': platform.platform(),
+                               'rows': len(rows), 'catalogue_rows': total_rows,
+                               'shard_index': args.shard_index, 'shard_count': args.shard_count,
+                               'platform': platform.platform(),
                                'machine': platform.machine(), 'cpu': cpu,
                                'packages': versions, 'examples': args.examples,
                                'input_bounds': {'rsp': '0x200800 only when used in a memory address',
@@ -363,18 +458,22 @@ def main() -> None:
                                'hypothesis_storage': os.environ.get('HYPOTHESIS_STORAGE_DIRECTORY', '.hypothesis')},
                               sort_keys=True), flush=True)
     counts = Counter()
+    compared = 0
     for row in rows:
         form, encoded = row['iform'], row['bytes']
         try:
             status, detail = _run_with_deadline(row, args)
         except Exception as exc:
-            status, detail = 'INCOMPLETE', f'worker launch: {type(exc).__name__}: {exc}'
+            status, detail = 'ERROR', f'worker launch: {type(exc).__name__}: {exc}'
         counts[status] += 1
+        match = re.search(r'(?:^| )compared=(\d+)(?: |$)', detail)
+        if match:
+            compared += int(match.group(1))
         print(f'{status} {form} {encoded} {detail}', flush=True)
     print(f'SUMMARY rows={len(rows)} forms={len({r["iform"] for r in rows})} '
           f'match={counts["MATCH"]} incomplete={counts["INCOMPLETE"]} '
-          f'mismatch={counts["MISMATCH"]}', flush=True)
-    if counts['INCOMPLETE'] or counts['MISMATCH']:
+          f'mismatch={counts["MISMATCH"]} error={counts["ERROR"]} compared={compared}', flush=True)
+    if _campaign_failed(counts, compared):
         raise SystemExit(1)
 
 

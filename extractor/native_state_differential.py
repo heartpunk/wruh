@@ -138,12 +138,12 @@ def compare_native_state(model: Any, capture: dict, initial_memory: bytes) -> di
                               if native != result.state.memory[addr]]
         if mismatching_memory:
             differences['memory'] = mismatching_memory
-        status = 'MISMATCH' if differences else ('INCOMPLETE' if undefined else 'MATCH')
+        # Undefined outputs have no required architectural value; do not
+        # compare them, and report them explicitly alongside the result.
+        status = 'MISMATCH' if differences else 'MATCH'
         result_data = {'status': status, 'differences': differences, 'undefined_flags': undefined,
                        'undefined_differences': undefined_differences,
                        'jumpkind': result.jumpkind, 'outcome_id': result.outcome_id}
-        if status == 'INCOMPLETE':
-            result_data['reason'] = 'instruction leaves architectural flags undefined: ' + ', '.join(undefined)
         return result_data
     except (IncompleteEvaluation, KeyError, TypeError, ValueError, z3.Z3Exception) as exc:
         return {'status': 'INCOMPLETE', 'reason': f'{type(exc).__name__}: {exc}'}

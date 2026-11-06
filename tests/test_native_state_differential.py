@@ -50,7 +50,7 @@ def test_changed_extended_state_is_incomplete():
     assert compare_native_state(mov_model(), native, bytes(8192))['status'] == 'INCOMPLETE'
 
 
-def test_undefined_flags_are_reported_as_incomplete():
+def test_undefined_flags_are_reported_but_defined_flags_are_compared():
     from extractor import runtime
     from extractor.amd64_state import step_instruction_outcomes
     encoded = bytes.fromhex('4831c0')
@@ -62,8 +62,14 @@ def test_undefined_flags_are_reported_as_incomplete():
     native['after']['rax'] = 0
     native['after']['eflags'] = 0x246
     result = compare_native_state(model, native, bytes(8192))
-    assert result['status'] == 'INCOMPLETE'
+    assert result['status'] == 'MATCH'
     assert result['undefined_flags'] == ['AF']
+    native['after']['eflags'] ^= 1 << 4
+    result = compare_native_state(model, native, bytes(8192))
+    assert result['status'] == 'MATCH'
+    assert 'rflags_AF' in result['undefined_differences']
+    native['after']['eflags'] ^= 1
+    assert compare_native_state(model, native, bytes(8192))['status'] == 'MISMATCH'
 
 
 def test_direction_flag_is_transferred_to_model():

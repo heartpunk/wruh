@@ -34,8 +34,10 @@ shrinking. These are input bounds, not claims of exhaustive coverage.
 Known gaps before the campaign can be considered complete:
 
 * XSAVE-format vector changes, other floating-point state changes,
-  architecturally undefined flags, and native faults other than integer divide
+  and native faults other than integer divide
   errors are currently reported as INCOMPLETE rather than compared.
+  Architecturally undefined flags are excluded from comparison and reported;
+  MATCH does not claim those flags were validated.
 * Repeated string instructions and `ENTER` require multi-access memory modeling
   and are reported as INCOMPLETE.
 * Native address calculations requiring more than two extra pages, addresses

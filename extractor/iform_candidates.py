@@ -15,6 +15,14 @@ class CandidateError(ValueError):
     """A proposed binding is not representable or changes the catalogued form."""
 
 
+class CandidateBindingError(CandidateError):
+    """A generated operand binding is invalid for the observed form."""
+
+
+class CandidateDecoderError(CandidateError):
+    """The external decoder could not be executed or returned a broken response."""
+
+
 # Explicit allowlist prevents writes to decoded fields with unrelated meaning.
 _MEMORY_FIELDS = frozenset({'memory_base', 'memory_index', 'memory_index_scale',
                             'memory_displacement', 'memory_displ_size'})
@@ -38,7 +46,7 @@ class CandidateTemplate:
         if self.bitness != 64 or not self.seed or len(self.seed) > 15:
             raise CandidateError('invalid catalogued seed or bitness')
         if set(bindings) - _FIELDS:
-            raise CandidateError('unknown binding fields: ' + ', '.join(sorted(set(bindings) - _FIELDS)))
+            raise CandidateBindingError('unknown binding fields: ' + ', '.join(sorted(set(bindings) - _FIELDS)))
         decoder = ice.Decoder(self.bitness, self.seed, ip=ip)
         ins = decoder.decode()
         if ins.is_invalid or ins.len != len(self.seed) or ins.code != self.iced_code:
@@ -48,31 +56,31 @@ class CandidateTemplate:
         try:
             for name, value in bindings.items():
                 if type(value) is not int:
-                    raise CandidateError(f'{name} must be an integer')
+                    raise CandidateBindingError(f'{name} must be an integer')
                 if name in _REGISTER_FIELDS:
                     index = int(name[2])
                     if index >= ins.op_count or ins.op_kind(index) != ice.OpKind.REGISTER:
-                        raise CandidateError(f'{name} does not name a register operand')
+                        raise CandidateBindingError(f'{name} does not name a register operand')
                 elif name in _OPERAND_FIELDS:
                     if _OPERAND_FIELDS[name] not in (ins.op_kind(i) for i in range(ins.op_count)):
-                        raise CandidateError(f'{name} is not an operand of this instruction')
+                        raise CandidateBindingError(f'{name} is not an operand of this instruction')
                 elif name in _MEMORY_FIELDS:
                     if ice.OpKind.MEMORY not in (ins.op_kind(i) for i in range(ins.op_count)):
-                        raise CandidateError(f'{name} requires an explicit memory operand')
+                        raise CandidateBindingError(f'{name} requires an explicit memory operand')
                 setattr(ins, name, value)
             encoder = ice.Encoder(self.bitness)
             encoder.encode(ins, ip)
             result = bytes(encoder.take_buffer())
         except (ValueError, OverflowError) as exc:
-            raise CandidateError(f'invalid operand binding: {exc}') from exc
+            raise CandidateBindingError(f'invalid operand binding: {exc}') from exc
         decoded = ice.Decoder(self.bitness, result, ip=ip).decode()
         if decoded.is_invalid or decoded.len != len(result) or decoded.code != self.iced_code:
-            raise CandidateError('generated instruction changed iced Code')
+            raise CandidateBindingError('generated instruction changed iced Code')
         for name, value in bindings.items():
             if getattr(decoded, name) != value:
-                raise CandidateError(f'{name} did not survive encoding and decoding')
+                raise CandidateBindingError(f'{name} did not survive encoding and decoding')
         if identify_iform(result) != self.iform:
-            raise CandidateError('generated instruction changed XED iform')
+            raise CandidateBindingError('generated instruction changed XED iform')
         return result
 
 
@@ -87,14 +95,16 @@ def xed_iform_decoder(executable: str, *, timeout: float = 2.0) -> Callable[[byt
         try:
             result = subprocess.run([executable], input=data.hex() + '\n', check=True, text=True,
                                     capture_output=True, timeout=timeout)
-        except (OSError, subprocess.SubprocessError) as exc:
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise CandidateDecoderError(f'XED decoder failed: {exc}') from exc
+        except subprocess.CalledProcessError as exc:
             raise CandidateError(f'XED decoder failed: {exc}') from exc
         fields = result.stdout.strip().split('\t')
         if len(fields) != 2 or not fields[1].isdigit():
-            raise CandidateError('XED returned invalid classification fields')
+            raise CandidateDecoderError('XED returned invalid classification fields')
         name = fields[0]
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', name):
-            raise CandidateError('XED returned an invalid iform name')
+            raise CandidateDecoderError('XED returned an invalid iform name')
         return name, int(fields[1])
 
     def identify(data: bytes) -> str:
