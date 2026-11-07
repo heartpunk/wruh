@@ -1,0 +1,486 @@
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 0
+cpu cores	: 18
+apicid		: 0
+initial apicid	: 0
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 1
+cpu cores	: 18
+apicid		: 1
+initial apicid	: 1
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 2
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 2
+cpu cores	: 18
+apicid		: 2
+initial apicid	: 2
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 3
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 3
+cpu cores	: 18
+apicid		: 3
+initial apicid	: 3
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 4
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 4
+cpu cores	: 18
+apicid		: 4
+initial apicid	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 5
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 5
+cpu cores	: 18
+apicid		: 5
+initial apicid	: 5
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 6
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 6
+cpu cores	: 18
+apicid		: 6
+initial apicid	: 6
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 7
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 7
+cpu cores	: 18
+apicid		: 7
+initial apicid	: 7
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 8
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 8
+cpu cores	: 18
+apicid		: 8
+initial apicid	: 8
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 9
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 9
+cpu cores	: 18
+apicid		: 9
+initial apicid	: 9
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 10
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 10
+cpu cores	: 18
+apicid		: 10
+initial apicid	: 10
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 11
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 11
+cpu cores	: 18
+apicid		: 11
+initial apicid	: 11
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 12
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 12
+cpu cores	: 18
+apicid		: 12
+initial apicid	: 12
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 13
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 13
+cpu cores	: 18
+apicid		: 13
+initial apicid	: 13
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 14
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 14
+cpu cores	: 18
+apicid		: 14
+initial apicid	: 14
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 15
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 15
+cpu cores	: 18
+apicid		: 15
+initial apicid	: 15
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 16
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 16
+cpu cores	: 18
+apicid		: 16
+initial apicid	: 16
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+processor	: 17
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 17
+cpu cores	: 18
+apicid		: 17
+initial apicid	: 17
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+

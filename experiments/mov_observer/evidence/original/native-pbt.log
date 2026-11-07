@@ -1,0 +1,10 @@
+MXCSR_MASK metadata: before=0x0, after=0xffff; raw records retained
+native cases passed: 25
+native cases passed: 50
+native cases passed: 75
+native cases passed: 100
+native cases passed: 125
+native cases passed: 150
+native cases passed: 175
+native cases passed: 200
+PASS: 200 generated states; all 16 stores; GPR/flags/segment preservation; legacy FP/XMM preservation; 128 captured bytes; memory frame; fresh model/native agreement; comparator mutations rejected

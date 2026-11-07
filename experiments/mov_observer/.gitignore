@@ -1,0 +1,5 @@
+/out/
+/.hypothesis/
+__pycache__/
+*.pyc
+

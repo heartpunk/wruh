@@ -1,0 +1,22 @@
+exact_bytes=112; instructions=16; register_updates=rip_only; memory_bytes=128
+0x400000:	mov	qword ptr [rip + 0x201039], rax
+0x400007:	mov	qword ptr [rip + 0x20103a], rcx
+0x40000e:	mov	qword ptr [rip + 0x20103b], rdx
+0x400015:	mov	qword ptr [rip + 0x20103c], rbx
+0x40001c:	mov	qword ptr [rip + 0x20103d], rsp
+0x400023:	mov	qword ptr [rip + 0x20103e], rbp
+0x40002a:	mov	qword ptr [rip + 0x20103f], rsi
+0x400031:	mov	qword ptr [rip + 0x201040], rdi
+0x400038:	mov	qword ptr [rip + 0x201041], r8
+0x40003f:	mov	qword ptr [rip + 0x201042], r9
+0x400046:	mov	qword ptr [rip + 0x201043], r10
+0x40004d:	mov	qword ptr [rip + 0x201044], r11
+0x400054:	mov	qword ptr [rip + 0x201045], r12
+0x40005b:	mov	qword ptr [rip + 0x201046], r13
+0x400062:	mov	qword ptr [rip + 0x201047], r14
+0x400069:	mov	qword ptr [rip + 0x201048], r15
+angr=10.0.4
+pyvex=10.0.4
+claripy=no version metadata; module=angr.rustylib.claripy; origin=bundled extension; see parent distribution
+archinfo=10.0.4
+z3-solver=no version metadata; module=z3; origin=/nix/store/mv49y1qn55ifd106gyz92mrg6iqnjr6f-python3-3.12.15-env/lib/python3.12/site-packages/z3/__init__.py

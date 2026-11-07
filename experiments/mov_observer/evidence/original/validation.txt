@@ -1,0 +1,35 @@
+Validated on NixOS, 2026-11-07 UTC
+Lean 4.34.0
+Wruh source: 64f523708016fdad2030690ba618a6fc2347ea7b
+AYXG source: 324752afe80b05d7fd8854834725cf5ee360f173
+
+Lean run: wruh-mov-pipeline-20261106-r3.service
+Result: success; exit 0; 54.677 s wall; 132.075 s CPU; 910.3 MiB peak; zero swap
+Resources: fleet-build.slice child; 8 GiB RAM maximum; 4 CPU equivalents
+Evidence: pipeline-r3.log
+Recheck in the pinned Wruh development shell: bash check_pipeline.sh
+For a fresh dependency build, first use: bash cache_dependencies.sh
+
+protocol_sound and protocol_complete: kernel checked.
+Axiom dependencies: propext, Classical.choice, Quot.sound.
+No sorryAx, custom axioms, or native_decide.
+
+Formal scope: exact MOV loader and MOV GPR capture, concrete byte codec,
+modeled stopped-state handoff, arbitrary target STS step and its labeled outcome.
+GPR inputs are universally quantified; capture has a full modeled memory frame.
+The modeled handoff is a specification, not a verified Linux/FFI implementation.
+Flags/vector recording is not implemented by this capture stub.
+
+Native calibration: 200 generated states passed for the capture fragment.
+That run did not execute the input loader or a target instruction.
+Evidence: native-pbt.log; supervisor in native_probe.py.
+
+Checked source and exact-byte SHA256:
+ca028b8e7f5483705b467a31b62723427c1895138ed5b4bcd785c542f767acaf  Proof.lean
+e8cbe3897a84c0fbd9c82cf8ec6ef15ced3852f3ecc4831009eb2f3bd12ff3c5  ByteCodec.lean
+3d8a33e6923a69eaadd366646430069d0d12eb342e59bef1f8d5c6445396cdad  Pipeline.lean
+841d82f594ba9f090195eb54837dbf5dcdcea5a2ac2cc145cbeabafcfa6d272a  Protocol.lean
+8798b7f6bab466c02698640bc736701caa26dd55332346614ac8f48de13f2058  out/Extracted.lean
+b47b0a2b07d54a3e0058294aec884f383d95b9a871685e02d4b7368cafa8e590  out/InputModel.lean
+b1f9eb3a26a7f70bd278fb11f1844c408e13150bf8433605d1d92522db10b339  out/observer.bin
+5cc094a7e66b2908c690567423d51e0a07231676765493e83b0c8f4c079e5699  out/loader.bin

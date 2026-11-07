@@ -1,0 +1,4 @@
+python=/nix/store/mv49y1qn55ifd106gyz92mrg6iqnjr6f-python3-3.12.15-env/bin/python3
+bubblewrap=/nix/store/qn1pfnn2xgfwdr6avw1fnvwsabi83973-bubblewrap-0.11.0/bin/bwrap
+ayxg=/nix/store/prgqrm74px43hwndnivs00ii41zlmllj-source
+floatlib=/nix/store/i9w4xr0f5nb639whs0pqxvgay29lyv43-floatlib-ayxg-scoped

@@ -1,0 +1,2 @@
+ERROR    | 2026-11-06 21:13:48,656 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+PASS: loader bytes=112, sixteen GPR loads, no memory writes, all other modeled fields preserved; sha256=5cc094a7e66b2908c690567423d51e0a07231676765493e83b0c8f4c079e5699
