@@ -48,6 +48,16 @@ theorem protocol_input_memory_frame {C E : Type}
     | cons pc rest =>
       exact writes_frame wanted inputWrites memory a outside
 
+/-- The existing loader falls through to this exact target address; it does
+not install an arbitrary requested RIP. -/
+theorem protocol_loaded_pc {C E : Type}
+    {target : SymbolicTransitionSystem C Γ E}
+    {control : C} {wanted ambient : Env Γ} {edge : E} {post : Config C Γ}
+    (run : ProtocolExecution target control wanted ambient edge post) :
+    Env.lookup run.loaded v_rip = BitVec.ofNat 64 4194672 := by
+  rw [← run.inputStep.2]
+  rfl
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
@@ -56,6 +66,7 @@ theorem protocol_sound {C E : Type}
     {control : C} {wanted ambient : Env Γ} {edge : E} {post : Config C Γ}
     (run : ProtocolExecution target control wanted ambient edge post) :
     observeGprs run.loaded = observeGprs wanted ∧
+    Env.lookup run.loaded v_rip = BitVec.ofNat 64 4194672 ∧
     (∀ a, (∀ w ∈ inputWrites, a ≠ w.1) →
       Env.lookup run.loaded v_mem a = Env.lookup ambient v_mem a) ∧
     target.toLTS.Tr ⟨control, run.loaded⟩ edge post ∧
@@ -63,7 +74,7 @@ theorem protocol_sound {C E : Type}
     CaptureSpec (enterCapture post.env) run.captured := by
   have input := run.inputStep.2
   have output := run.captureStep.2
-  refine ⟨?_, protocol_input_memory_frame run, run.targetStep, ?_,
+  refine ⟨?_, protocol_loaded_pc run, protocol_input_memory_frame run, run.targetStep, ?_,
     modeled_step_captures run.captureStep⟩
   · rw [← input]
     exact input_installed wanted ambient
@@ -89,6 +100,7 @@ theorem protocol_complete {C E : Type}
   }⟩
 
 #print axioms protocol_input_memory_frame
+#print axioms protocol_loaded_pc
 #print axioms protocol_sound
 #print axioms protocol_complete
 end MovObserver
