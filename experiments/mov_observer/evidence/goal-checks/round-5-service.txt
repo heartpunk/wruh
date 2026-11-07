@@ -1,0 +1,14 @@
+Id=wruh-observer-goal-20261107-r5.service
+ActiveState=active
+SubState=exited
+InvocationID=e627b678615b4f7f942956ccefa7a5d6
+Result=success
+ExecMainStartTimestamp=Sat 2026-11-07 06:19:36 PST
+ExecMainExitTimestamp=Sat 2026-11-07 06:19:49 PST
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=877740032
+CPUUsageNSec=10091952000
+CPUQuotaPerSecUSec=1s
+MemoryMax=2147483648
+MemorySwapMax=0
