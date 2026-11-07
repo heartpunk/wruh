@@ -1,0 +1,27 @@
+Id=wruh-protocol-input-frame-20261107-r3.service
+ActiveState=active
+SubState=exited
+InvocationID=b2e6cd7e48844f8d95035071e3fb9677
+Result=success
+ExecMainStartTimestamp=Sat 2026-11-07 13:31:52 PST
+ExecMainExitTimestamp=Sat 2026-11-07 13:32:10 PST
+ExecMainStatus=0
+ExecStart={ path=/run/current-system/sw/bin/bash ; argv[]=/run/current-system/sw/bin/bash -c set -e
+export PATH=/run/current-system/sw/bin:/run/wrappers/bin:/home/heartpunk/.nix-profile/bin
+export LEAN_NUM_THREADS=1
+git rev-parse HEAD
+nix develop --option max-jobs 1 --option cores 1 --command bash -c 'set -e
+cd /tmp/wruh-mov-observer-20261106/ayxg
+lake env bash -c '\''set -e
+export LEAN_PATH=/tmp/wruh-mov-observer-20261106/out:$LEAN_PATH
+cd '\''\'\'''\''/home/heartpunk/workspaces/wruh-observer-input-frame-ca47f917/experiments/mov_observer'\''\'\'''\''
+command -v lean
+lean --version
+lean -o out/Protocol.olean Protocol.lean'\''' ; ignore_errors=no ; start_time=[Sat 2026-11-07 13:31:52 PST] ; stop_time=[Sat 2026-11-07 13:32:10 PST] ; pid=2618518 ; code=exited ; status=0 }
+Slice=fleet-build.slice
+MemoryPeak=876986368
+CPUUsageNSec=14168585000
+CPUQuotaPerSecUSec=1s
+MemoryMax=2147483648
+MemorySwapMax=0
+TasksMax=128

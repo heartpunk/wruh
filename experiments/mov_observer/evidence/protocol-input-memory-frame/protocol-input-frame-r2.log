@@ -1,0 +1,25 @@
+5c0c61c0d1cea51d2d7ebb241ebf34ffa1936901
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+evaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+Protocol.lean:42:25: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  (StateUpdate.eval ?s loadUpdate).lookup v_mem
+in the target expression
+  (StateUpdate.eval (prepareInput wanted ambient) loadStep.update).lookup v_mem a = ambient.lookup v_mem a
+
+inst✝ : FPInterpretation
+C E : Type
+target : SymbolicTransitionSystem C Γ E
+control : C
+wanted ambient : Env Γ
+edge : E
+post : Config C Γ
+run : ProtocolExecution target control wanted ambient edge post
+a : BitVec 64
+outside : ∀ w ∈ inputWrites, a ≠ w.1
+⊢ (StateUpdate.eval (prepareInput wanted ambient) loadStep.update).lookup v_mem a = ambient.lookup v_mem a
+'MovObserver.protocol_input_memory_frame' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
+'MovObserver.protocol_sound' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
+'MovObserver.protocol_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
