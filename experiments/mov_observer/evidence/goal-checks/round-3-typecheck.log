@@ -1,0 +1,20 @@
+started_utc=2026-11-07T14:07:35Z
+18bf2e454108438f46f0cfe35e9873e37de6af4e
+2890533a2232055328a8ba012ce6ccfcbb5e1178517898e48216975db8d1873c  experiments/mov_observer/ObserverEndToEndGoal.lean
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+evaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+building '/nix/store/h9jlyf40j8rqbqwbky5xja6v38yd40d1-nix-shell-env.drv'...
+/nix/store/k5i7gk41mpwinsdrxpsiwmg3nbvr0b9q-lean/bin/lean
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+ObserverEndToEndGoal.EndToEnd {D : Domain} (C : Contract D) (E : Executions D) : Prop
+ObserverEndToEndGoal.components_suffice {D : Domain} {C : Contract D} {E : Executions D} (foundation : Foundations C E)
+  (parts : ComponentProofs C E) : EndToEnd C E
+ObserverEndToEndGoal.end_to_end_excludes_no_success {D : Domain} {C : Contract D} {E : Executions D}
+  (claim : EndToEnd C E) :
+  ¬∀ (w : D.World) (q : D.Request) (trace : D.Trace) (observation : D.Observation),
+      ¬E.native w q trace (Result.observed observation)
+'ObserverEndToEndGoal.components_suffice' does not depend on any axioms
+'ObserverEndToEndGoal.end_to_end_excludes_no_success' does not depend on any axioms
+finished_utc=2026-11-07T14:07:49Z
