@@ -20,10 +20,13 @@ Lean source hashes are preserved; the relocated wrappers have only syntax checks
 not a fresh execution. **After authorization**, first re-establish the Lean and
 native capture baseline from the promoted paths, retaining exact-run provenance.
 
-Goal: an executable single-instruction observer with a compositional proof
-relative to the current instruction models, plus native calibration of its
-model/OS boundary. Add flags, FP/vector state, real stop/fault handling and a Lean
-supervisor with narrow FFI. Minimize instruction complexity and form count.
+Goal: an executable single-instruction observer with an end-to-end refinement
+proof connecting its actual Lean orchestrator, concrete ABI bridge and exact
+harness bytes to faithful observation and noninterference, relative to the
+observer instruction models and explicitly listed external foundations. Native
+calibration cross-checks those foundations. Add flags, FP/vector state, real
+stop/fault handling and a Lean supervisor with narrow FFI. Minimize instruction
+complexity and form count.
 Semantic-model repairs, optimization, batching, macOS, emulation, bare-host
 execution and XSAVE-family work remain outside this pass.
 
@@ -35,12 +38,14 @@ flowchart TD
   C --> F[Fault lane: Lean/FFI transport milestone T]
   C --> P[FP installation/capture proofs]
   C --> V[Vector installation/capture proofs]
+  F --> B[Concrete ABI bridge and executable orchestrator proofs]
   F --> FC[Fault classification and calibration]
   F --> PC[FP native calibration]
   P --> PC
   F --> VC[Vector native calibration]
   V --> VC
-  FC --> I[Post-hoc integration and composition proof]
+  B --> I[Post-hoc integration and end-to-end theorem]
+  FC --> I
   PC --> I
   VC --> I
   I --> Q[Independent review and configured validation]
@@ -49,18 +54,22 @@ flowchart TD
 
 | Lane | Active-work estimate* | Ordered steps | Unlock / ownership |
 |---|---:|---|---|
-| Foundation C | 1–3 h | Recheck baseline → field/outcome audit → freeze contract/ABI → flags proof → publish common commit | Execution authorization; coordinator owns shared contracts, layout, emitters/generated context, flags, wrappers and acceptance tests |
-| Faulting F | 3–8 h | Lean driver + minimal FFI → usable transport T → classifier/fallback → protocol proofs and calibration | C; owns `Fault/`, `Supervisor/`, `ffi/` |
+| Foundation C | 2–4 h | Recheck baseline → field/outcome audit → freeze ABI/proof route and end-to-end statement → flags proof → publish common commit | Execution authorization; coordinator owns shared contracts, layout, emitters/generated context, flags, wrappers and acceptance tests |
+| Faulting F | 4–12 h | Lean driver + minimal FFI → usable transport T → concrete bridge/orchestrator refinement and classifier/fallback proofs → calibration | C; owns `Fault/`, `Supervisor/`, `ffi/`; bridge proofs B are required at final handoff |
 | FP P | 2–8 h | Select/extract exact forms → installation/capture/restoration proofs → native calibration | Proofs after C, native calibration after T; owns `Fp/`, MXCSR and x87 |
 | Vector V | 2–6 h | Alias map → exact forms → installation/capture/restoration proofs → native calibration | Proofs after C, native calibration after T; owns `Vector/`, consumes shared MXCSR contract |
-| Integration I | 2–5 h | Collect handoffs → resolve conflicts → compose actual order → re-extract/typecheck/calibrate | Completed F/P/V; coordinator or one freed worker, afterward; owns final composition |
+| Integration I | 3–8 h | Collect handoffs including B → resolve conflicts → compose actual order → prove end-to-end statement → re-extract/typecheck/calibrate | Completed F/P/V; coordinator or one freed worker, afterward; owns final composition |
 
-*Rough planning ranges, excluding blocked hardware/CI waits. No completion promise.
+*Rough planning ranges, excluding blocked hardware/CI waits. Re-estimate after C
+selects and checks the concrete bridge proof route; no completion promise.
 No new temporary general-purpose calibration runner: P/V wait for T to execute
 their fragments, while F continues its other work. T's handoff pins its immutable
 commit and ABI version; P/V calibration evidence records both. The existing Python probe
 remains GPR calibration evidence, not the production supervisor. C's immutable
 contract commit parents all three lanes. Shared changes return to the coordinator.
+T permits calibration to start; it is not evidence that B or the end-to-end proof
+is complete. Missing bridge semantics must be reported, never replaced by a new
+assumption that our own wrapper behaves correctly.
 
 ## Contract before fan-out
 
@@ -90,11 +99,76 @@ flags or faults to obtain agreement.
 
 Freeze the transport signature and synthetic event fixtures. The FFI creates and
 reaps tracees, transfers state/memory, resumes/stops and returns bytes/events;
-Lean owns decoding, orchestration, comparison and classification. List the
-kernel/FFI/compiler laws still externally assumed and calibrated. Maintain a
+Lean owns decoding, orchestration, comparison and classification. List external
+kernel, Lean runtime/compiler and imported primitive contracts separately from
+project-owned bridge obligations; the latter must be proved. Maintain a
 manifest of exact installation/capture/restoration/fallback instruction forms,
 side effects and model support; justify their simplicity without seeking a
 global optimality proof.
+
+## Required end-to-end proof
+
+C freezes one typechecked top-level theorem statement over the actual executable
+Lean entry point, not just a parallel specification. During planning, a Lean goal
+schema records the obligations without pretending the unimplemented entry point
+already exists; its concrete instantiation is a required integration artifact.
+`ObserverEndToEndGoal.lean` states that schema, composes the component obligations,
+and checks that the complete goal rules out an observer with no successes. Its
+execution/trace definitions must later be bound to the actual artifacts; their
+names or a typecheck alone do not establish that connection. Availability also
+requires no divergent execution under the fixed environmental premises.
+The required proof chain is:
+
+```text
+actual Lean orchestrator execution
+  → concrete ABI/FFI operations refine the specified transport
+  → transport and stop handling implement the observation protocol
+  → exact installation/capture/restoration bytes satisfy their contracts
+  → decoded result describes the original target outcome, with observer framing
+```
+
+The theorem composes the following obligations; none can be discharged merely by
+assuming that the project-owned component has the intended behavior:
+
+1. **Executable orchestrator refinement (F):** connect the real entry point,
+   sequencing, loops, decoding and all success/error paths to the protocol trace.
+   Proving a state machine that the executable never demonstrably follows is
+   insufficient. Freeze how Lean effects are interpreted and related to events.
+2. **Concrete ABI bridge refinement (F/B):** prove the project-owned marshalling,
+   wrappers and effect interpreter against the transport contract. Cover widths,
+   signedness, byte layout, alignment, ownership/lifetimes and aliasing of buffers,
+   Lean FFI object conventions, permitted clobbers, and failures/short transfers.
+   Relate host-side calls to the intended tracee, registers, memory and stopped
+   event; never conflate host ABI state with the target's machine state.
+3. **Harness and stop refinement (F/P/V plus C flags):** preserve the original
+   target outcome through stop classification, redirection and capture. Prove
+   the exact instruction sequence's installation, successful/aborted capture,
+   restoration and memory/register frame properties, including fault fallback.
+4. **Final composition (I):** instantiate these lemmas for the linked executable,
+   actual layouts and stub order. For admitted requests, every successful result
+   must describe that same target execution from the installed requested state;
+   observer effects stay within declared footprints or their proved restoration
+   account. Failures remain classified, never fabricated observations. Add the
+   agreed availability/progress statement with its explicit OS/resource premises
+   so reject-all correctness is not the completion criterion.
+
+C must name the concrete proof representation and source-to-artifact connection
+for every project-owned bridge function before fan-out. A possible bounded route
+is extraction of a tiny pinned compiled shim into AYXG, using explicit imported
+OS/runtime primitive contracts; if that route cannot model a required operation,
+report the exact gap before delegating dependent proof work. No new general C
+verifier or compiler-correctness project is implicitly authorized. A contract
+attached to an opaque implementation or passing PBT is not the bridge proof.
+
+Keep an assumption/dependency ledger: **component; exact source/artifact;
+semantic representation; proof or external foundation; owning theorem**. Compiler
+and runtime preservation, kernel primitive behavior and observer-instruction
+semantics may remain explicit foundations. Our own glue, codecs, orchestration
+and ABI adaptation may not migrate into that list. Treat the target outcome as
+the outcome being observed; target/model agreement is never a premise of the
+observer theorem or the separate comparison theorem. Preserve independent native
+evidence and calibration of foundations. Unproved obligations keep the end-to-end
+claim open even if component tests pass.
 
 ## Common correctness obligations
 
@@ -128,7 +202,8 @@ before worker implementations. Neither comparator nor workers define success.
    faults, timeouts, OOM and transport errors retain distinct failure reasons.
 7. **Comparison fidelity:** conditional on successful faithful capture,
    comparator acceptance is equivalent to independently specified `Required`.
-   Assume installation/observer/FFI laws, **not target/model agreement**. A native
+   Discharge project-owned installation/observer/bridge laws with the component
+   proofs above, **not target/model agreement**. A native
    outcome absent from the model remains a mismatch or named coverage obligation.
    Missing fields/incomplete captures cannot pass. Repairable unknowns stay debt;
    genuinely unobservable distinctions require a reviewed justification.
@@ -148,7 +223,9 @@ saved-image versus live flags. Freeze their ordering before FP/vector work.
 
 **Faulting / F:** test classification with synthetic transcripts, then native
 normal/fault/interruption fixtures with independently known outcomes. Prove the
-Lean protocol against specified transport events and calibrate that transport.
+executable Lean orchestrator and concrete bridge refine the specified transport
+and protocol; calibrate that transport independently. T is a usable transport
+milestone; completed F also supplies B and the exception-path proof obligations.
 A completed-fragment frame proof alone does not justify an aborted prefix.
 
 **FP / P:** own installation, capture and necessary restoration of x87 and MXCSR.
@@ -192,12 +269,14 @@ handoffs. Agents sleep during CI waits; an explicitly authorized lightweight
 monitor may report new failures/completion. Nothing starts merely because this
 plan is agreed.
 
-Integrate after completed handoffs. Reprove combined layout/order and qualify the
+Integrate after completed handoffs. Typecheck the concrete end-to-end theorem and
+its composed proof, inspect its assumptions/dependency ledger, and qualify the
 combined native harness against exact final source hashes. Preserve PR identity;
 no replacement PRs or merges by the coordinator. The user makes the merge decision.
 
 Acceptance rejects `sorry`, new axioms, unreviewed assumptions/profile reductions,
-result-dependent exclusions, incomplete-as-pass and unjustified masking. Compare
+result-dependent exclusions, incomplete-as-pass, unjustified masking and an
+unproved project-owned bridge hidden behind a transport contract. Compare
 frozen statements/tests/coverage against the common contract; only reviewed
 changes can amend it. These gates expose deviations; independent and human review
 still checks whether the specification expresses the intended property.
