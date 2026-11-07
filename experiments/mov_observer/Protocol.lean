@@ -39,7 +39,9 @@ theorem protocol_input_memory_frame {C E : Type}
     (a : BitVec 64)
     (outside : ∀ w ∈ inputWrites, a ≠ w.1) :
     Env.lookup run.loaded v_mem a = Env.lookup ambient v_mem a := by
-  rw [← run.inputStep.2, loader_preserves_mem]
+  have input := run.inputStep.2
+  change loadUpdate.eval (prepareInput wanted ambient) = run.loaded at input
+  rw [← input, loader_preserves_mem]
   cases ambient with
   | cons memory tail =>
     cases tail with
