@@ -38,7 +38,9 @@ abbrev Judgment (D : Domain) :=
   D.World → D.Request → D.Trace → Result D → Prop
 
 /-- Freeze these predicates independently of the implementation. `available`
-describes environmental/resource premises, never the computed verdict. -/
+describes environmental/resource premises, never the computed verdict or assumed
+success/safety of project-owned calls. Valid arguments and failure handling must
+follow from component proofs. -/
 structure Contract (D : Domain) where
   external : D.World → Prop
   admitted : D.Request → Prop
@@ -56,14 +58,19 @@ structure Contract (D : Domain) where
   requiredComparison : D.Prediction → TargetOutcome D → Prop
 
 /-- Closed, artifact-bound execution definitions are required at instantiation.
-These fields are declaration slots, not correctness assumptions. -/
+These fields are declaration slots, not correctness assumptions. Native and
+Lean nonreturning predicates include every maximal execution with no Result:
+infinite execution, finite stuck states and unhandled aborts/exits. Alternatively
+an abnormal termination may be classified explicitly as a failed Result.
+The bindings must account for all maximal executions, not only successful ones. -/
 structure Executions (D : Domain) where
   native : Judgment D
   lean : Judgment D
   abi : Judgment D
   protocol : Judgment D
   harness : Judgment D
-  diverges : D.World → D.Request → Prop
+  nativeNonreturning : D.World → D.Request → Prop
+  leanNonreturning : D.World → D.Request → Prop
 
 def Refines {D : Domain} (C : Contract D)
     (lower upper : Judgment D) : Prop :=
@@ -87,13 +94,14 @@ def Safe {D : Domain} (C : Contract D) (exec : Judgment D) : Prop :=
     C.external w → C.admitted q → exec w q trace result →
     OutcomeCorrect C q trace result
 
-/-- Termination and successful capture under the independently fixed availability
-premises; also excludes a failing alternative execution in such a world. -/
-def Available {D : Domain} (C : Contract D) (E : Executions D) : Prop :=
+/-- Successful completion under independently fixed availability premises;
+excludes both no-result behaviors and returned failures in such a world. -/
+def Available {D : Domain} (C : Contract D) (exec : Judgment D)
+    (nonreturning : D.World → D.Request → Prop) : Prop :=
   ∀ w q, C.external w → C.admitted q → C.available w q →
-    (¬ E.diverges w q) ∧
-    (∃ trace observation, E.native w q trace (.observed observation)) ∧
-    (∀ trace result, E.native w q trace result →
+    (¬ nonreturning w q) ∧
+    (∃ trace observation, exec w q trace (.observed observation)) ∧
+    (∀ trace result, exec w q trace result →
       ∃ observation, result = .observed observation)
 
 /-- Required coverage and external/availability premises must be inhabited.
@@ -114,10 +122,19 @@ def ComparisonCorrect {D : Domain} (C : Contract D) : Prop :=
 /-- Only compilation/runtime preservation belongs in this boundary. The Lean
 judgment still contains concrete foreign calls, so this field does not assert
 that project-owned marshalling or transport behavior is correct. The remaining
-external ISA/kernel contracts are fixed by `Contract.external` and its ledger. -/
+external ISA/kernel contracts are fixed by `Contract.external` and its ledger.
+At instantiation these three laws must follow from a compiler/runtime theorem
+parametric in the same concrete foreign semantics, including nonreturning cases;
+none is permission to assume the shim implements the abstract transport. -/
 structure Foundations {D : Domain} (C : Contract D)
     (E : Executions D) : Prop where
   nativeToLean : Refines C E.native E.lean
+  leanReturnToNative :
+    ∀ w q trace result, C.external w → C.admitted q →
+      E.lean w q trace result → ∃ nativeTrace, E.native w q nativeTrace result
+  nativeNonreturningReflects :
+    ∀ w q, C.external w → C.admitted q →
+      E.nativeNonreturning w q → E.leanNonreturning w q
 
 /-- Each field is a proof obligation to discharge for the concrete code. These
 must not become new axioms or external premises of the final instantiated result. -/
@@ -127,7 +144,7 @@ structure ComponentProofs {D : Domain} (C : Contract D)
   abiToProtocol : Refines C E.abi E.protocol
   protocolToHarness : Refines C E.protocol E.harness
   harnessCorrect : Safe C E.harness
-  availability : Available C E
+  leanAvailability : Available C E.lean E.leanNonreturning
   coverage : Covered C
   comparison : ComparisonCorrect C
 
@@ -135,7 +152,7 @@ structure ComponentProofs {D : Domain} (C : Contract D)
 structure EndToEnd {D : Domain} (C : Contract D)
     (E : Executions D) : Prop where
   safety : Safe C E.native
-  availability : Available C E
+  availability : Available C E.native E.nativeNonreturning
   coverage : Covered C
   comparison : ComparisonCorrect C
 
@@ -150,7 +167,21 @@ theorem components_suffice {D : Domain} {C : Contract D} {E : Executions D}
     have protocol := parts.abiToProtocol w q trace result external admitted abi
     have harness := parts.protocolToHarness w q trace result external admitted protocol
     exact parts.harnessCorrect w q trace result external admitted harness
-  availability := parts.availability
+  availability := by
+    intro w q external admitted available
+    rcases parts.leanAvailability w q external admitted available with
+      ⟨noNonreturn, ⟨leanTrace, observation, leanRun⟩, allLeanResults⟩
+    refine ⟨?_, ?_, ?_⟩
+    · intro nativeNonreturn
+      exact noNonreturn
+        (foundation.nativeNonreturningReflects w q external admitted nativeNonreturn)
+    · obtain ⟨nativeTrace, nativeRun⟩ :=
+        foundation.leanReturnToNative w q leanTrace (.observed observation)
+          external admitted leanRun
+      exact ⟨nativeTrace, observation, nativeRun⟩
+    · intro trace result nativeRun
+      exact allLeanResults trace result
+        (foundation.nativeToLean w q trace result external admitted nativeRun)
   coverage := parts.coverage
   comparison := parts.comparison
 

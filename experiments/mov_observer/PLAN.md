@@ -116,7 +116,12 @@ already exists; its concrete instantiation is a required integration artifact.
 and checks that the complete goal rules out an observer with no successes. Its
 execution/trace definitions must later be bound to the actual artifacts; their
 names or a typecheck alone do not establish that connection. Availability also
-requires no divergent execution under the fixed environmental premises.
+excludes every maximal execution with no result under fixed environmental
+premises: infinite runs, finite stuck states and unhandled aborts/exits. Abnormal
+terminations classified as returned failures must also remain in the judgments.
+Availability premises concern environment/resources and primitive guarantees;
+valid project-owned arguments, buffer safety and failure handling must be proved,
+not assumed by saying our own calls succeed or the observer never faults.
 The required proof chain is:
 
 ```text
@@ -149,11 +154,19 @@ assuming that the project-owned component has the intended behavior:
    must describe that same target execution from the installed requested state;
    observer effects stay within declared footprints or their proved restoration
    account. Failures remain classified, never fabricated observations. Add the
-   agreed availability/progress statement with its explicit OS/resource premises
-   so reject-all correctness is not the completion criterion.
+   agreed availability/progress statement with explicit OS/resource premises.
+   F proves availability of the actual Lean program including concrete foreign
+   behavior; compiler/runtime return preservation, finite-execution refinement
+   and reflection of native nonreturning executions transport it to the binary.
+   Thus termination and success are derived through the chain, not supplied as
+   an unexplained native-availability premise; reject-all correctness cannot pass.
 
 C must name the concrete proof representation and source-to-artifact connection
-for every project-owned bridge function before fan-out. A possible bounded route
+for every project-owned bridge function before fan-out. C's proof-route gate
+demonstrates one representative actual ABI operation, including marshalling and
+a failure path, in that representation before dependent lanes start. This is
+future foundation work, not authorization to implement it during planning.
+A possible bounded route
 is extraction of a tiny pinned compiled shim into AYXG, using explicit imported
 OS/runtime primitive contracts; if that route cannot model a required operation,
 report the exact gap before delegating dependent proof work. No new general C
@@ -169,6 +182,14 @@ the outcome being observed; target/model agreement is never a premise of the
 observer theorem or the separate comparison theorem. Preserve independent native
 evidence and calibration of foundations. Unproved obligations keep the end-to-end
 claim open even if component tests pass.
+
+The compiler/runtime preservation laws must be parametric in the **same concrete
+foreign semantics**, including no-result behaviors; they cannot already assume
+our bridge's abstract contract. C binds all execution predicates exhaustively to
+the actual artifacts. It binds `targetIn`, invocation counting and frame relations
+to the original requested target occurrence and explicit effects, independently
+of decoded observations. Exactly one invocation can include architectural
+partial progress; fallback never starts a second invocation.
 
 ## Common correctness obligations
 
