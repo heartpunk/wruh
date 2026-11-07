@@ -44,6 +44,7 @@ follow from component proofs. -/
 structure Contract (D : Domain) where
   external : D.World → Prop
   admitted : D.Request → Prop
+  targetTerminates : D.World → D.Request → Prop
   available : D.World → D.Request → Prop
   requiredClass : D.CoverageClass → Prop
   classOf : D.Request → D.CoverageClass
@@ -58,19 +59,18 @@ structure Contract (D : Domain) where
   requiredComparison : D.Prediction → TargetOutcome D → Prop
 
 /-- Closed, artifact-bound execution definitions are required at instantiation.
-These fields are declaration slots, not correctness assumptions. Native and
-Lean nonreturning predicates include every maximal execution with no Result:
-infinite execution, finite stuck states and unhandled aborts/exits. Alternatively
-an abnormal termination may be classified explicitly as a failed Result.
-The bindings must account for all maximal executions, not only successful ones. -/
+These fields are declaration slots, not correctness assumptions. `Terminates`
+means EVERY maximal execution is finite and returns a classified Result: no
+infinite run, stuck path or unhandled abort may disappear from the binding.
+Divergence is not a permitted Result or a failure alternative. -/
 structure Executions (D : Domain) where
   native : Judgment D
   lean : Judgment D
   abi : Judgment D
   protocol : Judgment D
   harness : Judgment D
-  nativeNonreturning : D.World → D.Request → Prop
-  leanNonreturning : D.World → D.Request → Prop
+  nativeTerminates : D.World → D.Request → Prop
+  leanTerminates : D.World → D.Request → Prop
 
 def Refines {D : Domain} (C : Contract D)
     (lower upper : Judgment D) : Prop :=
@@ -94,12 +94,21 @@ def Safe {D : Domain} (C : Contract D) (exec : Judgment D) : Prop :=
     C.external w → C.admitted q → exec w q trace result →
     OutcomeCorrect C q trace result
 
-/-- Successful completion under independently fixed availability premises;
-excludes both no-result behaviors and returned failures in such a world. -/
-def Available {D : Domain} (C : Contract D) (exec : Judgment D)
-    (nonreturning : D.World → D.Request → Prop) : Prop :=
-  ∀ w q, C.external w → C.admitted q → C.available w q →
-    (¬ nonreturning w q) ∧
+/-- Required no-divergence obligation. Given a terminating target instruction
+and the agreed external/stub semantics, our whole execution must terminate.
+This does NOT depend on successful-capture availability. Existence excludes an
+empty execution relation satisfying universal termination vacuously. -/
+def NoDivergence {D : Domain} (C : Contract D) (exec : Judgment D)
+    (terminates : D.World → D.Request → Prop) : Prop :=
+  ∀ w q, C.external w → C.admitted q → C.targetTerminates w q →
+    terminates w q ∧ ∃ trace result, exec w q trace result
+
+/-- Successful observations under additional environmental/resource premises.
+Outside those premises a classified finite failure may occur, but NoDivergence
+still applies. A timeout/incomplete label is not a termination proof. -/
+def Available {D : Domain} (C : Contract D) (exec : Judgment D) : Prop :=
+  ∀ w q, C.external w → C.admitted q → C.targetTerminates w q →
+    C.available w q →
     (∃ trace observation, exec w q trace (.observed observation)) ∧
     (∀ trace result, exec w q trace result →
       ∃ observation, result = .observed observation)
@@ -109,7 +118,8 @@ This is stronger than a theorem whose admission predicate can be always false. -
 def Covered {D : Domain} (C : Contract D) : Prop :=
   (∃ c, C.requiredClass c) ∧
   (∀ c, C.requiredClass c →
-    ∃ w q, C.external w ∧ C.admitted q ∧ C.available w q ∧ C.classOf q = c)
+    ∃ w q, C.external w ∧ C.admitted q ∧ C.targetTerminates w q ∧
+      C.available w q ∧ C.classOf q = c)
 
 /-- The model prediction appears only here, after capture. Agreement with it is
 the tested conclusion, never an assumption about the target execution. -/
@@ -124,7 +134,7 @@ judgment still contains concrete foreign calls, so this field does not assert
 that project-owned marshalling or transport behavior is correct. The remaining
 external ISA/kernel contracts are fixed by `Contract.external` and its ledger.
 At instantiation these three laws must follow from a compiler/runtime theorem
-parametric in the same concrete foreign semantics, including nonreturning cases;
+parametric in the same concrete foreign semantics, preserving total termination;
 none is permission to assume the shim implements the abstract transport. -/
 structure Foundations {D : Domain} (C : Contract D)
     (E : Executions D) : Prop where
@@ -132,9 +142,9 @@ structure Foundations {D : Domain} (C : Contract D)
   leanReturnToNative :
     ∀ w q trace result, C.external w → C.admitted q →
       E.lean w q trace result → ∃ nativeTrace, E.native w q nativeTrace result
-  nativeNonreturningReflects :
+  terminationPreserved :
     ∀ w q, C.external w → C.admitted q →
-      E.nativeNonreturning w q → E.leanNonreturning w q
+      E.leanTerminates w q → E.nativeTerminates w q
 
 /-- Each field is a proof obligation to discharge for the concrete code. These
 must not become new axioms or external premises of the final instantiated result. -/
@@ -144,7 +154,8 @@ structure ComponentProofs {D : Domain} (C : Contract D)
   abiToProtocol : Refines C E.abi E.protocol
   protocolToHarness : Refines C E.protocol E.harness
   harnessCorrect : Safe C E.harness
-  leanAvailability : Available C E.lean E.leanNonreturning
+  leanNoDivergence : NoDivergence C E.lean E.leanTerminates
+  leanAvailability : Available C E.lean
   coverage : Covered C
   comparison : ComparisonCorrect C
 
@@ -152,7 +163,8 @@ structure ComponentProofs {D : Domain} (C : Contract D)
 structure EndToEnd {D : Domain} (C : Contract D)
     (E : Executions D) : Prop where
   safety : Safe C E.native
-  availability : Available C E.native E.nativeNonreturning
+  noDivergence : NoDivergence C E.native E.nativeTerminates
+  availability : Available C E.native
   coverage : Covered C
   comparison : ComparisonCorrect C
 
@@ -167,14 +179,20 @@ theorem components_suffice {D : Domain} {C : Contract D} {E : Executions D}
     have protocol := parts.abiToProtocol w q trace result external admitted abi
     have harness := parts.protocolToHarness w q trace result external admitted protocol
     exact parts.harnessCorrect w q trace result external admitted harness
+  noDivergence := by
+    intro w q external admitted targetTerminates
+    rcases parts.leanNoDivergence w q external admitted targetTerminates with
+      ⟨leanTerminates, leanExists⟩
+    refine ⟨foundation.terminationPreserved w q external admitted leanTerminates, ?_⟩
+    obtain ⟨leanTrace, result, leanRun⟩ := leanExists
+    obtain ⟨nativeTrace, nativeRun⟩ :=
+      foundation.leanReturnToNative w q leanTrace result external admitted leanRun
+    exact ⟨nativeTrace, result, nativeRun⟩
   availability := by
-    intro w q external admitted available
-    rcases parts.leanAvailability w q external admitted available with
-      ⟨noNonreturn, ⟨leanTrace, observation, leanRun⟩, allLeanResults⟩
-    refine ⟨?_, ?_, ?_⟩
-    · intro nativeNonreturn
-      exact noNonreturn
-        (foundation.nativeNonreturningReflects w q external admitted nativeNonreturn)
+    intro w q external admitted targetTerminates available
+    rcases parts.leanAvailability w q external admitted targetTerminates available with
+      ⟨⟨leanTrace, observation, leanRun⟩, allLeanResults⟩
+    constructor
     · obtain ⟨nativeTrace, nativeRun⟩ :=
         foundation.leanReturnToNative w q leanTrace (.observed observation)
           external admitted leanRun
@@ -191,12 +209,14 @@ theorem end_to_end_excludes_no_success {D : Domain} {C : Contract D}
     ¬ (∀ w q trace observation, ¬ E.native w q trace (.observed observation)) := by
   intro none
   rcases claim.coverage.1 with ⟨c, required⟩
-  rcases claim.coverage.2 c required with ⟨w, q, external, admitted, available, _⟩
-  rcases (claim.availability w q external admitted available).2.1 with
+  rcases claim.coverage.2 c required with
+    ⟨w, q, external, admitted, targetTerminates, available, _⟩
+  rcases (claim.availability w q external admitted targetTerminates available).1 with
     ⟨trace, observation, executed⟩
   exact none w q trace observation executed
 
 #check EndToEnd
+#check EndToEnd.noDivergence
 #check components_suffice
 #check end_to_end_excludes_no_success
 #print axioms components_suffice

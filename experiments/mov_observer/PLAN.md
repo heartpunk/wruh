@@ -115,13 +115,19 @@ already exists; its concrete instantiation is a required integration artifact.
 `ObserverEndToEndGoal.lean` states that schema, composes the component obligations,
 and checks that the complete goal rules out an observer with no successes. Its
 execution/trace definitions must later be bound to the actual artifacts; their
-names or a typecheck alone do not establish that connection. Availability also
-excludes every maximal execution with no result under fixed environmental
-premises: infinite runs, finite stuck states and unhandled aborts/exits. Abnormal
-terminations classified as returned failures must also remain in the judgments.
-Availability premises concern environment/resources and primitive guarantees;
-valid project-owned arguments, buffer safety and failure handling must be proved,
-not assumed by saying our own calls succeed or the observer never faults.
+names or a typecheck alone do not establish that connection.
+
+**No divergence is a required proof obligation.** Assuming the target instruction
+terminates and the agreed current AYXG stub semantics and external contracts
+hold, every execution of our orchestrator, concrete bridge and harness must
+terminate with a classified result. This applies independently of the additional
+conditions for successful capture. Infinite runs, stuck paths and unhandled
+aborts cannot be accepted as alternative outcomes or disappear from the execution
+model. A timeout/incomplete label is not a substitute for the termination proof.
+Prove termination of our loops, retries, fallbacks and foreign-call sequencing;
+only target termination and explicitly scoped external primitive progress are
+premises. Valid arguments, buffer safety and our own calls' correct behavior are
+component obligations, not assumptions.
 The required proof chain is:
 
 ```text
@@ -154,12 +160,14 @@ assuming that the project-owned component has the intended behavior:
    must describe that same target execution from the installed requested state;
    observer effects stay within declared footprints or their proved restoration
    account. Failures remain classified, never fabricated observations. Add the
-   agreed availability/progress statement with explicit OS/resource premises.
-   F proves availability of the actual Lean program including concrete foreign
-   behavior; compiler/runtime return preservation, finite-execution refinement
-   and reflection of native nonreturning executions transport it to the binary.
-   Thus termination and success are derived through the chain, not supplied as
-   an unexplained native-availability premise; reject-all correctness cannot pass.
+   explicit `EndToEnd.noDivergence` obligation and successful-capture availability.
+   F proves total termination of the actual Lean program, including concrete
+   foreign behavior, conditional on target termination and the agreed foundations.
+   Compiler/runtime termination and return preservation carry that proof to the
+   binary. Additional availability premises require successful observations;
+   otherwise finite classified failures remain possible, but divergence does not.
+   Termination and success must be derived, not assumed for project-owned code;
+   reject-all correctness cannot pass.
 
 C must name the concrete proof representation and source-to-artifact connection
 for every project-owned bridge function before fan-out. C's proof-route gate
@@ -184,8 +192,8 @@ evidence and calibration of foundations. Unproved obligations keep the end-to-en
 claim open even if component tests pass.
 
 The compiler/runtime preservation laws must be parametric in the **same concrete
-foreign semantics**, including no-result behaviors; they cannot already assume
-our bridge's abstract contract. C binds all execution predicates exhaustively to
+foreign semantics**, including preservation of total termination; they cannot
+already assume our bridge's abstract contract. C binds all execution predicates exhaustively to
 the actual artifacts. It binds `targetIn`, invocation counting and frame relations
 to the original requested target occurrence and explicit effects, independently
 of decoded observations. Exactly one invocation can include architectural
