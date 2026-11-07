@@ -14,4 +14,3 @@ pkgs.mkShell {
     export PATH="${python}/bin:$PATH"
   '';
 }
-

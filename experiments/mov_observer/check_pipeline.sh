@@ -20,4 +20,3 @@ lake env bash -c '
     lean -o "$module.olean" "$module.lean"
   done
 ' bash "$task_root"
-

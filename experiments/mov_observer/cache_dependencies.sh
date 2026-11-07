@@ -32,8 +32,6 @@ Path('out/mathlib-cache-roots.txt').write_text('\n'.join(sorted(mathlib)) + '\n'
 PY
 mapfile -t cache_roots < out/mathlib-cache-roots.txt
 cd "$AYXG_WORKSPACE"
-# Resolving the exact pinned packages precedes requesting their cache.
-lake resolve-deps
+# Loading the workspace resolves its pinned dependencies; do not run lake update.
 lake exe cache get "${cache_roots[@]}"
 bash "$task_root/check_pipeline.sh"
-

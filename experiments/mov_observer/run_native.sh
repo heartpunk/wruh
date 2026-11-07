@@ -37,4 +37,3 @@ cat /proc/cpuinfo > out/cpuinfo.txt
   --setenv GHOT_LIBSTDCXX_RLOCATION lib/libstdc++.so.6 \
   --setenv PYTHONPATH "/repo/experiments/mov_observer:/repo:$WRUH_AYXG_SOURCE/python" \
   -- "$PYTHON_BIN" /repo/experiments/mov_observer/native_probe.py | tee out/native-pbt.log
-
