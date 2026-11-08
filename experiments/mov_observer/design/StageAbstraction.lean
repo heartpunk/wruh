@@ -6,8 +6,8 @@ variable [FPInterpretation]
 
 /-- Availability plus all-result correctness; NOT a divergence-freedom claim. -/
 def StageCorrect {I O : Type} (run : I → O → Prop)
-    (admissible : I → Prop) (ensures : I → O → Prop) : Prop :=
-  ∀ i, admissible i → (∃ o, run i o) ∧ ∀ o, run i o → ensures i o
+    (admissible : I → Prop) (postcond : I → O → Prop) : Prop :=
+  ∀ i, admissible i → (∃ o, run i o) ∧ ∀ o, run i o → postcond i o
 
 /-- Data only: no correctness fields or assumed laws. -/
 structure FlagsComponents (C E : Type) where
