@@ -39,6 +39,36 @@ inductive Reply where
   | reaped (tracee : Tracee)
   | failed (errno : UInt32) (transferred : Nat)
 
+/-- Request/reply shape, identity and transfer-count compatibility. This is a
+necessary boundary obligation, not evidence that the operation occurred. In
+particular, a wait reply's new stop serial must additionally satisfy the live
+tracee lifecycle contract; no previous serial is carried by `wait` itself.
+A failed transfer may report a prefix, but non-transfer operations report zero.
+The actual prefix bytes and effects are constrained separately by Transfer. -/
+def OperationReplyCompatible (request : Operation) (reply : Reply) : Prop :=
+  match request, reply with
+  | .create, .created _ => True
+  | .readRegisters stop, .bytes actual bytes => actual = stop ∧ bytes.length = 216
+  | .writeRegisters stop bytes, .written actual count =>
+      actual = stop ∧ bytes.length = 216 ∧ count = bytes.length
+  | .readMemory stop _ length, .bytes actual bytes =>
+      actual = stop ∧ bytes.length = length
+  | .writeMemory stop _ bytes, .written actual count =>
+      actual = stop ∧ count = bytes.length
+  | .singleStep stop, .resumed actual => actual = stop
+  | .wait tracee, .stopped stop _ _ => stop.tracee = tracee
+  | .wait tracee, .exited actual _ => actual = tracee
+  | .reap tracee, .reaped actual => actual = tracee
+  | .readRegisters _, .failed _ count => count ≤ 216
+  | .writeRegisters _ bytes, .failed _ count => count ≤ bytes.length
+  | .readMemory _ _ length, .failed _ count => count ≤ length
+  | .writeMemory _ _ bytes, .failed _ count => count ≤ bytes.length
+  | .create, .failed _ count
+  | .singleStep _, .failed _ count
+  | .wait _, .failed _ count
+  | .reap _, .failed _ count => count = 0
+  | _, _ => False
+
 /-- Proposed narrow Lean effect boundary. No implementation or correctness law
 is supplied. The concrete exported foreign symbol must implement this function
 through the separately specified marshalling and ownership obligations. -/
@@ -203,6 +233,14 @@ def CallTerminates {State : Type} (e : Execution State) (request : Operation) : 
     match e.returned s with
     | none => ∃ next, e.step s next
     | some _ => ¬ ∃ next, e.step s next
+
+/-- Every reachable returned reply belongs to its originating request. This
+quantifies over all returned executions, including errors, without asserting
+that the execution relation is already bound to the foreign implementation. -/
+def CallReplyCompatible {State : Type} (e : Execution State) : Prop :=
+  ∀ request state reply,
+    Reaches e.step (e.initial request) state →
+    e.returned state = some reply → OperationReplyCompatible request reply
 
 /-- Interface-level obligations only. Still required: bind Execution to the
 actual ForeignAPI implementation and prove syscall argument/return, ownership,
