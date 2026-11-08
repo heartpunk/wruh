@@ -32,14 +32,16 @@ def InputInstalled (q : Request) (s : Env Γ) : Prop :=
 manufactured by the observer being checked. Concrete execution refinement must
 account for every invocation, including restarts, and every fault/abort path. -/
 inductive Event where
-  | targetStart (before : Env Γ)
+  | targetStart (token : StopToken) (before : Env Γ)
   | targetStop (original : FrozenStop)
+  | targetExit (tracee : Tracee) (waitStatus : UInt32)
   | capturePrefix (original : FrozenStop) (state : CaptureState)
   | transport (operation : Operation) (reply : Reply)
 
 inductive Result where
   | captured (capture : CaptureResult)
   | setupFailed (reason : ObserverFailure)
+  | targetExited (tracee : Tracee) (waitStatus : UInt32)
 
 structure Execution (State : Type) where
   initial : Request → State
@@ -49,7 +51,7 @@ structure Execution (State : Type) where
 
 def starts (events : List Event) : List (Env Γ) :=
   events.filterMap fun event => match event with
-    | .targetStart before => some before
+    | .targetStart _ before => some before
     | _ => none
 
 def stops (events : List Event) : List FrozenStop :=
@@ -57,16 +59,45 @@ def stops (events : List Event) : List FrozenStop :=
     | .targetStop original => some original
     | _ => none
 
-/-- The same one target occurrence must supply both requested-state execution
-and the returned original-stop evidence. Failed setup must not execute a target.
-Capture failures still retain the original stop; they are not successful captures. -/
+/-- Pure request consistency, independent of execution success. This catches
+conflicting duplicate assignments and instruction/input overlap via InputInstalled.
+It is not the full CPU/OS/permissions admission predicate. -/
+def RequestCoherent (q : Request) : Prop :=
+  (∃ state, InputInstalled q state) ∧
+  (⟨_, v_mem⟩ : Σ s, Var Γ s) ∉ q.outputFields ∧
+  q.outputFields.Nodup ∧ q.outputMemory.Nodup
+
+inductive Phase where
+  | ready
+  | running (token : StopToken)
+  | stopped (original : FrozenStop)
+  | exited (tracee : Tracee) (waitStatus : UInt32)
+
+/-- Ordered native occurrence skeleton. One start, matching later stop/exit,
+and capture only after that exact stop. Transport events cannot stand in for
+missing target events in the eventual complete execution binding. -/
+inductive Ordered : List Event → Phase → Prop
+  | initial : Ordered [] .ready
+  | transport {events phase} (operation reply) : Ordered events phase →
+      Ordered (events ++ [.transport operation reply]) phase
+  | start {events} (token before) : Ordered events .ready →
+      Ordered (events ++ [.targetStart token before]) (.running token)
+  | stop {events token} (original : FrozenStop) :
+      Ordered events (.running token) →
+      original.evidence.token.tracee = token.tracee →
+      token.serial < original.evidence.token.serial →
+      Ordered (events ++ [.targetStop original]) (.stopped original)
+  | exit {events token} (status) : Ordered events (.running token) →
+      Ordered (events ++ [.targetExit token.tracee status]) (.exited token.tracee status)
+  | capture {events original} (state) : Ordered events (.stopped original) →
+      Ordered (events ++ [.capturePrefix original state]) (.stopped original)
+
 def ReturnFaithful (q : Request) (events : List Event) : Result → Prop
-  | .setupFailed _ => starts events = [] ∧ stops events = []
+  | .setupFailed _ => Ordered events .ready
   | .captured result =>
-      ∃ before original,
-        starts events = [before] ∧ stops events = [original] ∧
-        InputInstalled q before ∧
+      ∃ original, Ordered events (.stopped original) ∧
         ResultFaithful q.outputFields q.outputMemory original result
+  | .targetExited tracee status => Ordered events (.exited tracee status)
 
 /-- Whole-run finite completion, including orchestration retries and concrete
 foreign calls. Apply conditionally to the agreed external progress assumptions
@@ -85,7 +116,8 @@ obligation of the actual execution binding, not an assumption of instrumentation
 def TraceConsistent {State : Type} (e : Execution State) (q : Request) : Prop :=
   e.history (e.initial q) = [] ∧
   ∀ s, Reaches e.step (e.initial q) s →
-    (starts (e.history s)).length ≤ 1 ∧
+    (∃ phase, Ordered (e.history s) phase) ∧
+    (∀ token before, Event.targetStart token before ∈ e.history s → InputInstalled q before) ∧
     (∀ next, e.step s next → ∃ suffix,
       e.history next = e.history s ++ suffix)
 
@@ -106,6 +138,9 @@ by an arbitrary `correct` premise or an AYXG/native comparison. -/
 def ObserverFidelityAndTermination {State : Type}
     (e : Execution State) (q : Request) : Prop :=
   Terminates e q ∧ TraceConsistent e q ∧
+  (¬ RequestCoherent q →
+    ∀ s result, Reaches e.step (e.initial q) s → e.returned s = some result →
+      result = .setupFailed .invalidState) ∧
   ∀ s result, Reaches e.step (e.initial q) s → e.returned s = some result →
     ReturnFaithful q (e.history s) result
 
