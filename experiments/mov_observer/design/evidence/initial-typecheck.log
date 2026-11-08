@@ -1,0 +1,8 @@
+'MovObserver.protocol_input_memory_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_loaded_pc' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+design/StageAbstraction.lean:9:24: error: unexpected identifier; expected '_' or forbidden token
+design/StageAbstraction.lean:34:2: error(lean.unknownIdentifier): Unknown identifier `StageCorrect`
+design/StageAbstraction.lean:39:2: error(lean.unknownIdentifier): Unknown identifier `StageCorrect`
+design/StageAbstraction.lean:46:2: error(lean.unknownIdentifier): Unknown identifier `StageCorrect`

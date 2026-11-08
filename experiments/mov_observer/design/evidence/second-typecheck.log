@@ -1,0 +1,127 @@
+'MovObserver.protocol_input_memory_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_loaded_pc' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+design/StageAbstraction.lean:9:29: error: unexpected identifier; expected '_' or forbidden token
+design/StageAbstraction.lean:34:2: error(lean.unknownIdentifier): Unknown identifier `StageCorrect`
+design/StageAbstraction.lean:39:2: error(lean.unknownIdentifier): Unknown identifier `StageCorrect`
+design/StageAbstraction.lean:46:2: error(lean.unknownIdentifier): Unknown identifier `StageCorrect`
+design/StageAbstraction.lean:78:16: error: Function expected at
+  hp
+but this term has type
+  PrepareCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  (w, a)
+design/StageAbstraction.lean:80:16: error: Function expected at
+  hl
+but this term has type
+  LoadCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  (w, a)
+design/StageAbstraction.lean:82:16: error: Function expected at
+  hc
+but this term has type
+  CaptureCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  post
+design/StageAbstraction.lean:85:16: error: Function expected at
+  hl
+but this term has type
+  LoadCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  (w, a)
+design/StageAbstraction.lean:85:53: error: Function expected at
+  hl
+but this term has type
+  LoadCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  (w, a)
+design/StageAbstraction.lean:87:16: error: Function expected at
+  hc
+but this term has type
+  CaptureCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  post
+design/StageAbstraction.lean:87:57: error: Function expected at
+  hc
+but this term has type
+  CaptureCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  post
+design/StageAbstraction.lean:90:16: error: Function expected at
+  hp
+but this term has type
+  PrepareCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  (w, a)
+design/StageAbstraction.lean:92:16: error: Function expected at
+  hl
+but this term has type
+  LoadCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  (w, a)
+design/StageAbstraction.lean:94:16: error: Function expected at
+  hc
+but this term has type
+  CaptureCorrect p
+
+Note: Expected a function because this term is being applied to the argument
+  post
+design/StageAbstraction.lean:97:12: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case mpr.refine_1
+inst✝ : FPInterpretation
+C E : Type
+p : FlagsComponents C E
+hf : FlagsControlFlowCorrect p.prepare p.load p.capture p.loaderEntry p.targetEntry p.captureEntry p.captureExit
+ho : FlagsObservationCorrect p.decode p.assemble
+hcv : FlagsConversionCorrect
+ha : FlagsArchitecturalLayoutCorrect
+hd : FlagsRecordDecoderCorrect p.recordBase p.decode
+hs : FlagsMemorySeparation p.recordBase p.prepareWrites p.installWrites p.captureWrites p.protectedAddress
+hk : FlagsBoundaryClassificationCorrect p.classify
+hi : ProtocolFlagsFidelity p.prepare p.load p.capture p.decode
+hr : FlagsProtocolFrames p.prepare p.load p.capture p.prepareWrites p.installWrites p.captureWrites
+⊢ PrepareCorrect p
+design/StageAbstraction.lean:102:12: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case mpr.refine_2
+inst✝ : FPInterpretation
+C E : Type
+p : FlagsComponents C E
+hf : FlagsControlFlowCorrect p.prepare p.load p.capture p.loaderEntry p.targetEntry p.captureEntry p.captureExit
+ho : FlagsObservationCorrect p.decode p.assemble
+hcv : FlagsConversionCorrect
+ha : FlagsArchitecturalLayoutCorrect
+hd : FlagsRecordDecoderCorrect p.recordBase p.decode
+hs : FlagsMemorySeparation p.recordBase p.prepareWrites p.installWrites p.captureWrites p.protectedAddress
+hk : FlagsBoundaryClassificationCorrect p.classify
+hi : ProtocolFlagsFidelity p.prepare p.load p.capture p.decode
+hr : FlagsProtocolFrames p.prepare p.load p.capture p.prepareWrites p.installWrites p.captureWrites
+⊢ LoadCorrect p
+design/StageAbstraction.lean:108:12: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce
+
+case mpr.refine_3
+inst✝ : FPInterpretation
+C E : Type
+p : FlagsComponents C E
+hf : FlagsControlFlowCorrect p.prepare p.load p.capture p.loaderEntry p.targetEntry p.captureEntry p.captureExit
+ho : FlagsObservationCorrect p.decode p.assemble
+hcv : FlagsConversionCorrect
+ha : FlagsArchitecturalLayoutCorrect
+hd : FlagsRecordDecoderCorrect p.recordBase p.decode
+hs : FlagsMemorySeparation p.recordBase p.prepareWrites p.installWrites p.captureWrites p.protectedAddress
+hk : FlagsBoundaryClassificationCorrect p.classify
+hi : ProtocolFlagsFidelity p.prepare p.load p.capture p.decode
+hr : FlagsProtocolFrames p.prepare p.load p.capture p.prepareWrites p.installWrites p.captureWrites
+⊢ CaptureCorrect p
+'MovObserver.Design.preservesApprovedContract' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
