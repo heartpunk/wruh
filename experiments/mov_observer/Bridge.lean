@@ -34,7 +34,7 @@ inductive Reply where
   | bytes (stop : StopToken) (payload : List (BitVec 8))
   | written (stop : StopToken) (count : Nat)
   | resumed (prior : StopToken)
-  | stopped (stop : StopToken) (waitStatus : UInt32) (siginfo : List (BitVec 8))
+  | stopped (stop : StopToken) (waitStatus : UInt32) (siginfo : Option (List (BitVec 8)))
   | exited (tracee : Tracee) (waitStatus : UInt32)
   | reaped (tracee : Tracee)
   | failed (errno : UInt32) (transferred : Nat)
@@ -52,6 +52,7 @@ structure Buffer where
   length : Nat
   alignment : Nat
   owner : Nat
+  deriving DecidableEq
 
 abbrev HostMemory := Nat → BitVec 8
 
@@ -59,7 +60,7 @@ def BufferContains (b : Buffer) (a : Nat) : Prop :=
   b.base ≤ a ∧ a < b.base + b.length
 
 def BufferValid (b : Buffer) : Prop :=
-  0 < b.alignment ∧ b.base % b.alignment = 0 ∧
+  b.base < 2^64 ∧ 0 < b.alignment ∧ b.base % b.alignment = 0 ∧
   b.base + b.length ≤ 2^64
 
 def BuffersDisjoint (a b : Buffer) : Prop :=
@@ -75,12 +76,33 @@ license writes to tracee memory or assume any Lean object representation. -/
 def HostFrame (outputs : List Buffer) (before after : HostMemory) : Prop :=
   ∀ a, (∀ b ∈ outputs, ¬ BufferContains b a) → after a = before a
 
-/-- Each buffer must stay live for the entire foreign call. Distinct owner IDs
-alone do not prove disjoint storage: both properties are explicitly required. -/
+/-- Entry-state check only; full-call lifetime is CallBufferLifetime below.
+Distinct owner IDs do not imply disjoint storage. -/
 def CallBuffersValid (inputs outputs : List Buffer) (liveOwners : List Nat) : Prop :=
   (∀ b ∈ inputs ++ outputs, BufferValid b ∧ b.owner ∈ liveOwners) ∧
   (∀ i ∈ inputs, ∀ o ∈ outputs, BuffersDisjoint i o) ∧
   outputs.Pairwise BuffersDisjoint
+
+/-- Explicit host allocation state; an owner identifies the whole allocation,
+not merely a permission label. Buffers refer to that allocation or a subrange. -/
+structure HostState where
+  memory : HostMemory
+  allocations : Nat → Option Buffer
+
+def BorrowedFrom (b : Buffer) (h : HostState) : Prop :=
+  ∃ allocation, h.allocations b.owner = some allocation ∧
+    allocation.owner = b.owner ∧ BufferValid allocation ∧ BufferValid b ∧
+    allocation.base ≤ b.base ∧
+    b.base + b.length ≤ allocation.base + allocation.length
+
+/-- Live allocations cannot overlap; this includes allocations not passed to
+the call (for example other Lean objects). Object headers and runtime metadata
+must not be included in a writable payload slice. Their concrete locations
+remain part of the future Lean ABI layout binding. -/
+def AllocationsSeparated (h : HostState) : Prop :=
+  ∀ a b left right,
+    h.allocations a = some left → h.allocations b = some right → a ≠ b →
+    BuffersDisjoint left right
 
 /-- The same request and stop token must survive argument marshalling. Neither
 an observed value nor another process's state may replace a requested value.
@@ -106,6 +128,29 @@ structure Execution (State : Type) where
 inductive Reaches {State : Type} (step : State → State → Prop) : State → State → Prop
   | refl (s) : Reaches step s s
   | next {a b c} : Reaches step a b → step b c → Reaches step a c
+
+/-- Every state of the call keeps the same backing allocations for borrowed
+buffers, including the return state. Release/transfer of ownership happens only
+after this borrowing interval; a bridge requiring a different ownership mode
+must specify that mode rather than silently use this contract. -/
+def CallBufferLifetime {State : Type} (e : Execution State)
+    (host : State → HostState) (request : Operation) (buffers : List Buffer) : Prop :=
+  ∀ s, Reaches e.step (e.initial request) s →
+    AllocationsSeparated (host s) ∧
+    ∀ b ∈ buffers,
+      BorrowedFrom b (host s) ∧
+      (host s).allocations b.owner = (host (e.initial request)).allocations b.owner
+
+/-- Prefix-level host framing, including unsuccessful calls. Input contents
+remain unchanged and every individual bridge step stays inside output slices.
+Operation-specific output contents/counts are separate obligations; this frame
+is not permission to fabricate an output payload. -/
+def CallMemoryFrame {State : Type} (e : Execution State)
+    (host : State → HostState) (request : Operation) (inputs outputs : List Buffer) : Prop :=
+  ∀ s, Reaches e.step (e.initial request) s →
+    (∀ b ∈ inputs, ∀ a, BufferContains b a →
+      (host s).memory a = (host (e.initial request)).memory a) ∧
+    (∀ next, e.step s next → HostFrame outputs (host s).memory (host next).memory)
 
 /-- No infinite path, stuck nonterminal state, or execution past return.
 This is intentionally stronger than existence of one terminating execution.

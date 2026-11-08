@@ -30,7 +30,7 @@ complete register image, FP state, segments, or memory are represented here. -/
 def RegisterComponentCorresponds (image : RegisterImage) (state : Env Γ) : Prop :=
   imageGprs image = observeGprs state ∧
   registerWord image 16 = Env.lookup state v_rip ∧
-  flagsFromRflags (registerWord image 18) = observeModeledFlags state
+  FlagsMatchRflags (observeModeledFlags state) (registerWord image 18)
 
 /-- The byte decoder must accept every complete image, return every byte
 unchanged, and reject every wrong-length input. This is an obligation on the
