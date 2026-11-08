@@ -53,7 +53,11 @@ inductive Authority where
 
 /-- A child accessor borrows through a live owned parent. Reading through it
 is not acquisition of an independent ownership right. -/
-def Authorized (view : View) (reference : Reference) : Authority → Prop
+def Accessible (actor : Holder) (borrowed : List Nat) (root : Nat) (right : Right) : Prop :=
+  right.holder = actor ∨ (actor = .bridge ∧ right.holder = .caller ∧ root ∈ borrowed)
+
+def Authorized (view : View) (actor : Holder) (borrowed : List Nat)
+    (reference : Reference) : Authority → Prop
   | .owned root => ∃ right, view.roots root = some right ∧ Accessible actor borrowed root right ∧ right.reference = reference ∧
       Live view reference
   | .child root index => ∃ holder parent,
@@ -75,7 +79,7 @@ def OtherRootsUnchanged (root : Nat) (before after : View) : Prop :=
 Concrete binding must expose every action, including retain/release on failures.
 Runtime allocation/initialization is separately bound to actual allocation events.
 No physical refcount or mandatory deallocation is presumed (persistent values exist). -/
-def ActionCorrect (before after : View) : Option Action → Prop
+def ActionCorrect (actor : Holder) (borrowed : List Nat) (before after : View) : Option Action → Prop
   | none => after.roots = before.roots
   | some (.retain source root holder reference) =>
       holder = actor ∧ Authorized before actor borrowed reference source ∧ before.roots root = none ∧
