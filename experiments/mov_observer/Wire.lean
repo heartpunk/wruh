@@ -22,7 +22,7 @@ def LE64 (word : Nat) : List (BitVec 8) :=
   (List.range 8).map fun i => BitVec.ofNat 8 (word / 2^(8*i))
 
 def FrameFits (f : Frame) : Prop :=
-  f.words.length = 7 ∧ (∀ word ∈ f.words, word < 2^64) ∧ f.payload.length < 2^64
+  f.words.length = 7 ∧ (∀ word ∈ f.words, word < 2^64) ∧ 64 + f.payload.length < 2^64
 
 def FrameMatches (f : Frame) (bytes : ByteArray) : Prop :=
   FrameFits f ∧ bytes.data.toList.map (fun b => b.toBitVec) =
@@ -60,7 +60,10 @@ def ReplyFrame : Reply → Frame
   | .reaped t => ⟨[6,t.pid.toNat,t.generation,0,0,0,0], []⟩
   | .failed errno transferred => ⟨[7,0,0,0,errno.toNat,transferred,0], []⟩
 
-/-- Exact encoding, including rejection rather than truncation of unbounded
+/-- Header-plus-payload arithmetic must be checked before allocating or indexing.
+The bound below is wire addressability, not an assumption that allocation succeeds;
+actual runtime size/resource limits and their errors remain bridge obligations.
+Exact encoding, including rejection rather than truncation of unbounded
 Nat metadata. The closed frame equations above are the independent specification. -/
 def RequestEncoderCorrect (encode : Operation → Option ByteArray) : Prop :=
   (∀ request, FrameFits (RequestFrame request) → ∃ bytes, encode request = some bytes) ∧
