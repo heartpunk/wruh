@@ -179,7 +179,7 @@ replacing it by an ideal protocol relation would not discharge these goals. -/
 structure Execution (State : Type) where
   initial : Operation → State
   step : State → State → Prop
-  returned : State → Option Reply
+  returned : State → Option (Except IO.Error Reply)
   /-- Complete ordered host writes for this step, including writes later undone.
   Completeness must follow from concrete bridge execution, not instrumentation
   that is permitted to omit effects. -/
@@ -234,13 +234,15 @@ def CallTerminates {State : Type} (e : Execution State) (request : Operation) : 
     | none => ∃ next, e.step s next
     | some _ => ¬ ∃ next, e.step s next
 
-/-- Every reachable returned reply belongs to its originating request. This
+/-- Successful IO returns contain replies; returned IO errors remain terminal
+through CallTerminates and must retain their identity in whole-run handling.
+Every reachable returned reply belongs to its originating request. This
 quantifies over all returned executions, including errors, without asserting
 that the execution relation is already bound to the foreign implementation. -/
 def CallReplyCompatible {State : Type} (e : Execution State) : Prop :=
   ∀ request state reply,
     Reaches e.step (e.initial request) state →
-    e.returned state = some reply → OperationReplyCompatible request reply
+    e.returned state = some (.ok reply) → OperationReplyCompatible request reply
 
 /-- Interface-level obligations only. Still required: bind Execution to the
 actual ForeignAPI implementation and prove syscall argument/return, ownership,

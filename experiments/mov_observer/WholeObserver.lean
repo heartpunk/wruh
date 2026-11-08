@@ -40,6 +40,7 @@ inductive Event where
   | targetExit (tracee : Tracee) (waitStatus : UInt32)
   | capturePrefix (original : FrozenStop) (state : CaptureState)
   | transport (operation : Operation) (reply : Reply)
+  | runtimeError (operation : Operation) (error : IO.Error)
 
 inductive Result where
   | captured (capture : CaptureResult)
@@ -86,6 +87,8 @@ inductive Ordered : List Event → Phase → Prop
   | initial : Ordered [] .ready
   | transport {events phase} (operation reply) : Ordered events phase →
       Ordered (events ++ [.transport operation reply]) phase
+  | runtimeError {events phase} (operation error) : Ordered events phase →
+      Ordered (events ++ [.runtimeError operation error]) phase
   | created {events} (tracee) : Ordered events .ready →
       Ordered (events ++ [.traceeCreated tracee]) (.created tracee)
   | prepared {events tracee} (token ambient) : Ordered events (.created tracee) →
@@ -138,7 +141,20 @@ def TransportErrorAt (events : List Event) (phase : Phase) (errno : UInt32) : Pr
     | .stopped original => operationTracee operation = some original.evidence.token.tracee
     | .exited tracee _ => operationTracee operation = some tracee
 
-/-- Transport-error cases are evidence-backed in their own phase. Non-transport
+/-- Preserve the exact returned IO.Error from the originating operation and
+phase. A Lean IO error is not inferred to be a native errno or a runtime abort. -/
+def RuntimeErrorAt (events : List Event) (phase : Phase) (error : IO.Error) : Prop :=
+  ∃ before after operation,
+    events = before ++ Event.runtimeError operation error :: after ∧
+    Ordered before phase ∧
+    match phase with
+    | .ready => operationTracee operation = none
+    | .created tracee => operationTracee operation = some tracee
+    | .preparing stop _ | .running stop => operationTracee operation = some stop.tracee
+    | .stopped original => operationTracee operation = some original.evidence.token.tracee
+    | .exited tracee _ => operationTracee operation = some tracee
+
+/-- Native transport and returned IO-error cases are evidence-backed in their own phase. Other
 failure categories still need their specific classification/validation contracts;
 True in those branches deliberately asserts nothing about their causes. This is
 not named or used as a complete failure-causality claim. -/
@@ -151,6 +167,13 @@ def TransportFailureSupported (events : List Event) : Result → Prop
         TransportErrorAt events (.stopped original) errno
   | .outcomeUnavailable started (.transport errno) =>
       TransportErrorAt events (.running started) errno
+  | .setupFailed (.runtimeError error) =>
+      ∃ phase, SetupPhase phase ∧ Ordered events phase ∧ RuntimeErrorAt events phase error
+  | .captured (.failed evidence (.runtimeError error)) =>
+      ∃ original, original.evidence = evidence ∧
+        RuntimeErrorAt events (.stopped original) error
+  | .outcomeUnavailable started (.runtimeError error) =>
+      RuntimeErrorAt events (.running started) error
   | _ => True
 
 /-- A target stop is supported by the exact consolidated wait receipt from

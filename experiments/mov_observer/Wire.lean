@@ -87,4 +87,25 @@ def ReplyEncoderCorrect (encode : Reply → Option ByteArray) : Prop :=
   (∀ reply bytes, encode reply = some bytes → FrameMatches (ReplyFrame reply) bytes) ∧
   (∀ reply, ¬ FrameFits (ReplyFrame reply) → encode reply = none)
 
+/-- The runtime error branch is not an encoded native errno reply. Malformed
+successful wire returns retain their exact bytes as a distinct boundary failure. -/
+inductive DecodedReturn where
+  | reply (value : Reply)
+  | runtimeError (error : IO.Error)
+  | malformed (bytes : ByteArray)
+
+/-- Fixed independent relation for ALL returned IO outcomes. It neither turns
+runtime errors into native replies nor assumes every successful byte-array return
+is a well-formed reply. Runtime aborts are not returned IO outcomes. -/
+def ForeignReturnMatches : Except IO.Error ByteArray → DecodedReturn → Prop
+  | .ok bytes, .reply value => FrameMatches (ReplyFrame value) bytes
+  | .ok bytes, .malformed retained =>
+      retained = bytes ∧ ¬ ∃ value, FrameMatches (ReplyFrame value) bytes
+  | .error error, .runtimeError retained => retained = error
+  | _, _ => False
+
+def ForeignReturnDecoderCorrect
+    (decode : Except IO.Error ByteArray → DecodedReturn) : Prop :=
+  ∀ raw result, decode raw = result ↔ ForeignReturnMatches raw result
+
 end MovObserver.Wire

@@ -1,0 +1,4 @@
+982c731a1fbacc7688006f44f9f7af9d9e3e0247d310a728827f49e7f1466c13  /nix/store/qpk7v7b4ixkpa4jfsvgmmsmdr4l23in1-lean/include/lean/lean.h
+4612b91e65806364c814fc445b35598d8e26ee0f2a811ffde6c330d792dcddab  /nix/store/qpk7v7b4ixkpa4jfsvgmmsmdr4l23in1-lean/src/lean/Init/System/IO.lean
+f5d0e8fc141f7e8c70263fb9712548d5c69c25a2a3cc25f3799af361bfc470b9  /nix/store/qpk7v7b4ixkpa4jfsvgmmsmdr4l23in1-lean/src/lean/Init/System/IOError.lean
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
