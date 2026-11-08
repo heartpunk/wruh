@@ -16,7 +16,7 @@ lake env bash -c '
   task_root=$1
   export LEAN_PATH="$task_root/out${LEAN_PATH:+:$LEAN_PATH}"
   cd "$task_root/out"
-  for module in Extracted Proof ByteCodec InputModel Pipeline Protocol ContractEquivalence NativeBoundary Bridge Wire Transfer VectorProtocol LegacyFp FaultProtocol WholeObserver; do
+  for module in Extracted Proof ByteCodec InputModel Pipeline Protocol ContractEquivalence NativeBoundary Bridge Wire RuntimeOwnership Transfer VectorProtocol LegacyFp FaultProtocol WholeObserver; do
     lean -o "$module.olean" "$module.lean"
   done
 ' bash "$task_root"
