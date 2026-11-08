@@ -1,0 +1,21 @@
+Checking Protocol
+'MovObserver.protocol_input_memory_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_loaded_pc' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+Checking ContractEquivalence
+'MovObserver.Regression.preservesApprovedContract' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Regression.preservesApprovedEndToEnd' depends on axioms: [propext, Classical.choice, Quot.sound]
+Checking NativeBoundary
+Checking Bridge
+Checking Transfer
+Checking VectorProtocol
+VectorProtocol.lean:9:323: warning: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+VectorProtocol.lean:12:92: warning: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+Checking LegacyFp
+Checking FaultProtocol
+Checking WholeObserver
