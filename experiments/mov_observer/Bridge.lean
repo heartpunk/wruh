@@ -121,9 +121,10 @@ structure Execution (State : Type) where
   initial : Operation → State
   step : State → State → Prop
   returned : State → Option (Except IO.Error Reply)
-  /-- Complete ordered host writes for this step, including writes later undone.
-  Completeness must follow from concrete bridge execution, not instrumentation
-  that is permitted to omit effects. -/
+  /-- Complete ordered writes of the bound leaf buffer-access segment, including
+  writes later undone. Every write in that segment must be included. Runtime
+  allocation and return-object construction are outside this segment and need
+  their separate documented-ABI handoff, not silent omission from its effects. -/
   writes : State → State → List (Nat × BitVec 8)
 
 inductive Reaches {State : Type} (step : State → State → Prop) : State → State → Prop

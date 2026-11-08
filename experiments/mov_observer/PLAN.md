@@ -102,7 +102,7 @@ or that the eventual regression campaign is limited to MOV/GPRs.
   WholeObserver.lean and the current native_probe.py/stub.py before designing replacements.
 - Add Observer.lean with a finite GPR observation request/result and ordinary IO
   sequencing: create a stopped tracee; prepare code/data and requested state;
-  run the fixed loader; hand off to and single-step the target exactly once;
+  run the fixed loader to its existing fallthrough; single-step the target exactly once;
   freeze its stop and PC; run the fixed capture fragment; read and return the
   record; release the tracee. Keep operational values usable by the existing
   AYXG-facing state relations. Ghost Env values are proof state, not executable
@@ -126,6 +126,12 @@ or that the eventual regression campaign is limited to MOV/GPRs.
   Lean. Establish the actual argument types, borrowed lifetimes, output allocation,
   errno/partial-result representation and caller-visible return type. Use the
   existing 216-byte register mapping. No new general serialization protocol.
+- Identify the precise buffer-access segment and its live input/output/scratch
+  storage. Bind the existing frame to that segment, separately relating its
+  bytes/status to the actual Lean return value. Do not apply a leaf buffer frame
+  across runtime allocation or return-object construction. If it does not fit
+  ordinary documented ABI use, propose the smallest correction rather than adding
+  machinery solely to satisfy the current relation.
 - Add Prop/theorem statements for that actual handoff: arguments reach the intended
   stopped tracee; buffer accesses obey the leaf-call frame/lifetime contract; returned
   bytes/count/status represent that operation. Identify imported runtime/kernel ABI
@@ -136,8 +142,10 @@ or that the eventual regression campaign is limited to MOV/GPRs.
 
 - Implement the remaining small foreign calls required by step 1. Extend the existing
   test ELF layout to contain the unchanged loader/capture bytes plus a separate target
-  slot; preserve their fixed addresses/RIP-relative data references and record the
-  exact fixture bytes. Do not rewrite the observer in C or Python.
+  slot at LOAD_CODE + len(loader_bytes()) = 0x400170. Preserve capture at 0x400000,
+  loader at 0x400100, and their RIP-relative data references. Single-step the sixteen
+  loader instructions and stop at 0x400170 before issuing the one target step.
+  Record the exact fixture bytes. Do not rewrite the observer in C or Python.
 - Run a concrete register MOV target as the plumbing witness, with several deliberately
   distinct GPR inputs. Lean drives installation, one target step, original-stop/PC
   preservation, capture and decoding. Target-instruction semantics are not checked
