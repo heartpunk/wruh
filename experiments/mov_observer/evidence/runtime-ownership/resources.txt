@@ -1,0 +1,8 @@
+SubState=exited
+Result=success
+ExecMainStatus=0
+MemoryPeak=427417600
+CPUUsageNSec=36503344000
+CPUQuotaPerSecUSec=1s
+MemoryMax=2147483648
+MemorySwapMax=0
