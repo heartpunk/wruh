@@ -318,14 +318,21 @@ structure FlagsComponents (C E : Type) where
   captureEntry : BitVec 64
   captureExit : BitVec 64
 
+/-- Canonical represented flags at requested/ambient boundaries. Invalid
+post-target encodings must still be classified/reported, not filtered away. -/
 def admittedInput (i : Env Γ × Env Γ) : Prop :=
   (observeModeledFlags i.1).Valid ∧ (observeModeledFlags i.2).Valid
 
+/-- Preparation may install flags directly. Its completed endpoint preserves
+GPRs and all other non-exempt fields; only the fixed footprint may be written. -/
 def PrepareCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
   StageCorrect (fun i s => s = p.prepare i.1 i.2) admittedInput fun i s =>
     StateFrame flagsInstallChangedFields p.prepareWrites i.2 s ∧
     Env.lookup s v_rip = p.loaderEntry
 
+/-- Every admitted input has a loader result; every result installs exactly
+the requested represented flags, respects its frame, and reaches target entry.
+Temporary register borrowing must be restored by this endpoint. -/
 def LoadCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
   StageCorrect (fun i s => p.load.denotes (p.prepare i.1 i.2) s)
     admittedInput fun i s =>
@@ -333,6 +340,9 @@ def LoadCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
       StateFrame flagsInstallChangedFields p.installWrites (p.prepare i.1 i.2) s ∧
       Env.lookup s v_rip = p.targetEntry
 
+/-- Capture includes handoff and compares with ORIGINAL post-target state.
+Every valid post has a result; every result decodes the original flags and
+restores all non-exempt fields. Aborted prefixes are not covered by this frame. -/
 def CaptureCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
   StageCorrect (fun post s => p.capture.denotes (enterCapture post) s)
     (fun post => (observeModeledFlags post).Valid) fun post s =>
@@ -340,7 +350,13 @@ def CaptureCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
       StateFrame captureChangedFields p.captureWrites post s ∧
       Env.lookup s v_rip = p.captureExit
 
-/-- Shared-parameter flags contract. These remain obligations, not assumed laws. -/
+/-- Shared-parameter flags contract. These remain obligations, not assumed laws.
+The handoff PC law covers all states and must match the existing enterCapture.
+Footprints are fixed per layout, not inferred from observed modifications.
+The classifier covers invalid encodings too. Concrete acquisition, record-writer
+agreement, protected-set adequacy, failure reporting, intermediate interference,
+native stop/fault behavior and actual Lean/ABI invocation remain integration
+obligations. Availability here is not all-execution termination. -/
 def FlagsProtocolContract {C E : Type} (p : FlagsComponents C E) : Prop :=
   PrepareCorrect p ∧ LoadCorrect p ∧ CaptureCorrect p ∧
   (∀ post, Env.lookup (enterCapture post) v_rip = p.captureEntry) ∧
