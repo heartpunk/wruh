@@ -35,14 +35,16 @@ remain autonomous; material changes or unresolved compatibility need user judgme
 
 ## Review handoff: what the remaining decisions change
 
-Audit baseline: `0a221f1a115ca89298f39aad7df3c92029bb90f4` (the source
-obligations were last changed at `a40341cbf1764c22994ee83975387741272b526a`).
-The integrated check and Terra review are in `evidence/transport-linkage/`.
+Audit source: `61167d217d646151c266b75d5821563745a6710b`.
+The latest integrated check and Terra review are in `evidence/request-scope/`;
+ownership review and corrected runtime binding skeleton are recorded in
+`evidence/runtime-ownership/`.
 No full chunk is complete. In particular, `ObserverCoreContract` is not yet the
 requested end-to-end native-observer obligation.
 
 1. **Lean/ABI boundary.** Read `Bridge.CallTerminates`, `CallBufferLifetime`,
-   `CallMemoryFrame`, `CallReplyCompatible`, and the exact `Wire.*Correct`
+   `CallDynamicMemoryFrame`, `CallReplyCompatibleFor`,
+   `RuntimeOwnership.OwnedCallContract`, and the exact `Wire.*Correct`
    definitions. They constrain all abstract call paths and exact bytes. They
    do not yet relate `ForeignAPI.invoke` to those paths. The pending effect-program
    versus ordinary-IO decision determines the concrete relation and compiler/runtime
@@ -92,3 +94,23 @@ require those artifacts to exist. Their future obligations must still be declare
 with explicit artifact parameters and fixed semantics; proving or instantiating
 those obligations belongs to implementation/proof work. No code-hash placeholder
 or user-approved foundation may stand in for our own glue's correctness.
+
+## Decision-dependent stopping audit
+
+The reviewed independent ownership quantifier correction is complete. Terra's
+source audit found no remaining independent increment that would complete a
+whole requested chunk. More abstract linkage could be written, but would not
+resolve the concrete component-boundary, state, fault and environment choices.
+Do not label any chunk complete or silently select narrower coverage.
+
+Four questions have been presented to the user: lossless x87/state extension;
+Lean effect-program versus ordinary-IO proof route; required observation for
+interruptions/exits and owned-tracee cleanup; private/stable versus shared or
+device-backed memory. No answer has been presumed. Runtime OOM/abort behavior
+must additionally be reconciled with the chosen external resource/progress
+premises; returned IO.Error handling does not solve that problem.
+
+This is a stopping point for dependent specification work, not a claim that
+all possible source inspection or abstract schemas are exhausted. Resume with
+concrete definitions under the agreed decisions, preserving the accumulated
+obligations, rather than treating their current projections as trusted laws.
