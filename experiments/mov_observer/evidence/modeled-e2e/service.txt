@@ -1,0 +1,8 @@
+SubState=exited
+Result=success
+ExecMainStatus=0
+ExecStart={ path=/run/current-system/sw/bin/bash ; argv[]=/run/current-system/sw/bin/bash -c export PATH=/nix/store/qpk7v7b4ixkpa4jfsvgmmsmdr4l23in1-lean/bin:/run/current-system/sw/bin; export LEAN_NUM_THREADS=1; cd /tmp/wruh-mov-observer-20261106/ayxg; lake env bash -c 'export LEAN_PATH=/tmp/wruh-mov-observer-20261106/out:$LEAN_PATH; cd /home/heartpunk/workspaces/wruh-observer-modeled-e2e-f1853fac/experiments/mov_observer; lean Protocol.lean' ; ignore_errors=no ; start_time=[Sun 2026-11-08 00:37:23 PST] ; stop_time=[Sun 2026-11-08 00:37:28 PST] ; pid=2623572 ; code=exited ; status=0 }
+MemoryPeak=410722304
+CPUQuotaPerSecUSec=1s
+MemoryMax=2147483648
+MemorySwapMax=0
