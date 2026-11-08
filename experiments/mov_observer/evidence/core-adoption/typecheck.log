@@ -1,0 +1,6 @@
+'MovObserver.protocol_input_memory_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_loaded_pc' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Regression.preservesApprovedContract' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Regression.preservesApprovedEndToEnd' depends on axioms: [propext, Classical.choice, Quot.sound]
