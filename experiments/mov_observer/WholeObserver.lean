@@ -198,13 +198,13 @@ satisfy its frame/recoverability obligation. No separate successful-run trace is
 substituted. Concrete execution binding must expose intermediate effects. -/
 def PrefixNoninterference (q : Request) (layout : Layout) (events : List Event) : Prop :=
   LayoutSeparated q layout ∧
-  (∀ prefix suffix token ambient state,
-    Ordered prefix (.preparing token ambient) →
-    events = prefix ++ Event.installationPrefix state :: suffix →
+  (∀ priorEvents suffix token ambient state,
+    Ordered priorEvents (.preparing token ambient) →
+    events = priorEvents ++ Event.installationPrefix state :: suffix →
     InstallationRecoverable q layout ambient state) ∧
-  (∀ prefix suffix token ambient before,
-    Ordered prefix (.preparing token ambient) →
-    events = prefix ++ Event.targetStart token before :: suffix →
+  (∀ priorEvents suffix token ambient before,
+    Ordered priorEvents (.preparing token ambient) →
+    events = priorEvents ++ Event.targetStart token before :: suffix →
     StateFrame (installationFields q) (installationWrites q layout) ambient before) ∧
   (∀ original state, Event.capturePrefix original state ∈ events →
     Recoverable original layout.captureWrites state)
