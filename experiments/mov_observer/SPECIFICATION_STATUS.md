@@ -30,4 +30,65 @@ Do not treat instrumented event names as proof of their provenance/completeness.
 Do not assume bridge, decoder, frame or failure correctness as an external law.
 Do not use a model prediction as native input evidence or output evidence.
 Do not infer full coverage from the legacy image, a typecheck, or a targeted review.
-The next binding decisions must preserve contract AND telos; changes need user judgment.
+Binding decisions must preserve contract AND telos. Routine compatible details
+remain autonomous; material changes or unresolved compatibility need user judgment.
+
+## Review handoff: what the remaining decisions change
+
+Audit baseline: `0a221f1a115ca89298f39aad7df3c92029bb90f4` (the source
+obligations were last changed at `a40341cbf1764c22994ee83975387741272b526a`).
+The integrated check and Terra review are in `evidence/transport-linkage/`.
+No full chunk is complete. In particular, `ObserverCoreContract` is not yet the
+requested end-to-end native-observer obligation.
+
+1. **Lean/ABI boundary.** Read `Bridge.CallTerminates`, `CallBufferLifetime`,
+   `CallMemoryFrame`, `CallReplyCompatible`, and the exact `Wire.*Correct`
+   definitions. They constrain all abstract call paths and exact bytes. They
+   do not yet relate `ForeignAPI.invoke` to those paths. The pending effect-program
+   versus ordinary-IO decision determines the concrete relation and compiler/runtime
+   preservation statements. Recommendation: an explicit effect program shared by
+   the interpreter and its semantics, with project-owned interpreter/FFI correctness
+   as obligations, never as imported foundations. This is not authorization to
+   implement that interpreter.
+2. **FP/vector state.** Read `VectorProtocol.VectorContract` and
+   `LegacyFp.DecoderCorrect`. Full modeled vector bits have installation/capture
+   obligations; the legacy FP image has exact byte preservation. There is no full
+   x87 conversion, installation or capture obligation yet. The pending representation
+   decision is whether to extend AYXG-facing state losslessly and relate the existing
+   fields, rather than discard raw 80-bit payloads. Recommendation: extend it, subject
+   to user judgment. Raw transport evidence is not a second replacement semantics.
+3. **Faults and environment.** Read `FaultProtocol.FaultCaptureSafety`,
+   `FallbackCorrect`, and `WholeObserver.TransportEvidenceLinked`. Original evidence
+   and state recovery are constrained, without target replay. Still to settle:
+   which stopped outcomes have a required complete observation, what to return for
+   an intervening external signal or process exit, and how cleanup is permitted to
+   affect an owned tracee after evidence is secured. Recommendation: preserve raw
+   wait/siginfo evidence for every outcome; do not infer successful instruction
+   completion from SIGTRAP alone. Their concrete policy and total obligations remain to be specified; routine
+   compatible details do not require a new approval. Only material uncertainty or
+   changes to fault observability, ownership, or progress require user judgment.
+4. **Whole-observer domain and availability.** Read `ObserverCoreContract` and
+   `CaptureAvailable`. The latter is not currently included under a concrete
+   independently fixed admission/environment premise. We must settle the required
+   CPU/OS-enabled state and target-visible mappings, including whether memory is
+   proved private/stable or concurrent external writes are modeled. Recommendation:
+   establish private stable observation storage from containment rather than silently
+   assuming a stopped process has stable memory. Any exclusions from the target
+   domain require user judgment. External primitive progress must be stated
+   explicitly; project-owned loops, retries and calls must still terminate.
+
+## What implementation does and does not block
+
+The intended total contracts, concrete state relations, effect semantics, resource
+ownership rules and failure classifications can be specified before implementing
+the observer. Pending decisions block only the definitions materially dependent on
+them. In particular, pinned runtime ABI investigation and representation-neutral
+shared-execution linkage can proceed now. Missing implementation is not an excuse
+to leave those statements as arbitrary predicates.
+
+Exact compiled bridge/stub bytes, symbol addresses, compiler-produced layouts and
+the correspondence of a particular executable's transitions to the specification
+require those artifacts to exist. Their future obligations must still be declared
+with explicit artifact parameters and fixed semantics; proving or instantiating
+those obligations belongs to implementation/proof work. No code-hash placeholder
+or user-approved foundation may stand in for our own glue's correctness.
