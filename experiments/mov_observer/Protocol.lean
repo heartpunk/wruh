@@ -352,8 +352,8 @@ def FlagsProtocolContract {C E : Type} (p : FlagsComponents C E) : Prop :=
   FlagsBoundaryClassificationCorrect p.classify
 
 
-/-- The reusable frame algebra; it says nothing about intermediate faults. -/
 omit [FPInterpretation] in
+/-- The reusable frame algebra; it says nothing about intermediate faults. -/
 theorem stateFrame_compose
     (fieldsA fieldsB : List (Σ s : TermSort, Var Γ s))
     (bytesA bytesB : List (BitVec 64)) (a b c : Env Γ)

@@ -1,8 +1,10 @@
 # Smaller observer contracts: ten-minute design result
 
 Scope: simplify the specifications for a faithful, noninterfering native
-instruction observer. No AYXG/native differential comparison. Approved
-Protocol.lean is unchanged. Candidate: StageAbstraction.lean.
+instruction observer. No AYXG/native differential comparison. The stage core is now adopted in `../Protocol.lean`. The exploratory candidate
+was removed; its history remains in VCS. `../ContractEquivalence.lean` retains
+the exact approved statements only as regression targets and proves both the
+component contract and modeled end-to-end statement equivalent.
 
 ## Recommended core
 
@@ -16,7 +18,7 @@ Protocol.lean is unchanged. Candidate: StageAbstraction.lean.
 - Keep concrete codecs, independent bit layout, classifier and record/separation
   requirements. No generic lens library or assumed setter laws required.
 
-The candidate's `preservesApprovedContract` proves a biconditional with the
+The checked design's `preservesApprovedContract` proved a biconditional with the
 existing FlagsProtocolContract. This proves equivalent obligations, not observer
 correctness. Both the equivalence and frame composition checked on pinned Lean
 on NixOS, source c132261ae7dc1d18ee359c2f4e41863bedca9dbc, exit 0, no sorryAx.
@@ -35,7 +37,7 @@ and its equivalence proof adds initial lines. No global optimality claim.
 
 ## Further reductions, in priority order
 
-1. Adopt the checked equivalent refactor after human review. Derive existing
+1. Adoption is authorized and implemented. Next derive existing
    modeled end-to-end assertions from the component contract and frame algebra;
    avoid separately hand-writing those implications for every profile.
 2. Define reusable metadata assembler and raw-preserving validity classifier
@@ -78,4 +80,7 @@ read/write-set API surfaced in the bounded search. VTDO provides observation
 adequacy rather than a replacement operational frame library.
 
 Design timebox began 2026-11-08 08:43:16 UTC; deadline 08:53:16 UTC.
-No approved contract was rewritten or native implementation started.
+The design timebox did not rewrite the approved contract. Subsequent authorized
+adoption replaced its presentation with the equivalent compact core. No native
+observer implementation was added. Current validation is in
+`../evidence/core-adoption/`.
