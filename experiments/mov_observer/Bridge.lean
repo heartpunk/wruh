@@ -209,25 +209,40 @@ def CallBufferLifetime {State : Type} (e : Execution State)
 
 /-- Prefix-level host framing, including unsuccessful calls. Input contents
 remain unchanged and every individual bridge step stays inside output or
-separately declared, state-indexed scratch slices. Scratch is disjoint from
+separately declared, state-indexed scratch slices. Outputs are also state-indexed
+so new payloads need not exist at call entry. Every slice must already be live
+and writable in the PRE-state of a write; a later allocation cannot justify it.
+The runtime allocation event must precede use, and allocation/header writes need
+their own accounted runtime permission. Scratch is disjoint from
 input/output slices. Every concrete write must occur in `e.writes`; equality of
 endpoint bytes alone cannot discharge that execution-binding obligation.
 Scratch allocation/free must be exposed as separate steps before/after use.
 Operation-specific output contents/counts are separate obligations; this frame
 is not permission to fabricate an output payload. -/
-def CallMemoryFrame {State : Type} (e : Execution State)
-    (host : State → HostState) (request : Operation) (inputs outputs : List Buffer) (scratch : State → List Buffer) : Prop :=
+def CallDynamicMemoryFrame {State : Type} (e : Execution State)
+    (host : State → HostState) (request : Operation) (inputs : List Buffer)
+    (outputs scratch : State → List Buffer) : Prop :=
   ∀ s, Reaches e.step (e.initial request) s →
     (∀ b ∈ inputs, ∀ a, BufferContains b a →
       (host s).memory a = (host (e.initial request)).memory a) ∧
-    (∀ b ∈ outputs ++ scratch s, WritableBorrow b (host s)) ∧
-    (∀ b ∈ scratch s, ∀ other ∈ inputs ++ outputs, BuffersDisjoint b other) ∧
+    (∀ b ∈ outputs s ++ scratch s, WritableBorrow b (host s)) ∧
+    (∀ b ∈ scratch s, ∀ other ∈ inputs ++ outputs s, BuffersDisjoint b other) ∧
     (∀ next, e.step s next →
-      HostFrame (outputs ++ scratch s) (host s).memory (host next).memory ∧
+      HostFrame (outputs s ++ scratch s) (host s).memory (host next).memory ∧
       (∀ write ∈ e.writes s next,
-        (∃ b ∈ outputs ++ scratch s, BufferContains b write.1) ∧
+        (∃ b ∈ outputs s ++ scratch s, BufferContains b write.1) ∧
         (∀ b ∈ inputs, ¬ BufferContains b write.1)) ∧
       AllocationTransitionCorrect (host s) (host next))
+
+/-- Original preallocated-output contract as the constant-output instance.
+This preserves its conditions; allocating a returned payload during the call
+instead requires CallDynamicMemoryFrame with live state-indexed output slices.
+Those slices must be fixed by runtime ownership/layout, never selected after
+observing which addresses were written. -/
+def CallMemoryFrame {State : Type} (e : Execution State)
+    (host : State → HostState) (request : Operation) (inputs outputs : List Buffer)
+    (scratch : State → List Buffer) : Prop :=
+  CallDynamicMemoryFrame e host request inputs (fun _ => outputs) scratch
 
 /-- No infinite path, stuck nonterminal state, or execution past return.
 This is intentionally stronger than existence of one terminating execution.
