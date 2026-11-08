@@ -204,6 +204,56 @@ def ProtocolFlagsFidelity
     (∀ captured, flagsCapture.denotes (enterCapture post) captured →
       decodeFlags (Env.lookup captured v_mem) = some (observeModeledFlags post)))
 
+/-- Flag installation may change only represented flags, RIP and declared
+memory bytes. Preparation has the same allowance so supervisor installation
+is permitted; it is not forced through a ceremonial instruction fragment. -/
+def flagsInstallChangedFields : List (Σ s : TermSort, Var Γ s) :=
+  [⟨_, v_mem⟩, ⟨_, v_rip⟩,
+   ⟨_, v_rflags_CF⟩, ⟨_, v_rflags_PF⟩, ⟨_, v_rflags_AF⟩,
+   ⟨_, v_rflags_ZF⟩, ⟨_, v_rflags_SF⟩, ⟨_, v_rflags_OF⟩,
+   ⟨_, v_d⟩, ⟨_, v_ac⟩, ⟨_, v_id⟩]
+
+/-- Completed-stage frame: field allowance plus a concrete byte footprint.
+This does not claim the footprint is minimal or private; actual footprints
+and their separation from target memory/code require independent review. -/
+def FlagsStageFrame (changed : List (Σ s : TermSort, Var Γ s))
+    (writes : List (BitVec 64)) (before after : Env Γ) : Prop :=
+  (∀ (s : TermSort) (v : Var Γ s),
+    (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ changed →
+    Env.lookup after v = Env.lookup before v) ∧
+  (∀ a : BitVec 64, a ∉ writes →
+    Env.lookup after v_mem a = Env.lookup before v_mem a)
+
+/-- Unproved endpoint frames for the flags-only extension. Use the SAME
+preparation/loader/capture parameters as ProtocolFlagsFidelity; that separate
+obligation supplies availability and correct flag values. GPR installation
+is a separate stage, not an allowed side effect of flags installation.
+Temporary register borrowing must be restored by each completed endpoint.
+Capture includes enterCapture and compares with the original post-target state;
+it must restore flags as well as every other field except RIP and record memory.
+Aborted prefixes, intermediate interference, saved-PC fidelity and actual native
+implementation binding remain separate obligations. Footprints are fixed per
+instantiation, not chosen from observed differences after execution. -/
+def FlagsStageFrames
+    (prepareFlags : Env Γ → Env Γ → Env Γ)
+    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
+    (prepareWrites installWrites captureWrites : List (BitVec 64)) : Prop :=
+  (∀ wanted ambient : Env Γ,
+    (observeModeledFlags wanted).Valid →
+    (observeModeledFlags ambient).Valid →
+    FlagsStageFrame flagsInstallChangedFields prepareWrites
+      ambient (prepareFlags wanted ambient)) ∧
+  (∀ wanted ambient loaded : Env Γ,
+    (observeModeledFlags wanted).Valid →
+    (observeModeledFlags ambient).Valid →
+    flagsLoader.denotes (prepareFlags wanted ambient) loaded →
+    FlagsStageFrame flagsInstallChangedFields installWrites
+      (prepareFlags wanted ambient) loaded) ∧
+  (∀ post captured : Env Γ,
+    (observeModeledFlags post).Valid →
+    flagsCapture.denotes (enterCapture post) captured →
+    FlagsStageFrame captureChangedFields captureWrites post captured)
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
