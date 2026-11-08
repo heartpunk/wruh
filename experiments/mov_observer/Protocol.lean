@@ -216,7 +216,7 @@ def flagsInstallChangedFields : List (Σ s : TermSort, Var Γ s) :=
 /-- Completed-stage frame: field allowance plus a concrete byte footprint.
 This does not claim the footprint is minimal or private; actual footprints
 and their separation from target memory/code require independent review. -/
-def FlagsStageFrame (changed : List (Σ s : TermSort, Var Γ s))
+def StateFrame (changed : List (Σ s : TermSort, Var Γ s))
     (writes : List (BitVec 64)) (before after : Env Γ) : Prop :=
   (∀ (s : TermSort) (v : Var Γ s),
     (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ changed →
@@ -234,25 +234,25 @@ it must restore flags as well as every other field except RIP and record memory.
 Aborted prefixes, intermediate interference, saved-PC fidelity and actual native
 implementation binding remain separate obligations. Footprints are fixed per
 instantiation, not chosen from observed differences after execution. -/
-def FlagsStageFrames
+def FlagsProtocolFrames
     (prepareFlags : Env Γ → Env Γ → Env Γ)
     (flagsLoader flagsCapture : QFAbvStep Γ Γ)
     (prepareWrites installWrites captureWrites : List (BitVec 64)) : Prop :=
   (∀ wanted ambient : Env Γ,
     (observeModeledFlags wanted).Valid →
     (observeModeledFlags ambient).Valid →
-    FlagsStageFrame flagsInstallChangedFields prepareWrites
+    StateFrame flagsInstallChangedFields prepareWrites
       ambient (prepareFlags wanted ambient)) ∧
   (∀ wanted ambient loaded : Env Γ,
     (observeModeledFlags wanted).Valid →
     (observeModeledFlags ambient).Valid →
     flagsLoader.denotes (prepareFlags wanted ambient) loaded →
-    FlagsStageFrame flagsInstallChangedFields installWrites
+    StateFrame flagsInstallChangedFields installWrites
       (prepareFlags wanted ambient) loaded) ∧
   (∀ post captured : Env Γ,
     (observeModeledFlags post).Valid →
     flagsCapture.denotes (enterCapture post) captured →
-    FlagsStageFrame captureChangedFields captureWrites post captured)
+    StateFrame captureChangedFields captureWrites post captured)
 
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
