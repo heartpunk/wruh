@@ -122,14 +122,51 @@ def observeModeledFlags (s : Env Γ) : ModeledFlags :=
    Env.lookup s v_rflags_SF, Env.lookup s v_rflags_OF,
    Env.lookup s v_d, Env.lookup s v_ac, Env.lookup s v_id⟩
 
+/-- VEX AMD64 representation invariant, not an arbitrary coverage restriction.
+Source: VEX fd41c675d50845b0aadd0b42ac7490038e2f3d82,
+libvex_guest_amd64.h and LibVEX_GuestAMD64_get/put_rflags. -/
+def ModeledFlags.Valid (f : ModeledFlags) : Prop :=
+  (f.d = 1 ∨ f.d = BitVec.ofNat 64 (2^64 - 1)) ∧
+  (f.ac = 0 ∨ f.ac = 1) ∧ (f.id = 0 ∨ f.id = 1)
+
+instance (f : ModeledFlags) : Decidable f.Valid :=
+  inferInstanceAs (Decidable ((f.d = 1 ∨ f.d = BitVec.ofNat 64 (2^64 - 1)) ∧
+    (f.ac = 0 ∨ f.ac = 1) ∧ (f.id = 0 ∨ f.id = 1)))
+
+/-- Decode only the nine represented flags; no claim of full RFLAGS coverage. -/
+def flagsFromRflags (word : BitVec 64) : ModeledFlags :=
+  let bit (n : Nat) : BitVec 1 := if word.getLsbD n then 1 else 0
+  ⟨bit 0, bit 2, bit 4, bit 6, bit 7, bit 11,
+   if word.getLsbD 10 then BitVec.ofNat 64 (2^64 - 1) else 1,
+   if word.getLsbD 18 then 1 else 0,
+   if word.getLsbD 21 then 1 else 0⟩
+
+def modeledRflagsMask : BitVec 64 :=
+  BitVec.ofNat 64 (2^0 + 2^2 + 2^4 + 2^6 + 2^7 + 2^10 + 2^11 + 2^18 + 2^21)
+
+/-- Patch the represented flags into a supplied word, preserving every other
+bit (including reserved bits). Reject invalid VEX encodings rather than
+normalizing them. This does not assert that the OS permits writing the word. -/
+def flagsToRflags (f : ModeledFlags) (original : BitVec 64) : Option (BitVec 64) :=
+  if f.Valid then
+    let bits := BitVec.ofNat 64
+      (f.cf.toNat * 2^0 + f.pf.toNat * 2^2 + f.af.toNat * 2^4 +
+       f.zf.toNat * 2^6 + f.sf.toNat * 2^7 + f.of_.toNat * 2^11 +
+       (if f.d = BitVec.ofNat 64 (2^64 - 1) then 2^10 else 0) +
+       f.ac.toNat * 2^18 + f.id.toNat * 2^21)
+    some ((original &&& ~~~modeledRflagsMask) ||| bits)
+  else none
+
 /-- Unproved modeled flags-extension obligation. The parameters must eventually
 be instantiated with the actual preparation, extracted loader/capture and
 memory decoder; the current MOV fragments do not satisfy this obligation.
 Availability prevents a disabled guard or reject-all decoder from passing.
 All completed outcomes must be faithful, not merely one chosen successor.
 The decoder receives only captured memory, never wanted flags or a prediction.
-This states modeled fidelity for all Γ values. Native admissibility and the
-mapping of d/ac/id to hardware, missing architectural flags, memory layout,
+This requires canonical VEX flags at the input and target-stop boundaries.
+Proving that actual target executions preserve that invariant is still required;
+an invalid model successor must be reported, not silently skipped. OS write
+permissions, missing architectural flags, memory layout,
 frame/ordering and concrete implementation binding remain separate obligations;
 this definition does not settle or narrow those requirements. -/
 def ProtocolFlagsFidelity
@@ -137,10 +174,13 @@ def ProtocolFlagsFidelity
     (flagsLoader flagsCapture : QFAbvStep Γ Γ)
     (decodeFlags : Mem 64 8 → Option ModeledFlags) : Prop :=
   (∀ wanted ambient : Env Γ,
+    (observeModeledFlags wanted).Valid →
+    (observeModeledFlags ambient).Valid →
     (∃ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded) ∧
     (∀ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded →
       observeModeledFlags loaded = observeModeledFlags wanted)) ∧
   (∀ post : Env Γ,
+    (observeModeledFlags post).Valid →
     (∃ captured, flagsCapture.denotes (enterCapture post) captured) ∧
     (∀ captured, flagsCapture.denotes (enterCapture post) captured →
       decodeFlags (Env.lookup captured v_mem) = some (observeModeledFlags post)))
