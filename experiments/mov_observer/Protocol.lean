@@ -58,6 +58,30 @@ theorem protocol_loaded_pc {C E : Type}
   rw [← run.inputStep.2]
   rfl
 
+/-- Fields intentionally changed by input preparation and GPR loading.
+Memory is framed separately at byte granularity; RIP is the fixed loader
+fallthrough, and the sixteen GPRs receive the requested values. -/
+def inputChangedFields : List (Σ s : TermSort, Var Γ s) :=
+  [⟨_, v_mem⟩, ⟨_, v_rip⟩,
+   ⟨_, v_rax⟩, ⟨_, v_rcx⟩, ⟨_, v_rdx⟩, ⟨_, v_rbx⟩,
+   ⟨_, v_rsp⟩, ⟨_, v_rbp⟩, ⟨_, v_rsi⟩, ⟨_, v_rdi⟩,
+   ⟨_, v_r8⟩, ⟨_, v_r9⟩, ⟨_, v_r10⟩, ⟨_, v_r11⟩,
+   ⟨_, v_r12⟩, ⟨_, v_r13⟩, ⟨_, v_r14⟩, ⟨_, v_r15⟩]
+
+/-- Unproved obligation for the existing preparation and loader, independent
+of whether a subsequent target or capture succeeds. Every other field in Γ
+must retain its ambient value; only input-slot bytes may change in memory.
+This frames the current modeled state, not fields absent from Γ or native
+mapping/permission behavior. GPR fidelity and fixed RIP are separate claims. -/
+def ProtocolInputStateFrame : Prop :=
+  ∀ (wanted ambient loaded : Env Γ),
+    loadStep.denotes (prepareInput wanted ambient) loaded →
+    (∀ (s : TermSort) (v : Var Γ s),
+      (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ inputChangedFields →
+      Env.lookup loaded v = Env.lookup ambient v) ∧
+    (∀ a : BitVec 64, (∀ w ∈ inputWrites, a ≠ w.1) →
+      Env.lookup loaded v_mem a = Env.lookup ambient v_mem a)
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
