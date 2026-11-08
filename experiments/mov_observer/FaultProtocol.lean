@@ -7,10 +7,14 @@ open Bridge
 /-- Original stop evidence, frozen before any capture redirection. `post` is
 related to native acquisition by the bridge obligations, never a prediction.
 Missing siginfo stays missing rather than being synthesized from an outcome. -/
-structure FrozenStop where
+structure StopEvidence where
   token : StopToken
   waitStatus : UInt32
   siginfo : Option (List (BitVec 8))
+
+/-- Ghost proof state, not a public/native-acquired return value. -/
+structure FrozenStop where
+  evidence : StopEvidence
   post : Env Γ
 
 inductive ObserverFailure where
@@ -55,9 +59,18 @@ def NoReplay (events : List CaptureEvent) : Prop :=
     | .targetInvocation => False
     | _ => True
 
+structure CapturedField where
+  sort : TermSort
+  field : Var Γ sort
+  value : Denote sort
+
+structure CapturedValues where
+  fields : List CapturedField
+  memory : List (BitVec 64 × BitVec 8)
+
 inductive CaptureResult where
-  | observed (original : FrozenStop) (values : Env Γ)
-  | failed (original : FrozenStop) (reason : ObserverFailure)
+  | observed (original : StopEvidence) (values : CapturedValues)
+  | failed (original : StopEvidence) (reason : ObserverFailure)
 
 /-- Receipts retain every intermediate state, including aborted capture prefixes.
 A concrete trace binding must include those states and every target invocation. -/
@@ -68,17 +81,18 @@ structure CaptureRun where
 
 /-- A failed observation still reports the same original stop. Required fields
 and memory addresses must be fixed independently of capture success by the final
-profile. Env is a typed carrier here: unselected values are not claimed observed.
+profile. Returned fields are explicit typed values; unselected model state is not returned.
 Profile adequacy and nonvacuous coverage remain required integration obligations. -/
 def ResultFaithful (requiredFields : List (Σ s : TermSort, Var Γ s))
     (requiredMemory : List (BitVec 64)) (original : FrozenStop) : CaptureResult → Prop
-  | .observed recorded values => recorded = original ∧
-      (∀ (sort : TermSort) (field : Var Γ sort),
-        (⟨sort, field⟩ : Σ t, Var Γ t) ∈ requiredFields →
-        Env.lookup values field = Env.lookup original.post field) ∧
-      (∀ address ∈ requiredMemory,
-        Env.lookup values v_mem address = Env.lookup original.post v_mem address)
-  | .failed recorded _ => recorded = original
+  | .observed recorded values =>
+      recorded = original.evidence ∧
+      (⟨_, v_mem⟩ : Σ s, Var Γ s) ∉ requiredFields ∧
+      values.fields.map (fun f => (⟨f.sort, f.field⟩ : Σ s, Var Γ s)) = requiredFields ∧
+      (∀ f ∈ values.fields, f.value = Env.lookup original.post f.field) ∧
+      values.memory.map Prod.fst = requiredMemory ∧
+      (∀ pair ∈ values.memory, pair.2 = Env.lookup original.post v_mem pair.1)
+  | .failed recorded _ => recorded = original.evidence
 
 /-- Prefix preservation and original-outcome fidelity, independent of whether
 normal capture or fallback completes. Acquisition, classification and failure
@@ -102,7 +116,7 @@ def FallbackCorrect (writes : List (BitVec 64))
     (fallback : FrozenStop → CaptureState → CaptureRun → Prop) : Prop :=
   ∀ original interrupted prior status info,
     capture original prior →
-    prior.result = .failed original (.captureFault status info) →
+    prior.result = .failed original.evidence (.captureFault status info) →
     prior.states.getLast? = some interrupted →
     Recoverable original writes interrupted →
     (∃ run, fallback original interrupted run) ∧
