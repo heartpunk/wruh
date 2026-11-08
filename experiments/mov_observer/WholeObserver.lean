@@ -42,6 +42,7 @@ inductive Result where
   | captured (capture : CaptureResult)
   | setupFailed (reason : ObserverFailure)
   | targetExited (tracee : Tracee) (waitStatus : UInt32)
+  | outcomeUnavailable (started : StopToken) (reason : ObserverFailure)
 
 structure Execution (State : Type) where
   initial : Request → State
@@ -98,6 +99,7 @@ def ReturnFaithful (q : Request) (events : List Event) : Result → Prop
       ∃ original, Ordered events (.stopped original) ∧
         ResultFaithful q.outputFields q.outputMemory original result
   | .targetExited tracee status => Ordered events (.exited tracee status)
+  | .outcomeUnavailable started _ => Ordered events (.running started)
 
 /-- Whole-run finite completion, including orchestration retries and concrete
 foreign calls. Apply conditionally to the agreed external progress assumptions
