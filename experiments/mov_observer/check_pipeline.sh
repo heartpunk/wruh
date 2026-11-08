@@ -7,7 +7,7 @@ test -f "$ayxg_root/Ayxg/QfAbv/Step.lean"
 : "${AYXG_FLOATLIB_SOURCE:?Run through the pinned Nix development environment}"
 export LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-4}
 mkdir -p "$task_root/out"
-cp "$task_root"/{Proof,ByteCodec,Pipeline,Protocol,ContractEquivalence,NativeBoundary,Bridge,Wire,Transfer,VectorProtocol,LegacyFp,FaultProtocol,WholeObserver}.lean "$task_root/out/"
+cp "$task_root"/{Proof,ByteCodec,Pipeline,Protocol,ContractEquivalence,NativeBoundary,Bridge,Wire,RuntimeOwnership,Transfer,VectorProtocol,LegacyFp,FaultProtocol,WholeObserver}.lean "$task_root/out/"
 cp "$task_root/models/"*.lean "$task_root/out/"
 cd "$ayxg_root"
 lake build Ayxg.QfAbv.Step Ayxg.LTS.QfAbv.SymbolicTransitionSystem
