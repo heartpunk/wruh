@@ -356,6 +356,29 @@ def FlagsControlFlowCorrect
     flagsCapture.denotes (enterCapture post) captured →
     Env.lookup captured v_rip = captureExit)
 
+/-- Flags observation retaining the original target metadata. C and E are
+model control/outcome types, not a claim that native execution exposes a model
+edge identifier. Their native correspondence remains a separate obligation. -/
+structure FlagsObservation (C E : Type) where
+  control : C
+  edge : E
+  savedPC : BitVec 64
+  flags : ModeledFlags
+
+/-- Unproved observation-assembly obligation. The assembler receives only
+saved metadata and captured memory, never requested or predicted flag values.
+Successful decoding must produce exactly that metadata and those decoded flags;
+decoder failure must remain None. This does not prove the supervisor saved the
+right metadata before handoff, acquired the right memory, or reports the result.
+Those executable snapshot/acquisition/reporting links remain obligations. -/
+def FlagsObservationCorrect {C E : Type}
+    (decodeFlags : Mem 64 8 → Option ModeledFlags)
+    (assemble : C → E → BitVec 64 → Mem 64 8 → Option (FlagsObservation C E)) : Prop :=
+  ∀ (control : C) (edge : E) (savedPC : BitVec 64) (memory : Mem 64 8),
+    assemble control edge savedPC memory =
+      (decodeFlags memory).map fun flags =>
+        ⟨control, edge, savedPC, flags⟩
+
 /-- Combined, unproved flags-component contract. Fidelity and framing share
 exactly the same stage functions; fixed footprints belong to that instantiation.
 The architectural conversions are the concrete functions above, not arbitrary
@@ -364,16 +387,18 @@ This conjunction does not prove that an executable invokes these components,
 establish that capture writes the agreed record, establish completeness of
 the protected-address predicate, or propagate classification failures. Those links
 remain explicit integration obligations, not consequences of these names. -/
-def FlagsProtocolContract (recordBase : Nat)
+def FlagsProtocolContract {C E : Type} (recordBase : Nat)
     (prepareFlags : Env Γ → Env Γ → Env Γ)
     (flagsLoader flagsCapture : QFAbvStep Γ Γ)
     (decodeFlags : Mem 64 8 → Option ModeledFlags)
+    (assemble : C → E → BitVec 64 → Mem 64 8 → Option (FlagsObservation C E))
     (classify : Env Γ → FlagsBoundaryResult)
     (prepareWrites installWrites captureWrites : List (BitVec 64))
     (protectedAddress : BitVec 64 → Prop)
     (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
   FlagsControlFlowCorrect prepareFlags flagsLoader flagsCapture
     loaderEntry targetEntry captureEntry captureExit ∧
+  FlagsObservationCorrect decodeFlags assemble ∧
   FlagsConversionCorrect ∧
   FlagsArchitecturalLayoutCorrect ∧
   FlagsRecordDecoderCorrect recordBase decodeFlags ∧
