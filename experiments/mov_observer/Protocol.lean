@@ -296,6 +296,21 @@ def FlagsProtocolFrames
     flagsCapture.denotes (enterCapture post) captured →
     StateFrame captureChangedFields captureWrites post captured)
 
+/-- Unproved binding of the flags decoder to an eight-byte little-endian
+RFLAGS record at a fixed base. read64 is the existing concrete byte decoder;
+flagsFromRflags is the existing architectural conversion. No requested values
+or predicted post-state enter decoding. Every memory is covered, so reject-all
+or alternate-record decoders cannot satisfy this obligation.
+The base must permit eight contiguous addresses without 64-bit wraparound.
+Memory here is total: readability, short native transfers, record acquisition,
+and agreement of the capture writer with this base remain separate obligations.
+This does not claim all RFLAGS bits appear in ModeledFlags. -/
+def FlagsRecordDecoderCorrect (recordBase : Nat)
+    (decodeFlags : Mem 64 8 → Option ModeledFlags) : Prop :=
+  recordBase + 8 ≤ 2^64 ∧
+  ∀ memory : Mem 64 8,
+    decodeFlags memory = some (flagsFromRflags (read64 memory recordBase))
+
 /-- Combined, unproved flags-component contract. Fidelity and framing share
 exactly the same stage functions; fixed footprints belong to that instantiation.
 The architectural conversions are the concrete functions above, not arbitrary
