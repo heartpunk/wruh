@@ -102,6 +102,49 @@ def ProtocolCaptureHandoffFrame : Prop :=
     (∀ a : BitVec 64, (∀ w ∈ expectedWrites, a ≠ w.1) →
       Env.lookup captured v_mem a = Env.lookup post v_mem a)
 
+/-- Exact current model representation, without normalizing flag encodings.
+The 64-bit d/ac/id fields are retained verbatim, not asserted to be raw RFLAGS
+bits. This is not a claim that Γ represents every architectural flag. -/
+structure ModeledFlags where
+  cf : BitVec 1
+  pf : BitVec 1
+  af : BitVec 1
+  zf : BitVec 1
+  sf : BitVec 1
+  of_ : BitVec 1
+  d : BitVec 64
+  ac : BitVec 64
+  id : BitVec 64
+
+def observeModeledFlags (s : Env Γ) : ModeledFlags :=
+  ⟨Env.lookup s v_rflags_CF, Env.lookup s v_rflags_PF,
+   Env.lookup s v_rflags_AF, Env.lookup s v_rflags_ZF,
+   Env.lookup s v_rflags_SF, Env.lookup s v_rflags_OF,
+   Env.lookup s v_d, Env.lookup s v_ac, Env.lookup s v_id⟩
+
+/-- Unproved modeled flags-extension obligation. The parameters must eventually
+be instantiated with the actual preparation, extracted loader/capture and
+memory decoder; the current MOV fragments do not satisfy this obligation.
+Availability prevents a disabled guard or reject-all decoder from passing.
+All completed outcomes must be faithful, not merely one chosen successor.
+The decoder receives only captured memory, never wanted flags or a prediction.
+This states modeled fidelity for all Γ values. Native admissibility and the
+mapping of d/ac/id to hardware, missing architectural flags, memory layout,
+frame/ordering and concrete implementation binding remain separate obligations;
+this definition does not settle or narrow those requirements. -/
+def ProtocolFlagsFidelity
+    (prepareFlags : Env Γ → Env Γ → Env Γ)
+    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
+    (decodeFlags : Mem 64 8 → Option ModeledFlags) : Prop :=
+  (∀ wanted ambient : Env Γ,
+    (∃ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded) ∧
+    (∀ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded →
+      observeModeledFlags loaded = observeModeledFlags wanted)) ∧
+  (∀ post : Env Γ,
+    (∃ captured, flagsCapture.denotes (enterCapture post) captured) ∧
+    (∀ captured, flagsCapture.denotes (enterCapture post) captured →
+      decodeFlags (Env.lookup captured v_mem) = some (observeModeledFlags post)))
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
