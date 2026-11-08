@@ -41,7 +41,6 @@ inductive Event where
   | capturePrefix (original : FrozenStop) (state : CaptureState)
   | transport (operation : Operation) (reply : Reply)
   | runtimeError (operation : Operation) (error : IO.Error)
-  | malformedReply (operation : Operation) (bytes : ByteArray)
 
 inductive Result where
   | captured (capture : CaptureResult)
@@ -54,16 +53,6 @@ structure Execution (State : Type) where
   step : State → State → Prop
   history : State → List Event
   returned : State → Option Result
-
-def starts (events : List Event) : List (Env Γ) :=
-  events.filterMap fun event => match event with
-    | .targetStart _ before => some before
-    | _ => none
-
-def stops (events : List Event) : List FrozenStop :=
-  events.filterMap fun event => match event with
-    | .targetStop original => some original
-    | _ => none
 
 /-- Pure request consistency, independent of execution success. This catches
 conflicting duplicate assignments and instruction/input overlap via InputInstalled.
@@ -90,8 +79,6 @@ inductive Ordered : List Event → Phase → Prop
       Ordered (events ++ [.transport operation reply]) phase
   | runtimeError {events phase} (operation error) : Ordered events phase →
       Ordered (events ++ [.runtimeError operation error]) phase
-  | malformedReply {events phase} (operation bytes) : Ordered events phase →
-      Ordered (events ++ [.malformedReply operation bytes]) phase
   | created {events} (tracee) : Ordered events .ready →
       Ordered (events ++ [.traceeCreated tracee]) (.created tracee)
   | prepared {events tracee} (token ambient) : Ordered events (.created tracee) →
@@ -157,25 +144,10 @@ def RuntimeErrorAt (events : List Event) (phase : Phase) (error : IO.Error) : Pr
     | .stopped original => operationTracee operation = some original.evidence.token.tracee
     | .exited tracee _ => operationTracee operation = some tracee
 
-/-- Malformed successful wire returns remain exact evidence from the same
-operation/phase. Wire.ForeignReturnMatches separately requires that these bytes
-really are malformed; this witness alone does not establish decoder fidelity. -/
-def MalformedReplyAt (events : List Event) (phase : Phase) (bytes : ByteArray) : Prop :=
-  ∃ before after operation,
-    events = before ++ Event.malformedReply operation bytes :: after ∧
-    Ordered before phase ∧
-    match phase with
-    | .ready => operationTracee operation = none
-    | .created tracee => operationTracee operation = some tracee
-    | .preparing stop _ | .running stop => operationTracee operation = some stop.tracee
-    | .stopped original => operationTracee operation = some original.evidence.token.tracee
-    | .exited tracee _ => operationTracee operation = some tracee
-
-/-- Native transport, returned IO errors and malformed replies are evidence-backed
-in their own phase. Other
-failure categories still need their specific classification/validation contracts;
-True in those branches deliberately asserts nothing about their causes. This is
-not named or used as a complete failure-causality claim. -/
+/-- Native transport and returned IO errors retain evidence from their own
+phase. Other failure categories still need their concrete classification;
+True in those branches asserts nothing about their causes. Retry/abort policy
+is user-controlled and is not chosen by this relation. -/
 def TransportFailureSupported (events : List Event) : Result → Prop
   | .setupFailed (.transport errno) =>
       ∃ phase, SetupPhase phase ∧ Ordered events phase ∧
@@ -192,13 +164,6 @@ def TransportFailureSupported (events : List Event) : Result → Prop
         RuntimeErrorAt events (.stopped original) error
   | .outcomeUnavailable started (.runtimeError error) =>
       RuntimeErrorAt events (.running started) error
-  | .setupFailed (.malformedReply bytes) =>
-      ∃ phase, SetupPhase phase ∧ Ordered events phase ∧ MalformedReplyAt events phase bytes
-  | .captured (.failed evidence (.malformedReply bytes)) =>
-      ∃ original, original.evidence = evidence ∧
-        MalformedReplyAt events (.stopped original) bytes
-  | .outcomeUnavailable started (.malformedReply bytes) =>
-      MalformedReplyAt events (.running started) bytes
   | _ => True
 
 /-- A target stop is supported by the exact consolidated wait receipt from
@@ -243,8 +208,8 @@ def ObserverTransportEvidence {State : Type} (e : Execution State)
     (q : Request) : Prop :=
   ∀ s, Reaches e.step (e.initial q) s → TransportEvidenceLinked (e.history s)
 
-/-- Whole-run finite completion, including orchestration retries and concrete
-foreign calls. Apply conditionally to the agreed external progress assumptions
+/-- Nonexceptional whole-run finite completion, including agreed retries and
+concrete foreign calls. Exceptional substrate crashes are outside this obligation. Apply conditionally to the agreed external progress assumptions
 and terminating target instruction, never assume termination of our own code.
 This is stronger than the existing per-call termination obligation. -/
 def Terminates {State : Type} (e : Execution State) (q : Request) : Prop :=

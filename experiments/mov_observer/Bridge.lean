@@ -69,17 +69,11 @@ def OperationReplyCompatible (request : Operation) (reply : Reply) : Prop :=
   | .reap _, .failed _ count => count = 0
   | _, _ => False
 
-/-- A successful foreign IO return may still fail wire validation. Retain the
-exact malformed bytes rather than fabricating a native reply or IO.Error. -/
-inductive DecodedReply where
-  | reply (value : Reply)
-  | malformed (bytes : ByteArray)
-
-/-- Proposed narrow Lean effect boundary. No implementation or correctness law
-is supplied. The concrete exported foreign symbol must implement this function
-through the separately specified marshalling and ownership obligations. -/
+/-- Abstract operation boundary for ordinary Lean functions and concrete FFI
+calls, not a serialized dispatcher or an effect interpreter. Returned IO errors
+remain errors; native syscall failures retain errno in Reply. -/
 structure ForeignAPI where
-  invoke : Operation → IO DecodedReply
+  invoke : Operation → IO Reply
 
 /-- Host addresses are distinct from tracee addresses. Length uses Nat so the
 ABI obligation must rule out overflow before narrowing to a machine size. -/
@@ -87,8 +81,6 @@ structure Buffer where
   base : Nat
   length : Nat
   alignment : Nat
-  owner : Nat
-  generation : Nat
   deriving DecidableEq
 
 abbrev HostMemory := Nat → BitVec 8
@@ -113,79 +105,22 @@ license writes to tracee memory or assume any Lean object representation. -/
 def HostFrame (outputs : List Buffer) (before after : HostMemory) : Prop :=
   ∀ a, (∀ b ∈ outputs, ¬ BufferContains b a) → after a = before a
 
-/-- Entry-state check only; full-call lifetime is CallBufferLifetime below.
-Distinct owner IDs do not imply disjoint storage. -/
-def CallBuffersValid (inputs outputs : List Buffer) (liveOwners : List Nat) : Prop :=
-  (∀ b ∈ inputs ++ outputs, BufferValid b ∧ b.owner ∈ liveOwners) ∧
+/-- Requirements on the concrete call's buffers, fixed before use rather than
+inferred from the writes that happened. -/
+def CallBuffersValid (inputs outputs : List Buffer) : Prop :=
+  (∀ b ∈ inputs ++ outputs, BufferValid b) ∧
   (∀ i ∈ inputs, ∀ o ∈ outputs, BuffersDisjoint i o) ∧
   outputs.Pairwise BuffersDisjoint
 
-/-- Explicit host allocation state; an owner identifies the whole allocation,
-not merely a permission label. Buffers refer to that allocation or a subrange. -/
-structure HostState where
-  memory : HostMemory
-  allocations : Nat → Option Buffer
-  retired : Nat → Nat → Prop
-  writablePayload : Nat → Nat → List Buffer
-
-def BorrowedFrom (b : Buffer) (h : HostState) : Prop :=
-  ∃ allocation, h.allocations b.owner = some allocation ∧
-    allocation.owner = b.owner ∧ allocation.generation = b.generation ∧
-    ¬ h.retired b.owner b.generation ∧ BufferValid allocation ∧ BufferValid b ∧
-    allocation.base ≤ b.base ∧
-    b.base + b.length ≤ allocation.base + allocation.length
-
-/-- Writable payload is supplied by the concrete allocation/ABI layout, not
-chosen from observed writes. Every permitted slice must stay within the same
-live allocation. Headers may be writable only as explicitly owned runtime
-scratch, never by pretending they are returned observation bytes. -/
-def WritableBorrow (b : Buffer) (h : HostState) : Prop :=
-  BorrowedFrom b h ∧
-  ∃ payload ∈ h.writablePayload b.owner b.generation,
-    payload.owner = b.owner ∧ payload.generation = b.generation ∧
-    BorrowedFrom payload h ∧ payload.base ≤ b.base ∧
-    b.base + b.length ≤ payload.base + payload.length
-
-/-- Required at every allocation/free transition: retired incarnations never
-return. The concrete execution binding must expose each allocation/free event;
-a step that hides free-and-reallocate is not an adequate binding. -/
-def AllocationTransitionCorrect (before after : HostState) : Prop :=
-  (∀ owner generation, before.retired owner generation →
-    after.retired owner generation) ∧
-  (∀ owner old, before.allocations owner = some old →
-    after.allocations owner ≠ some old → after.retired owner old.generation) ∧
-  (∀ owner allocation, after.allocations owner = some allocation →
-    allocation.owner = owner ∧ ¬ after.retired owner allocation.generation)
-
-/-- Live allocations cannot overlap; this includes allocations not passed to
-the call (for example other Lean objects). Object headers and runtime metadata
-must not be included in a writable payload slice. Their concrete locations
-remain part of the future Lean ABI layout binding. -/
-def AllocationsSeparated (h : HostState) : Prop :=
-  ∀ a b left right,
-    h.allocations a = some left → h.allocations b = some right → a ≠ b →
-    BuffersDisjoint left right
-
-/-- The same request and stop token must survive argument marshalling. Neither
-an observed value nor another process's state may replace a requested value.
-`encode`/`decode` are future concrete bridge codecs, not trusted premises. -/
-def RequestCodecCorrect {Wire : Type}
-    (encode : Operation → Wire) (decode : Wire → Option Operation) : Prop :=
-  ∀ request, decode (encode request) = some request
-
-/-- Symmetric output requirement, including transport errors and partial writes.
-An implementation may not turn a failure into a fabricated observation. -/
-def ReplyCodecCorrect {Wire : Type}
-    (encode : Reply → Wire) (decode : Wire → Option Reply) : Prop :=
-  ∀ reply, decode (encode reply) = some reply
-
-/-- State of the future concrete execution interpreter. The relation must be
-bound to the actual Lean program plus its concrete foreign implementation;
-replacing it by an ideal protocol relation would not discharge these goals. -/
+/-- Proof relation for the actual Lean/FFI call, not an implementation interpreter.
+The concrete binding supplies its steps, returned value and project-owned writes.
+Buffer-frame claims concern the leaf buffer-access segment with storage supplied
+by the caller; runtime allocation is outside that segment and governed by the
+documented ABI contract. This is not yet a whole-call refinement proof. -/
 structure Execution (State : Type) where
   initial : Operation → State
   step : State → State → Prop
-  returned : State → Option (Except IO.Error DecodedReply)
+  returned : State → Option (Except IO.Error Reply)
   /-- Complete ordered host writes for this step, including writes later undone.
   Completeness must follow from concrete bridge execution, not instrumentation
   that is permitted to omit effects. -/
@@ -195,59 +130,48 @@ inductive Reaches {State : Type} (step : State → State → Prop) : State → S
   | refl (s) : Reaches step s s
   | next {a b c} : Reaches step a b → step b c → Reaches step a c
 
-/-- Every state of the call keeps the same backing allocations for borrowed
-buffers, including the return state. Release/transfer of ownership happens only
-after this borrowing interval; a bridge requiring a different ownership mode
-must specify that mode rather than silently use this contract. -/
+/-- Borrowed storage remains valid throughout the call. `live` must be bound
+to the concrete function's documented ABI lifetime, not a new allocator model.
+Our handoff must satisfy that ABI contract; runtime correctness is not re-proved. -/
 def CallBufferLifetime {State : Type} (e : Execution State)
-    (host : State → HostState) (request : Operation) (buffers : List Buffer) : Prop :=
+    (live : State → Buffer → Prop) (request : Operation) (buffers : List Buffer) : Prop :=
   ∀ s, Reaches e.step (e.initial request) s →
-    AllocationsSeparated (host s) ∧
-    ∀ b ∈ buffers,
-      BorrowedFrom b (host s) ∧
-      (host s).allocations b.owner = (host (e.initial request)).allocations b.owner
+    ∀ b ∈ buffers, BufferValid b ∧ live s b
 
-/-- Prefix-level host framing, including unsuccessful calls. Input contents
-remain unchanged and every individual bridge step stays inside output or
-separately declared, state-indexed scratch slices. Outputs are also state-indexed
-so new payloads need not exist at call entry. Every slice must already be live
-and writable in the PRE-state of a write; a later allocation cannot justify it.
-The runtime allocation event must precede use, and allocation/header writes need
-their own accounted runtime permission. Scratch is disjoint from
-input/output slices. Every concrete write must occur in `e.writes`; equality of
-endpoint bytes alone cannot discharge that execution-binding obligation.
-Scratch allocation/free must be exposed as separate steps before/after use.
-Operation-specific output contents/counts are separate obligations; this frame
-is not permission to fabricate an output payload. -/
+/-- Project-owned writes stay inside the concrete function's output/scratch
+buffers, and borrowed input bytes stay unchanged, including failed prefixes.
+Output/scratch storage must be valid and live before use. Runtime allocation
+internals are governed by the imported ABI contract, not enumerated here.
+`memory` and `e.writes` describe the same actual call; complete project-owned
+writes must be supplied by its binding, not selected to make this claim true. -/
 def CallDynamicMemoryFrame {State : Type} (e : Execution State)
-    (host : State → HostState) (request : Operation) (inputs : List Buffer)
+    (memory : State → HostMemory) (live : State → Buffer → Prop)
+    (request : Operation) (inputs : List Buffer)
     (outputs scratch : State → List Buffer) : Prop :=
+  CallBufferLifetime e live request inputs ∧
   ∀ s, Reaches e.step (e.initial request) s →
+    CallBuffersValid inputs (outputs s ++ scratch s) ∧
+    (∀ b ∈ outputs s ++ scratch s, live s b) ∧
     (∀ b ∈ inputs, ∀ a, BufferContains b a →
-      (host s).memory a = (host (e.initial request)).memory a) ∧
-    (∀ b ∈ outputs s ++ scratch s, WritableBorrow b (host s)) ∧
-    (∀ b ∈ scratch s, ∀ other ∈ inputs ++ outputs s, BuffersDisjoint b other) ∧
+      memory s a = memory (e.initial request) a) ∧
     (∀ next, e.step s next →
-      HostFrame (outputs s ++ scratch s) (host s).memory (host next).memory ∧
-      (∀ write ∈ e.writes s next,
+      HostFrame (outputs s ++ scratch s) (memory s) (memory next) ∧
+      ∀ write ∈ e.writes s next,
         (∃ b ∈ outputs s ++ scratch s, BufferContains b write.1) ∧
-        (∀ b ∈ inputs, ¬ BufferContains b write.1)) ∧
-      AllocationTransitionCorrect (host s) (host next))
+        (∀ b ∈ inputs, ¬ BufferContains b write.1))
 
-/-- Original preallocated-output contract as the constant-output instance.
-This preserves its conditions; allocating a returned payload during the call
-instead requires CallDynamicMemoryFrame with live state-indexed output slices.
-Those slices must be fixed by runtime ownership/layout, never selected after
-observing which addresses were written. -/
+/-- Preallocated-output instance of the same concrete-call frame. -/
 def CallMemoryFrame {State : Type} (e : Execution State)
-    (host : State → HostState) (request : Operation) (inputs outputs : List Buffer)
+    (memory : State → HostMemory) (live : State → Buffer → Prop)
+    (request : Operation) (inputs outputs : List Buffer)
     (scratch : State → List Buffer) : Prop :=
-  CallDynamicMemoryFrame e host request inputs (fun _ => outputs) scratch
+  CallDynamicMemoryFrame e memory live request inputs (fun _ => outputs) scratch
 
 /-- No infinite path, stuck nonterminal state, or execution past return.
 This is intentionally stronger than existence of one terminating execution.
-External primitive progress and target termination are premises of the future
-instantiated theorem; they are not assumed of project-owned code here. -/
+For nonexceptional runs, external primitive progress and target termination
+are premises of the future instantiated theorem; termination of project-owned
+code is an obligation, not an imported premise. -/
 def CallTerminates {State : Type} (e : Execution State) (request : Operation) : Prop :=
   Acc (fun next current => e.step current next) (e.initial request) ∧
   ∀ s, Reaches e.step (e.initial request) s →
@@ -263,22 +187,10 @@ that the execution relation is already bound to the foreign implementation. -/
 def CallReplyCompatibleFor {State : Type} (e : Execution State) (request : Operation) : Prop :=
   ∀ state reply,
     Reaches e.step (e.initial request) state →
-    e.returned state = some (.ok (.reply reply)) → OperationReplyCompatible request reply
+    e.returned state = some (.ok reply) → OperationReplyCompatible request reply
 
 /-- Interface-wide claim retained separately from an admitted individual call. -/
 def CallReplyCompatible {State : Type} (e : Execution State) : Prop :=
   ∀ request, CallReplyCompatibleFor e request
-
-/-- Interface-level obligations only. Still required: bind Execution to the
-actual ForeignAPI implementation and prove syscall argument/return, ownership,
-process identity, transfer, and error semantics. Codec round trips do not prove
-that the kernel saw those values, or that two matching codecs use the right ABI. -/
-def BridgeCodecContract {RequestWire ReplyWire : Type}
-    (encodeRequest : Operation → RequestWire)
-    (decodeRequest : RequestWire → Option Operation)
-    (encodeReply : Reply → ReplyWire)
-    (decodeReply : ReplyWire → Option Reply) : Prop :=
-  RequestCodecCorrect encodeRequest decodeRequest ∧
-  ReplyCodecCorrect encodeReply decodeReply
 
 end MovObserver.Bridge

@@ -20,7 +20,6 @@ structure FrozenStop where
 inductive ObserverFailure where
   | transport (errno : UInt32)
   | runtimeError (error : IO.Error)
-  | malformedReply (bytes : ByteArray)
   | captureFault (waitStatus : UInt32) (siginfo : Option (List (BitVec 8)))
   | missingState
   | invalidState
