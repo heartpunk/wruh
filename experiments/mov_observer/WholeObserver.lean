@@ -33,7 +33,7 @@ manufactured by the observer being checked. Concrete execution refinement must
 account for every invocation, including restarts, and every fault/abort path. -/
 inductive Event where
   | traceeReady (token : StopToken) (ambient : Env Γ)
-  | installationPrefix (state : Env Γ)
+  | installationPrefix (state : CaptureState)
   | targetStart (token : StopToken) (before : Env Γ)
   | targetStop (original : FrozenStop)
   | targetExit (tracee : Tracee) (waitStatus : UInt32)
@@ -178,6 +178,20 @@ def LayoutSeparated (q : Request) (layout : Layout) : Prop :=
     address ∉ q.input.memory.map Prod.fst ∧ address ∉ codeAddresses q ∧
     ¬ layout.protectedAddress address)
 
+/-- Intermediate installation may borrow nonrequested fields only while their
+original ambient values remain recoverable. Requested fields may change to their
+requested values. Strict restoration is separately required at target entry. -/
+def InstallationRecoverable (q : Request) (layout : Layout)
+    (ambient : Env Γ) (state : CaptureState) : Prop :=
+  (∀ (sort : TermSort) (field : Var Γ sort),
+    (⟨sort, field⟩ : Σ t, Var Γ t) ∉ installationFields q →
+    ((⟨sort, field⟩ : Σ t, Var Γ t) ∈ state.savedFields →
+      Env.lookup state.saved field = Env.lookup ambient field) ∧
+    ((⟨sort, field⟩ : Σ t, Var Γ t) ∉ state.savedFields →
+      Env.lookup state.machine field = Env.lookup ambient field)) ∧
+  (∀ address, address ∉ installationWrites q layout →
+    Env.lookup state.machine v_mem address = Env.lookup ambient v_mem address)
+
 /-- The same ordered event history supplies the original installation state and
 frozen target stop. Every exposed prefix, including one ending in a fault, must
 satisfy its frame/recoverability obligation. No separate successful-run trace is
@@ -187,7 +201,7 @@ def PrefixNoninterference (q : Request) (layout : Layout) (events : List Event) 
   (∀ prefix suffix token ambient state,
     Ordered prefix (.preparing token ambient) →
     events = prefix ++ Event.installationPrefix state :: suffix →
-    StateFrame (installationFields q) (installationWrites q layout) ambient state) ∧
+    InstallationRecoverable q layout ambient state) ∧
   (∀ prefix suffix token ambient before,
     Ordered prefix (.preparing token ambient) →
     events = prefix ++ Event.targetStart token before :: suffix →
