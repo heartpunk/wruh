@@ -69,11 +69,17 @@ def OperationReplyCompatible (request : Operation) (reply : Reply) : Prop :=
   | .reap _, .failed _ count => count = 0
   | _, _ => False
 
+/-- A successful foreign IO return may still fail wire validation. Retain the
+exact malformed bytes rather than fabricating a native reply or IO.Error. -/
+inductive DecodedReply where
+  | reply (value : Reply)
+  | malformed (bytes : ByteArray)
+
 /-- Proposed narrow Lean effect boundary. No implementation or correctness law
 is supplied. The concrete exported foreign symbol must implement this function
 through the separately specified marshalling and ownership obligations. -/
 structure ForeignAPI where
-  invoke : Operation → IO Reply
+  invoke : Operation → IO DecodedReply
 
 /-- Host addresses are distinct from tracee addresses. Length uses Nat so the
 ABI obligation must rule out overflow before narrowing to a machine size. -/
@@ -179,7 +185,7 @@ replacing it by an ideal protocol relation would not discharge these goals. -/
 structure Execution (State : Type) where
   initial : Operation → State
   step : State → State → Prop
-  returned : State → Option (Except IO.Error Reply)
+  returned : State → Option (Except IO.Error DecodedReply)
   /-- Complete ordered host writes for this step, including writes later undone.
   Completeness must follow from concrete bridge execution, not instrumentation
   that is permitted to omit effects. -/
@@ -242,7 +248,7 @@ that the execution relation is already bound to the foreign implementation. -/
 def CallReplyCompatible {State : Type} (e : Execution State) : Prop :=
   ∀ request state reply,
     Reaches e.step (e.initial request) state →
-    e.returned state = some (.ok reply) → OperationReplyCompatible request reply
+    e.returned state = some (.ok (.reply reply)) → OperationReplyCompatible request reply
 
 /-- Interface-level obligations only. Still required: bind Execution to the
 actual ForeignAPI implementation and prove syscall argument/return, ownership,

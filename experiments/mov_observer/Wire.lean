@@ -89,19 +89,16 @@ def ReplyEncoderCorrect (encode : Reply → Option ByteArray) : Prop :=
 
 /-- The runtime error branch is not an encoded native errno reply. Malformed
 successful wire returns retain their exact bytes as a distinct boundary failure. -/
-inductive DecodedReturn where
-  | reply (value : Reply)
-  | runtimeError (error : IO.Error)
-  | malformed (bytes : ByteArray)
+abbrev DecodedReturn := Except IO.Error DecodedReply
 
 /-- Fixed independent relation for ALL returned IO outcomes. It neither turns
 runtime errors into native replies nor assumes every successful byte-array return
 is a well-formed reply. Runtime aborts are not returned IO outcomes. -/
 def ForeignReturnMatches : Except IO.Error ByteArray → DecodedReturn → Prop
-  | .ok bytes, .reply value => FrameMatches (ReplyFrame value) bytes
-  | .ok bytes, .malformed retained =>
+  | .ok bytes, .ok (.reply value) => FrameMatches (ReplyFrame value) bytes
+  | .ok bytes, .ok (.malformed retained) =>
       retained = bytes ∧ ¬ ∃ value, FrameMatches (ReplyFrame value) bytes
-  | .error error, .runtimeError retained => retained = error
+  | .error error, .error retained => retained = error
   | _, _ => False
 
 def ForeignReturnDecoderCorrect

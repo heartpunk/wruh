@@ -41,6 +41,7 @@ inductive Event where
   | capturePrefix (original : FrozenStop) (state : CaptureState)
   | transport (operation : Operation) (reply : Reply)
   | runtimeError (operation : Operation) (error : IO.Error)
+  | malformedReply (operation : Operation) (bytes : ByteArray)
 
 inductive Result where
   | captured (capture : CaptureResult)
@@ -89,6 +90,8 @@ inductive Ordered : List Event → Phase → Prop
       Ordered (events ++ [.transport operation reply]) phase
   | runtimeError {events phase} (operation error) : Ordered events phase →
       Ordered (events ++ [.runtimeError operation error]) phase
+  | malformedReply {events phase} (operation bytes) : Ordered events phase →
+      Ordered (events ++ [.malformedReply operation bytes]) phase
   | created {events} (tracee) : Ordered events .ready →
       Ordered (events ++ [.traceeCreated tracee]) (.created tracee)
   | prepared {events tracee} (token ambient) : Ordered events (.created tracee) →
@@ -154,6 +157,20 @@ def RuntimeErrorAt (events : List Event) (phase : Phase) (error : IO.Error) : Pr
     | .stopped original => operationTracee operation = some original.evidence.token.tracee
     | .exited tracee _ => operationTracee operation = some tracee
 
+/-- Malformed successful wire returns remain exact evidence from the same
+operation/phase. Wire.ForeignReturnMatches separately requires that these bytes
+really are malformed; this witness alone does not establish decoder fidelity. -/
+def MalformedReplyAt (events : List Event) (phase : Phase) (bytes : ByteArray) : Prop :=
+  ∃ before after operation,
+    events = before ++ Event.malformedReply operation bytes :: after ∧
+    Ordered before phase ∧
+    match phase with
+    | .ready => operationTracee operation = none
+    | .created tracee => operationTracee operation = some tracee
+    | .preparing stop _ | .running stop => operationTracee operation = some stop.tracee
+    | .stopped original => operationTracee operation = some original.evidence.token.tracee
+    | .exited tracee _ => operationTracee operation = some tracee
+
 /-- Native transport and returned IO-error cases are evidence-backed in their own phase. Other
 failure categories still need their specific classification/validation contracts;
 True in those branches deliberately asserts nothing about their causes. This is
@@ -174,6 +191,13 @@ def TransportFailureSupported (events : List Event) : Result → Prop
         RuntimeErrorAt events (.stopped original) error
   | .outcomeUnavailable started (.runtimeError error) =>
       RuntimeErrorAt events (.running started) error
+  | .setupFailed (.malformedReply bytes) =>
+      ∃ phase, SetupPhase phase ∧ Ordered events phase ∧ MalformedReplyAt events phase bytes
+  | .captured (.failed evidence (.malformedReply bytes)) =>
+      ∃ original, original.evidence = evidence ∧
+        MalformedReplyAt events (.stopped original) bytes
+  | .outcomeUnavailable started (.malformedReply bytes) =>
+      MalformedReplyAt events (.running started) bytes
   | _ => True
 
 /-- A target stop is supported by the exact consolidated wait receipt from
