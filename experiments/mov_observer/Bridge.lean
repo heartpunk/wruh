@@ -52,6 +52,7 @@ structure Buffer where
   length : Nat
   alignment : Nat
   owner : Nat
+  generation : Nat
   deriving DecidableEq
 
 abbrev HostMemory := Nat → BitVec 8
@@ -88,12 +89,37 @@ not merely a permission label. Buffers refer to that allocation or a subrange. -
 structure HostState where
   memory : HostMemory
   allocations : Nat → Option Buffer
+  retired : Nat → Nat → Prop
+  writablePayload : Nat → Nat → List Buffer
 
 def BorrowedFrom (b : Buffer) (h : HostState) : Prop :=
   ∃ allocation, h.allocations b.owner = some allocation ∧
-    allocation.owner = b.owner ∧ BufferValid allocation ∧ BufferValid b ∧
+    allocation.owner = b.owner ∧ allocation.generation = b.generation ∧
+    ¬ h.retired b.owner b.generation ∧ BufferValid allocation ∧ BufferValid b ∧
     allocation.base ≤ b.base ∧
     b.base + b.length ≤ allocation.base + allocation.length
+
+/-- Writable payload is supplied by the concrete allocation/ABI layout, not
+chosen from observed writes. Every permitted slice must stay within the same
+live allocation. Headers may be writable only as explicitly owned runtime
+scratch, never by pretending they are returned observation bytes. -/
+def WritableBorrow (b : Buffer) (h : HostState) : Prop :=
+  BorrowedFrom b h ∧
+  ∃ payload ∈ h.writablePayload b.owner b.generation,
+    payload.owner = b.owner ∧ payload.generation = b.generation ∧
+    BorrowedFrom payload h ∧ payload.base ≤ b.base ∧
+    b.base + b.length ≤ payload.base + payload.length
+
+/-- Required at every allocation/free transition: retired incarnations never
+return. The concrete execution binding must expose each allocation/free event;
+a step that hides free-and-reallocate is not an adequate binding. -/
+def AllocationTransitionCorrect (before after : HostState) : Prop :=
+  (∀ owner generation, before.retired owner generation →
+    after.retired owner generation) ∧
+  (∀ owner old, before.allocations owner = some old →
+    after.allocations owner ≠ some old → after.retired owner old.generation) ∧
+  (∀ owner allocation, after.allocations owner = some allocation →
+    allocation.owner = owner ∧ ¬ after.retired owner allocation.generation)
 
 /-- Live allocations cannot overlap; this includes allocations not passed to
 the call (for example other Lean objects). Object headers and runtime metadata
@@ -142,15 +168,19 @@ def CallBufferLifetime {State : Type} (e : Execution State)
       (host s).allocations b.owner = (host (e.initial request)).allocations b.owner
 
 /-- Prefix-level host framing, including unsuccessful calls. Input contents
-remain unchanged and every individual bridge step stays inside output slices.
+remain unchanged and every individual bridge step stays inside output or
+separately declared scratch slices. Scratch is not returned observation data.
 Operation-specific output contents/counts are separate obligations; this frame
 is not permission to fabricate an output payload. -/
 def CallMemoryFrame {State : Type} (e : Execution State)
-    (host : State → HostState) (request : Operation) (inputs outputs : List Buffer) : Prop :=
+    (host : State → HostState) (request : Operation) (inputs outputs scratch : List Buffer) : Prop :=
   ∀ s, Reaches e.step (e.initial request) s →
     (∀ b ∈ inputs, ∀ a, BufferContains b a →
       (host s).memory a = (host (e.initial request)).memory a) ∧
-    (∀ next, e.step s next → HostFrame outputs (host s).memory (host next).memory)
+    (∀ b ∈ outputs ++ scratch, WritableBorrow b (host s)) ∧
+    (∀ next, e.step s next →
+      HostFrame (outputs ++ scratch) (host s).memory (host next).memory ∧
+      AllocationTransitionCorrect (host s) (host next))
 
 /-- No infinite path, stuck nonterminal state, or execution past return.
 This is intentionally stronger than existence of one terminating execution.
