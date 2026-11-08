@@ -184,6 +184,6 @@ def OwnedCallContract {State : Type} (e : Execution State) (view : State → Vie
   ForeignReturnOwnership e view actions phase request ∧
   CallBufferLifetime (ForeignSegment e phase) (fun state => (view state).host) request [payload] ∧
   CallDynamicMemoryFrame (ForeignSegment e phase) (fun state => (view state).host) request [payload] outputs scratch ∧
-  CallTerminates e request ∧ CallReplyCompatible e
+  CallTerminates e request ∧ CallReplyCompatibleFor e request
 
 end MovObserver.RuntimeOwnership

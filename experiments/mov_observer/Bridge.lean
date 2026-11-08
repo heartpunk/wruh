@@ -260,10 +260,14 @@ through CallTerminates and must retain their identity in whole-run handling.
 Every reachable returned reply belongs to its originating request. This
 quantifies over all returned executions, including errors, without asserting
 that the execution relation is already bound to the foreign implementation. -/
-def CallReplyCompatible {State : Type} (e : Execution State) : Prop :=
-  ∀ request state reply,
+def CallReplyCompatibleFor {State : Type} (e : Execution State) (request : Operation) : Prop :=
+  ∀ state reply,
     Reaches e.step (e.initial request) state →
     e.returned state = some (.ok (.reply reply)) → OperationReplyCompatible request reply
+
+/-- Interface-wide claim retained separately from an admitted individual call. -/
+def CallReplyCompatible {State : Type} (e : Execution State) : Prop :=
+  ∀ request, CallReplyCompatibleFor e request
 
 /-- Interface-level obligations only. Still required: bind Execution to the
 actual ForeignAPI implementation and prove syscall argument/return, ownership,
