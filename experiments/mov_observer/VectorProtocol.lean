@@ -55,6 +55,7 @@ structure Components where
   prepareWrites : List (BitVec 64)
   installWrites : List (BitVec 64)
   captureWrites : List (BitVec 64)
+  protectedAddress : BitVec 64 → Prop
   loaderEntry : BitVec 64
   targetEntry : BitVec 64
   captureEntry : BitVec 64
@@ -78,12 +79,24 @@ def CaptureCorrect (p : Components) : Prop :=
       StateFrame captureChangedFields p.captureWrites post s ∧
       Env.lookup s v_rip = p.captureExit
 
+/-- Fixed-layout separation, matching the approved flags pattern. Adequacy of
+protectedAddress must follow from the real target/code layout; choosing it empty
+is not a way to establish native noninterference. -/
+def MemorySeparation (p : Components) : Prop :=
+  p.recordBase + 2112 ≤ 2^64 ∧
+  (∀ i : Nat, i < 2112 →
+    BitVec.ofNat 64 (p.recordBase + i) ∈ p.captureWrites) ∧
+  (∀ a : BitVec 64,
+    a ∈ p.prepareWrites ∨ a ∈ p.installWrites ∨ a ∈ p.captureWrites →
+    ¬ p.protectedAddress a)
+
 /-- Full existing modeled vector domain, not a profile chosen after seeing
 which tests pass. All bit patterns must install/capture; aliases retain exact
 low bits. Completed endpoints must preserve GPRs, flags and FP fields. Prefix
 faults, native feature exposure and concrete instruction effects remain separate
 obligations: StateFrame alone does not permit erasing upper lanes mid-capture. -/
 def VectorContract (p : Components) : Prop :=
-  InstallationCorrect p ∧ CaptureCorrect p ∧ VectorDecoderCorrect p.recordBase p.decode
+  InstallationCorrect p ∧ CaptureCorrect p ∧
+  VectorDecoderCorrect p.recordBase p.decode ∧ MemorySeparation p
 
 end MovObserver.VectorProtocol
