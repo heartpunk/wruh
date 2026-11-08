@@ -1,0 +1,25 @@
+Started [systemd-run] /run/current-system/sw/bin/bash /home/heartpunk/workspaces/observer-cleanup-e7f7a9d2/check-cleanup.sh.
+snapshot=
+e7f7a9d27724ab6e6dcbe1695017c214e12cbade
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+ayxg=
+324752afe80b05d7fd8854834725cf5ee360f173
+Protocol
+'MovObserver.protocol_input_memory_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_loaded_pc' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.protocol_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ContractEquivalence
+'MovObserver.Regression.preservesApprovedContract' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Regression.preservesApprovedEndToEnd' depends on axioms: [propext, Classical.choice, Quot.sound]
+NativeBoundary
+Bridge
+Transfer
+VectorProtocol
+VectorProtocol.lean:9:323: warning: try 'simp' instead of 'simpa'
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+VectorProtocol.lean:12:92: warning: try 'simp' instead of 'simpa'
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+LegacyFp
+FaultProtocol
+WholeObserver
