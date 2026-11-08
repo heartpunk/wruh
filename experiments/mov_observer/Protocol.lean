@@ -58,6 +58,17 @@ theorem protocol_loaded_pc {C E : Type}
   rw [← run.inputStep.2]
   rfl
 
+/-- Completed-stage frame: field allowance plus a concrete byte footprint.
+This does not claim the footprint is minimal or private; actual footprints
+and their separation from target memory/code require independent review. -/
+def StateFrame (changed : List (Σ s : TermSort, Var Γ s))
+    (writes : List (BitVec 64)) (before after : Env Γ) : Prop :=
+  (∀ (s : TermSort) (v : Var Γ s),
+    (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ changed →
+    Env.lookup after v = Env.lookup before v) ∧
+  (∀ a : BitVec 64, a ∉ writes →
+    Env.lookup after v_mem a = Env.lookup before v_mem a)
+
 /-- Fields intentionally changed by input preparation and GPR loading.
 Memory is framed separately at byte granularity; RIP is the fixed loader
 fallthrough, and the sixteen GPRs receive the requested values. -/
@@ -76,11 +87,7 @@ mapping/permission behavior. GPR fidelity and fixed RIP are separate claims. -/
 def ProtocolInputStateFrame : Prop :=
   ∀ (wanted ambient loaded : Env Γ),
     loadStep.denotes (prepareInput wanted ambient) loaded →
-    (∀ (s : TermSort) (v : Var Γ s),
-      (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ inputChangedFields →
-      Env.lookup loaded v = Env.lookup ambient v) ∧
-    (∀ a : BitVec 64, (∀ w ∈ inputWrites, a ≠ w.1) →
-      Env.lookup loaded v_mem a = Env.lookup ambient v_mem a)
+    StateFrame inputChangedFields (inputWrites.map Prod.fst) ambient loaded
 
 /-- Only RIP and capture-record memory may differ after the modeled handoff
 and completed capture. Memory is framed separately at byte granularity. -/
@@ -96,11 +103,7 @@ are separate fidelity claims, not inferred from this frame. -/
 def ProtocolCaptureHandoffFrame : Prop :=
   ∀ (post captured : Env Γ),
     captureStep.denotes (enterCapture post) captured →
-    (∀ (s : TermSort) (v : Var Γ s),
-      (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ captureChangedFields →
-      Env.lookup captured v = Env.lookup post v) ∧
-    (∀ a : BitVec 64, (∀ w ∈ expectedWrites, a ≠ w.1) →
-      Env.lookup captured v_mem a = Env.lookup post v_mem a)
+    StateFrame captureChangedFields (expectedWrites.map Prod.fst) post captured
 
 /-- Exact current model representation, without normalizing flag encodings.
 The 64-bit d/ac/id fields are retained verbatim, not asserted to be raw RFLAGS
@@ -212,17 +215,6 @@ def flagsInstallChangedFields : List (Σ s : TermSort, Var Γ s) :=
    ⟨_, v_rflags_CF⟩, ⟨_, v_rflags_PF⟩, ⟨_, v_rflags_AF⟩,
    ⟨_, v_rflags_ZF⟩, ⟨_, v_rflags_SF⟩, ⟨_, v_rflags_OF⟩,
    ⟨_, v_d⟩, ⟨_, v_ac⟩, ⟨_, v_id⟩]
-
-/-- Completed-stage frame: field allowance plus a concrete byte footprint.
-This does not claim the footprint is minimal or private; actual footprints
-and their separation from target memory/code require independent review. -/
-def StateFrame (changed : List (Σ s : TermSort, Var Γ s))
-    (writes : List (BitVec 64)) (before after : Env Γ) : Prop :=
-  (∀ (s : TermSort) (v : Var Γ s),
-    (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ changed →
-    Env.lookup after v = Env.lookup before v) ∧
-  (∀ a : BitVec 64, a ∉ writes →
-    Env.lookup after v_mem a = Env.lookup before v_mem a)
 
 /-- Unproved endpoint frames for the flags-only extension. Use the SAME
 preparation/loader/capture parameters as ProtocolFlagsFidelity; that separate
