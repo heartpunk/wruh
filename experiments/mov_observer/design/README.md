@@ -52,6 +52,9 @@ and its equivalence proof adds initial lines. No global optimality claim.
 ## What must not disappear
 
 - Every successor, not just one good result, must satisfy effects.
+- If outcomes later include failure, existence of a classified result is not
+  successful-capture availability. Keep success availability and inhabited
+  coverage explicit so reject-all implementations cannot pass.
 - Every first-stage result must establish the next stage's domain before
   applying a sequencing theorem. Existing stage inputs differ; do not add a
   context-carrying framework solely to make a generic theorem applicable.
