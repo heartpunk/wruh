@@ -157,6 +157,25 @@ def flagsToRflags (f : ModeledFlags) (original : BitVec 64) : Option (BitVec 64)
     some ((original &&& ~~~modeledRflagsMask) ||| bits)
   else none
 
+/-- Unproved codec obligation for the concrete conversions above. Decoding
+always yields canonical model flags. Encoding valid flags must succeed and
+recover exactly those flags while framing every unmodeled bit. Decoding and
+patching the original word back must recover that entire word. Invalid model
+encodings are rejected exactly, not normalized. These are codec laws, not a
+claim of full architectural coverage or permission to install a native word. -/
+def FlagsConversionCorrect : Prop :=
+  (∀ word : BitVec 64, (flagsFromRflags word).Valid) ∧
+  (∀ (f : ModeledFlags) (original : BitVec 64), f.Valid →
+    ∃ encoded : BitVec 64,
+      flagsToRflags f original = some encoded ∧
+      flagsFromRflags encoded = f ∧
+      (encoded &&& ~~~modeledRflagsMask) =
+        (original &&& ~~~modeledRflagsMask)) ∧
+  (∀ word : BitVec 64,
+    flagsToRflags (flagsFromRflags word) word = some word) ∧
+  (∀ (f : ModeledFlags) (original : BitVec 64),
+    flagsToRflags f original = none ↔ ¬ f.Valid)
+
 /-- Unproved modeled flags-extension obligation. The parameters must eventually
 be instantiated with the actual preparation, extracted loader/capture and
 memory decoder; the current MOV fragments do not satisfy this obligation.
