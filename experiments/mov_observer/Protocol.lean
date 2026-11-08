@@ -179,6 +179,29 @@ def FlagsConversionCorrect : Prop :=
   (∀ (f : ModeledFlags) (original : BitVec 64),
     flagsToRflags f original = none ↔ ¬ f.Valid)
 
+/-- Classification evidence retains the exact observed model fields in both
+cases. Invalid is a representation failure, not a successful comparison or
+an absent sample. This record does not describe native instruction faults. -/
+inductive FlagsBoundaryResult where
+  | valid (flags : ModeledFlags)
+  | invalidEncoding (flags : ModeledFlags)
+
+/-- Unproved obligation for a boundary classifier over actual model state.
+Every state is covered, including noncanonical d/ac/id values. The result
+must retain those values verbatim, without normalization or model prediction.
+The same contract applies to requested, ambient and post-target model states.
+It does not establish that the executable calls the classifier or propagates
+invalidEncoding: those sequencing/reporting obligations remain for the Lean
+orchestrator, which must not discard invalid results or count them as passes. -/
+def FlagsBoundaryClassificationCorrect
+    (classify : Env Γ → FlagsBoundaryResult) : Prop :=
+  ∀ state : Env Γ,
+    classify state =
+      if (observeModeledFlags state).Valid then
+        FlagsBoundaryResult.valid (observeModeledFlags state)
+      else
+        FlagsBoundaryResult.invalidEncoding (observeModeledFlags state)
+
 /-- Unproved modeled flags-extension obligation. The parameters must eventually
 be instantiated with the actual preparation, extracted loader/capture and
 memory decoder; the current MOV fragments do not satisfy this obligation.
