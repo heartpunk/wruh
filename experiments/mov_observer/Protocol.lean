@@ -330,6 +330,32 @@ def FlagsMemorySeparation (recordBase : Nat)
     a ∈ prepareWrites ∨ a ∈ installWrites ∨ a ∈ captureWrites →
     ¬ protectedAddress a)
 
+/-- Unproved endpoint-PC obligation for the flags stages. Addresses describe
+this exact stage layout, not the target instruction's eventual successor.
+The existing enterCapture uses a fixed entry; this obligation must agree with
+it rather than assuming an arbitrary handoff address. Availability is supplied
+by ProtocolFlagsFidelity with these same stage functions. These endpoint laws
+do not prove intermediate control flow, stopping, target execution count, or
+saved target-PC fidelity; those remain executable protocol obligations. -/
+def FlagsControlFlowCorrect
+    (prepareFlags : Env Γ → Env Γ → Env Γ)
+    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
+    (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
+  (∀ wanted ambient : Env Γ,
+    (observeModeledFlags wanted).Valid →
+    (observeModeledFlags ambient).Valid →
+    Env.lookup (prepareFlags wanted ambient) v_rip = loaderEntry) ∧
+  (∀ wanted ambient loaded : Env Γ,
+    (observeModeledFlags wanted).Valid →
+    (observeModeledFlags ambient).Valid →
+    flagsLoader.denotes (prepareFlags wanted ambient) loaded →
+    Env.lookup loaded v_rip = targetEntry) ∧
+  (∀ post : Env Γ, Env.lookup (enterCapture post) v_rip = captureEntry) ∧
+  (∀ post captured : Env Γ,
+    (observeModeledFlags post).Valid →
+    flagsCapture.denotes (enterCapture post) captured →
+    Env.lookup captured v_rip = captureExit)
+
 /-- Combined, unproved flags-component contract. Fidelity and framing share
 exactly the same stage functions; fixed footprints belong to that instantiation.
 The architectural conversions are the concrete functions above, not arbitrary
@@ -344,7 +370,10 @@ def FlagsProtocolContract (recordBase : Nat)
     (decodeFlags : Mem 64 8 → Option ModeledFlags)
     (classify : Env Γ → FlagsBoundaryResult)
     (prepareWrites installWrites captureWrites : List (BitVec 64))
-    (protectedAddress : BitVec 64 → Prop) : Prop :=
+    (protectedAddress : BitVec 64 → Prop)
+    (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
+  FlagsControlFlowCorrect prepareFlags flagsLoader flagsCapture
+    loaderEntry targetEntry captureEntry captureExit ∧
   FlagsConversionCorrect ∧
   FlagsArchitecturalLayoutCorrect ∧
   FlagsRecordDecoderCorrect recordBase decodeFlags ∧
