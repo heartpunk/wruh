@@ -296,6 +296,27 @@ def FlagsProtocolFrames
     flagsCapture.denotes (enterCapture post) captured →
     StateFrame captureChangedFields captureWrites post captured)
 
+/-- Combined, unproved flags-component contract. Fidelity and framing share
+exactly the same stage functions; fixed footprints belong to that instantiation.
+The architectural conversions are the concrete functions above, not arbitrary
+replacement codecs. Classification uses the same modeled flag representation.
+This conjunction does not prove that an executable invokes these components,
+connect decodeFlags to flagsFromRflags through a concrete record layout, enforce
+private-memory separation, or propagate classification failures. Those links
+remain explicit integration obligations, not consequences of these names. -/
+def FlagsProtocolContract
+    (prepareFlags : Env Γ → Env Γ → Env Γ)
+    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
+    (decodeFlags : Mem 64 8 → Option ModeledFlags)
+    (classify : Env Γ → FlagsBoundaryResult)
+    (prepareWrites installWrites captureWrites : List (BitVec 64)) : Prop :=
+  FlagsConversionCorrect ∧
+  FlagsArchitecturalLayoutCorrect ∧
+  FlagsBoundaryClassificationCorrect classify ∧
+  ProtocolFlagsFidelity prepareFlags flagsLoader flagsCapture decodeFlags ∧
+  FlagsProtocolFrames prepareFlags flagsLoader flagsCapture
+    prepareWrites installWrites captureWrites
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
