@@ -32,6 +32,7 @@ def InputInstalled (q : Request) (s : Env Γ) : Prop :=
 manufactured by the observer being checked. Concrete execution refinement must
 account for every invocation, including restarts, and every fault/abort path. -/
 inductive Event where
+  | traceeCreated (tracee : Tracee)
   | traceeReady (token : StopToken) (ambient : Env Γ)
   | installationPrefix (state : CaptureState)
   | targetStart (token : StopToken) (before : Env Γ)
@@ -72,6 +73,7 @@ def RequestCoherent (q : Request) : Prop :=
 
 inductive Phase where
   | ready
+  | created (tracee : Tracee)
   | preparing (token : StopToken) (ambient : Env Γ)
   | running (token : StopToken)
   | stopped (original : FrozenStop)
@@ -84,7 +86,10 @@ inductive Ordered : List Event → Phase → Prop
   | initial : Ordered [] .ready
   | transport {events phase} (operation reply) : Ordered events phase →
       Ordered (events ++ [.transport operation reply]) phase
-  | prepared {events} (token ambient) : Ordered events .ready →
+  | created {events} (tracee) : Ordered events .ready →
+      Ordered (events ++ [.traceeCreated tracee]) (.created tracee)
+  | prepared {events tracee} (token ambient) : Ordered events (.created tracee) →
+      token.tracee = tracee →
       Ordered (events ++ [.traceeReady token ambient]) (.preparing token ambient)
   | installing {events token ambient} (state) : Ordered events (.preparing token ambient) →
       Ordered (events ++ [.installationPrefix state]) (.preparing token ambient)
@@ -100,8 +105,12 @@ inductive Ordered : List Event → Phase → Prop
   | capture {events original} (state) : Ordered events (.stopped original) →
       Ordered (events ++ [.capturePrefix original state]) (.stopped original)
 
+def SetupPhase : Phase → Prop
+  | .ready | .created _ | .preparing _ _ => True
+  | _ => False
+
 def ReturnFaithful (q : Request) (events : List Event) : Result → Prop
-  | .setupFailed _ => Ordered events .ready ∨ ∃ token ambient, Ordered events (.preparing token ambient)
+  | .setupFailed _ => ∃ phase, SetupPhase phase ∧ Ordered events phase
   | .captured result =>
       ∃ original, Ordered events (.stopped original) ∧
         ResultFaithful q.outputFields q.outputMemory original result
@@ -124,6 +133,7 @@ def TransportErrorAt (events : List Event) (phase : Phase) (errno : UInt32) : Pr
     Ordered before phase ∧
     match phase with
     | .ready => operationTracee operation = none
+    | .created tracee => operationTracee operation = some tracee
     | .preparing stop _ | .running stop => operationTracee operation = some stop.tracee
     | .stopped original => operationTracee operation = some original.evidence.token.tracee
     | .exited tracee _ => operationTracee operation = some tracee
@@ -134,8 +144,8 @@ True in those branches deliberately asserts nothing about their causes. This is
 not named or used as a complete failure-causality claim. -/
 def TransportFailureSupported (events : List Event) : Result → Prop
   | .setupFailed (.transport errno) =>
-      TransportErrorAt events .ready errno ∨
-      ∃ token ambient, TransportErrorAt events (.preparing token ambient) errno
+      ∃ phase, SetupPhase phase ∧ Ordered events phase ∧
+        TransportErrorAt events phase errno
   | .captured (.failed evidence (.transport errno)) =>
       ∃ original, original.evidence = evidence ∧
         TransportErrorAt events (.stopped original) errno
