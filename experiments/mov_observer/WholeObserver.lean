@@ -32,6 +32,8 @@ def InputInstalled (q : Request) (s : Env Γ) : Prop :=
 manufactured by the observer being checked. Concrete execution refinement must
 account for every invocation, including restarts, and every fault/abort path. -/
 inductive Event where
+  | traceeReady (token : StopToken) (ambient : Env Γ)
+  | installationPrefix (state : Env Γ)
   | targetStart (token : StopToken) (before : Env Γ)
   | targetStop (original : FrozenStop)
   | targetExit (tracee : Tracee) (waitStatus : UInt32)
@@ -70,6 +72,7 @@ def RequestCoherent (q : Request) : Prop :=
 
 inductive Phase where
   | ready
+  | preparing (token : StopToken) (ambient : Env Γ)
   | running (token : StopToken)
   | stopped (original : FrozenStop)
   | exited (tracee : Tracee) (waitStatus : UInt32)
@@ -81,7 +84,11 @@ inductive Ordered : List Event → Phase → Prop
   | initial : Ordered [] .ready
   | transport {events phase} (operation reply) : Ordered events phase →
       Ordered (events ++ [.transport operation reply]) phase
-  | start {events} (token before) : Ordered events .ready →
+  | prepared {events} (token ambient) : Ordered events .ready →
+      Ordered (events ++ [.traceeReady token ambient]) (.preparing token ambient)
+  | installing {events token ambient} (state) : Ordered events (.preparing token ambient) →
+      Ordered (events ++ [.installationPrefix state]) (.preparing token ambient)
+  | start {events token ambient} (before) : Ordered events (.preparing token ambient) →
       Ordered (events ++ [.targetStart token before]) (.running token)
   | stop {events token} (original : FrozenStop) :
       Ordered events (.running token) →
@@ -94,7 +101,7 @@ inductive Ordered : List Event → Phase → Prop
       Ordered (events ++ [.capturePrefix original state]) (.stopped original)
 
 def ReturnFaithful (q : Request) (events : List Event) : Result → Prop
-  | .setupFailed _ => Ordered events .ready
+  | .setupFailed _ => Ordered events .ready ∨ ∃ token ambient, Ordered events (.preparing token ambient)
   | .captured result =>
       ∃ original, Ordered events (.stopped original) ∧
         ResultFaithful q.outputFields q.outputMemory original result
@@ -145,5 +152,61 @@ def ObserverFidelityAndTermination {State : Type}
       result = .setupFailed .invalidState) ∧
   ∀ s result, Reaches e.step (e.initial q) s → e.returned s = some result →
     ReturnFaithful q (e.history s) result
+
+/-- Fixed layout, chosen before observing execution. Protected-set adequacy
+must be established from mappings and target-visible state. Private preparation
+writes cannot silently become target input; capture cannot overwrite input/code. -/
+structure Layout where
+  privateInstall : List (BitVec 64)
+  captureWrites : List (BitVec 64)
+  protectedAddress : BitVec 64 → Prop
+
+def codeAddresses (q : Request) : List (BitVec 64) :=
+  (List.range q.instruction.length).map fun i => BitVec.ofNat 64 (q.entry.toNat + i)
+
+def installationFields (q : Request) : List (Σ s : TermSort, Var Γ s) :=
+  [⟨_, v_mem⟩, ⟨_, v_rip⟩] ++ q.input.fields.map (fun f => ⟨f.sort, f.field⟩)
+
+def installationWrites (q : Request) (layout : Layout) : List (BitVec 64) :=
+  q.input.memory.map Prod.fst ++ codeAddresses q ++ layout.privateInstall
+
+def LayoutSeparated (q : Request) (layout : Layout) : Prop :=
+  (∀ address ∈ layout.privateInstall,
+    address ∉ q.input.memory.map Prod.fst ∧ address ∉ codeAddresses q ∧
+    ¬ layout.protectedAddress address) ∧
+  (∀ address ∈ layout.captureWrites,
+    address ∉ q.input.memory.map Prod.fst ∧ address ∉ codeAddresses q ∧
+    ¬ layout.protectedAddress address)
+
+/-- The same ordered event history supplies the original installation state and
+frozen target stop. Every exposed prefix, including one ending in a fault, must
+satisfy its frame/recoverability obligation. No separate successful-run trace is
+substituted. Concrete execution binding must expose intermediate effects. -/
+def PrefixNoninterference (q : Request) (layout : Layout) (events : List Event) : Prop :=
+  LayoutSeparated q layout ∧
+  (∀ prefix suffix token ambient state,
+    Ordered prefix (.preparing token ambient) →
+    events = prefix ++ Event.installationPrefix state :: suffix →
+    StateFrame (installationFields q) (installationWrites q layout) ambient state) ∧
+  (∀ prefix suffix token ambient before,
+    Ordered prefix (.preparing token ambient) →
+    events = prefix ++ Event.targetStart token before :: suffix →
+    StateFrame (installationFields q) (installationWrites q layout) ambient before) ∧
+  (∀ original state, Event.capturePrefix original state ∈ events →
+    Recoverable original layout.captureWrites state)
+
+/-- Prefix framing is required on every reachable state, even if no successful
+capture ever returns. Host memory/ABI framing remains the separate bridge contract.
+This does not assert that arbitrary omitted hardware state is represented by Γ. -/
+def ObserverPrefixNoninterference {State : Type} (e : Execution State)
+    (q : Request) (layout : Layout) : Prop :=
+  ∀ s, Reaches e.step (e.initial q) s → PrefixNoninterference q layout (e.history s)
+
+/-- Both obligations apply to exactly the same execution and request. This is
+a composition obligation only; native binding, complete profile and component
+linkage must still be discharged, rather than assumed from this conjunction. -/
+def ObserverCoreContract {State : Type} (e : Execution State)
+    (q : Request) (layout : Layout) : Prop :=
+  ObserverFidelityAndTermination e q ∧ ObserverPrefixNoninterference e q layout
 
 end MovObserver.WholeObserver
