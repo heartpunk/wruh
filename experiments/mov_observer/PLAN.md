@@ -87,3 +87,92 @@ bring material uncertainty about either to the user. Commit coherent checkpoints
 
 The next implementation goal is reviewed separately before execution. No observer
 implementation is authorized by this cleanup. The user retains all merge decisions.
+
+## Proposed bounded implementation goal — awaiting user activation
+
+Implement one ordinary-Lean native observation path to settle the real harness
+and ABI shape. Reuse the existing exact MOV loader/capture fragments and approved
+observer obligations. Success is a working, checked implementation slice with
+concrete obligations attached, not a claim that the complete observer is proved
+or that the eventual regression campaign is limited to MOV/GPRs.
+
+### 1. Ordinary-Lean entry point and control flow
+
+- Read Protocol.lean, NativeBoundary.lean, Transfer.lean, FaultProtocol.lean,
+  WholeObserver.lean and the current native_probe.py/stub.py before designing replacements.
+- Add Observer.lean with a finite GPR observation request/result and ordinary IO
+  sequencing: create a stopped tracee; prepare code/data and requested state;
+  run the fixed loader; hand off to and single-step the target exactly once;
+  freeze its stop and PC; run the fixed capture fragment; read and return the
+  record; release the tracee. Keep operational values usable by the existing
+  AYXG-facing state relations. Ghost Env values are proof state, not executable
+  observations or an independently invented architectural model.
+- Name the small direct foreign functions in NativeIO.lean. Initially unimplemented
+  foreign declarations may typecheck; do not call them a working program yet.
+  No generic dispatch/wire format, effect AST/interpreter or runtime simulator.
+- Before encoding retry/abort behavior, bring the user a concrete operation/error
+  policy for this path. Do not choose transient classes, replay/retry safety or
+  retry limits. Work independently on unaffected code while that answer is pending.
+
+### 2. Concrete ABI and one working call
+
+- Inspect the pinned Lean distribution's FFI headers, examples and available Lean
+  declarations, plus the Linux ABI used by native_probe.py. Reuse adequate existing
+  declarations. If absent, add only the ABI contract stub needed by these functions.
+- Add a minimal native_io.c shim only where needed to call Linux primitives through
+  Lean's ABI. Keep orchestration in Lean and capture in the exact machine-code stub.
+  Use the documented runtime APIs, not guessed object layouts or a new ownership model.
+- First make register readback from the stopped fixture work end to end through
+  Lean. Establish the actual argument types, borrowed lifetimes, output allocation,
+  errno/partial-result representation and caller-visible return type. Use the
+  existing 216-byte register mapping. No new general serialization protocol.
+- Add Prop/theorem statements for that actual handoff: arguments reach the intended
+  stopped tracee; buffer accesses obey the leaf-call frame/lifetime contract; returned
+  bytes/count/status represent that operation. Identify imported runtime/kernel ABI
+  contracts separately from obligations on our code. No sorry or new axiom pretending
+  our handoff correctness is proved. Proofs may remain open as named Props.
+
+### 3. One vertical path through the existing MOV observer
+
+- Implement the remaining small foreign calls required by step 1. Extend the existing
+  test ELF layout to contain the unchanged loader/capture bytes plus a separate target
+  slot; preserve their fixed addresses/RIP-relative data references and record the
+  exact fixture bytes. Do not rewrite the observer in C or Python.
+- Run a concrete register MOV target as the plumbing witness, with several deliberately
+  distinct GPR inputs. Lean drives installation, one target step, original-stop/PC
+  preservation, capture and decoding. Target-instruction semantics are not checked
+  against AYXG in this task. No new general instruction generator/PBT campaign.
+- Check installed GPRs against the request and the captured GPR record against the
+  independently acquired stopped post-target GPRs. Check the existing capture memory
+  frame and preservation checks relevant to this path. These exercise observer
+  fidelity, not a model prediction of the target result. Include one corrupted-record
+  check so the validation can actually reject a bad observation.
+- Map the implemented entry point and native functions to the retained obligations
+  in Protocol/Bridge/Transfer/WholeObserver. Add concrete statements for missing links;
+  leave unproved links explicitly open rather than adding arbitrary correctness premises.
+  Ghost histories need not become a production logging subsystem. Do not claim a
+  typecheck or a smoke run proves e2e fidelity/noninterference.
+
+### Execution discipline and stop condition
+
+- Source of truth: local ~/workspaces/wruh-mov-observer. Use the adjacent persisted
+  AYXG workspace only if needed; no speculative AYXG changes. Work locally, build/run
+  remotely on NixOS in the existing bounded fleet-build reservation. Keep Git identity
+  and caches in remote snapshots; no remote source edits. Use the existing containment
+  setup for native execution; do not silently drop it or use bare Entrapta/emulation.
+- Typecheck the remaining cleanup first. Then commit early at each coherent checking
+  checkpoint. Show the user the concrete signatures/control flow before extending
+  the native shim across the complete path. Explain any implementation change that
+  might alter contract or telos and obtain their judgment before proceeding.
+- Do not implement full FP/vector capture, fault-friendly fallback, batching, performance
+  work, semantic fixes or AYXG/native comparisons. Their retained obligations remain;
+  this slice neither completes them nor changes the intended final coverage.
+- No general Lean runtime/allocator/OS proof. Nonexceptional observer runs must terminate
+  assuming terminating target/native primitives under the agreed environment. Truly
+  exceptional substrate failure may abort/crash. Never silently replay the target or
+  report an aborted observation as success. Failure-policy decisions remain with user.
+- Stop after the ordinary-Lean vertical path runs, relevant Lean statements typecheck,
+  targeted checks pass, and self-review identifies the remaining proof links. Report
+  commits, exact commands/results and the remaining obligations for human review.
+  Mark this bounded goal complete only on that basis; otherwise report the concrete
+  blocker. Do not continue into broader implementation, publish/push or merge.
