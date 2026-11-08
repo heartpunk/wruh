@@ -111,6 +111,28 @@ theorem preservesApprovedContract {C E : Type} (p : FlagsComponents C E) :
       exact ⟨(hi.2 post valid).2 captured step,
         hr.2.2 post captured valid step, hf.2.2.2 post captured valid step⟩
 
+/-- The reusable frame algebra; it says nothing about intermediate faults. -/
+theorem stateFrame_compose
+    (fieldsA fieldsB : List (Σ s : TermSort, Var Γ s))
+    (bytesA bytesB : List (BitVec 64)) (a b c : Env Γ)
+    (first : StateFrame fieldsA bytesA a b)
+    (second : StateFrame fieldsB bytesB b c) :
+    StateFrame (fieldsA ++ fieldsB) (bytesA ++ bytesB) a c := by
+  constructor
+  · intro sort v outside
+    have ha : (⟨sort, v⟩ : Σ t : TermSort, Var Γ t) ∉ fieldsA :=
+      fun h => outside (List.mem_append.mpr (Or.inl h))
+    have hb : (⟨sort, v⟩ : Σ t : TermSort, Var Γ t) ∉ fieldsB :=
+      fun h => outside (List.mem_append.mpr (Or.inr h))
+    exact (second.1 sort v hb).trans (first.1 sort v ha)
+  · intro address outside
+    have ha : address ∉ bytesA :=
+      fun h => outside (List.mem_append.mpr (Or.inl h))
+    have hb : address ∉ bytesB :=
+      fun h => outside (List.mem_append.mpr (Or.inr h))
+    exact (second.2 address hb).trans (first.2 address ha)
+
+#print axioms stateFrame_compose
 #print axioms preservesApprovedContract
 
 end MovObserver.Design
