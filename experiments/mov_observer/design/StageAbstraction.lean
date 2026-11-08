@@ -67,4 +67,50 @@ def PreservesApprovedContract {C E : Type} (p : FlagsComponents C E) : Prop :=
       p.assemble p.classify p.prepareWrites p.installWrites p.captureWrites
       p.protectedAddress p.loaderEntry p.targetEntry p.captureEntry p.captureExit
 
+/-- Refactor equivalence only; does not discharge either observer contract. -/
+theorem preservesApprovedContract {C E : Type} (p : FlagsComponents C E) :
+    PreservesApprovedContract p := by
+  constructor
+  · rintro ⟨hp, hl, hc, he, ho, hcv, ha, hd, hs, hk⟩
+    refine ⟨?_, ho, hcv, ha, hd, hs, hk, ?_, ?_⟩
+    · refine ⟨?_, ?_, he, ?_⟩
+      · intro w a hw hv
+        exact ((hp (w,a) ⟨hw,hv⟩).2 _ rfl).2
+      · intro w a l hw hv step
+        exact ((hl (w,a) ⟨hw,hv⟩).2 l step).2.2
+      · intro post captured valid step
+        exact ((hc post valid).2 captured step).2.2
+    · constructor
+      · intro w a hw hv
+        exact ⟨(hl (w,a) ⟨hw,hv⟩).1, fun l step => ((hl (w,a) ⟨hw,hv⟩).2 l step).1⟩
+      · intro post valid
+        exact ⟨(hc post valid).1, fun captured step => ((hc post valid).2 captured step).1⟩
+    · refine ⟨?_, ?_, ?_⟩
+      · intro w a hw hv
+        exact ((hp (w,a) ⟨hw,hv⟩).2 _ rfl).1
+      · intro w a l hw hv step
+        exact ((hl (w,a) ⟨hw,hv⟩).2 l step).2.1
+      · intro post captured valid step
+        exact ((hc post valid).2 captured step).2.1
+  · rintro ⟨hf, ho, hcv, ha, hd, hs, hk, hi, hr⟩
+    refine ⟨?_, ?_, ?_, hf.2.2.1, ho, hcv, ha, hd, hs, hk⟩
+    · intro i valid
+      refine ⟨⟨p.prepare i.1 i.2, rfl⟩, ?_⟩
+      intro s eq
+      subst s
+      exact ⟨hr.1 i.1 i.2 valid.1 valid.2, hf.1 i.1 i.2 valid.1 valid.2⟩
+    · intro i valid
+      refine ⟨(hi.1 i.1 i.2 valid.1 valid.2).1, ?_⟩
+      intro s step
+      exact ⟨(hi.1 i.1 i.2 valid.1 valid.2).2 s step,
+        hr.2.1 i.1 i.2 s valid.1 valid.2 step,
+        hf.2.1 i.1 i.2 s valid.1 valid.2 step⟩
+    · intro post valid
+      refine ⟨(hi.2 post valid).1, ?_⟩
+      intro captured step
+      exact ⟨(hi.2 post valid).2 captured step,
+        hr.2.2 post captured valid step, hf.2.2.2 post captured valid step⟩
+
+#print axioms preservesApprovedContract
+
 end MovObserver.Design
