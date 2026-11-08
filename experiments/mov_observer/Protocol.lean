@@ -82,6 +82,26 @@ def ProtocolInputStateFrame : Prop :=
     (∀ a : BitVec 64, (∀ w ∈ inputWrites, a ≠ w.1) →
       Env.lookup loaded v_mem a = Env.lookup ambient v_mem a)
 
+/-- Only RIP and capture-record memory may differ after the modeled handoff
+and completed capture. Memory is framed separately at byte granularity. -/
+def captureChangedFields : List (Σ s : TermSort, Var Γ s) :=
+  [⟨_, v_mem⟩, ⟨_, v_rip⟩]
+
+/-- Unproved endpoint-frame obligation for the existing handoff and capture.
+Compare with the original post-target state, before enterCapture redirects RIP.
+Every other field in Γ and every byte outside the capture record must survive.
+This does not assert intermediate-prefix or native fault behavior, nor that
+fields absent from Γ are represented. Saved target PC/event and record decoding
+are separate fidelity claims, not inferred from this frame. -/
+def ProtocolCaptureHandoffFrame : Prop :=
+  ∀ (post captured : Env Γ),
+    captureStep.denotes (enterCapture post) captured →
+    (∀ (s : TermSort) (v : Var Γ s),
+      (⟨s, v⟩ : Σ t : TermSort, Var Γ t) ∉ captureChangedFields →
+      Env.lookup captured v = Env.lookup post v) ∧
+    (∀ a : BitVec 64, (∀ w ∈ expectedWrites, a ≠ w.1) →
+      Env.lookup captured v_mem a = Env.lookup post v_mem a)
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
