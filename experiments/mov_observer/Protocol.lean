@@ -229,34 +229,6 @@ def FlagsBoundaryClassificationCorrect
       else
         FlagsBoundaryResult.invalidEncoding (observeModeledFlags state)
 
-/-- Unproved modeled flags-extension obligation. The parameters must eventually
-be instantiated with the actual preparation, extracted loader/capture and
-memory decoder; the current MOV fragments do not satisfy this obligation.
-Availability prevents a disabled guard or reject-all decoder from passing.
-All completed outcomes must be faithful, not merely one chosen successor.
-The decoder receives only captured memory, never wanted flags or a prediction.
-This requires canonical VEX flags at the input and target-stop boundaries.
-Proving that actual target executions preserve that invariant is still required;
-an invalid model successor must be reported, not silently skipped. OS write
-permissions, missing architectural flags, memory layout,
-frame/ordering and concrete implementation binding remain separate obligations;
-this definition does not settle or narrow those requirements. -/
-def ProtocolFlagsFidelity
-    (prepareFlags : Env Γ → Env Γ → Env Γ)
-    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
-    (decodeFlags : Mem 64 8 → Option ModeledFlags) : Prop :=
-  (∀ wanted ambient : Env Γ,
-    (observeModeledFlags wanted).Valid →
-    (observeModeledFlags ambient).Valid →
-    (∃ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded) ∧
-    (∀ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded →
-      observeModeledFlags loaded = observeModeledFlags wanted)) ∧
-  (∀ post : Env Γ,
-    (observeModeledFlags post).Valid →
-    (∃ captured, flagsCapture.denotes (enterCapture post) captured) ∧
-    (∀ captured, flagsCapture.denotes (enterCapture post) captured →
-      decodeFlags (Env.lookup captured v_mem) = some (observeModeledFlags post)))
-
 /-- Flag installation may change only represented flags, RIP and declared
 memory bytes. Preparation has the same allowance so supervisor installation
 is permitted; it is not forced through a ceremonial instruction fragment. -/
@@ -265,36 +237,6 @@ def flagsInstallChangedFields : List (Σ s : TermSort, Var Γ s) :=
    ⟨_, v_rflags_CF⟩, ⟨_, v_rflags_PF⟩, ⟨_, v_rflags_AF⟩,
    ⟨_, v_rflags_ZF⟩, ⟨_, v_rflags_SF⟩, ⟨_, v_rflags_OF⟩,
    ⟨_, v_d⟩, ⟨_, v_ac⟩, ⟨_, v_id⟩]
-
-/-- Unproved endpoint frames for the flags-only extension. Use the SAME
-preparation/loader/capture parameters as ProtocolFlagsFidelity; that separate
-obligation supplies availability and correct flag values. GPR installation
-is a separate stage, not an allowed side effect of flags installation.
-Temporary register borrowing must be restored by each completed endpoint.
-Capture includes enterCapture and compares with the original post-target state;
-it must restore flags as well as every other field except RIP and record memory.
-Aborted prefixes, intermediate interference, saved-PC fidelity and actual native
-implementation binding remain separate obligations. Footprints are fixed per
-instantiation, not chosen from observed differences after execution. -/
-def FlagsProtocolFrames
-    (prepareFlags : Env Γ → Env Γ → Env Γ)
-    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
-    (prepareWrites installWrites captureWrites : List (BitVec 64)) : Prop :=
-  (∀ wanted ambient : Env Γ,
-    (observeModeledFlags wanted).Valid →
-    (observeModeledFlags ambient).Valid →
-    StateFrame flagsInstallChangedFields prepareWrites
-      ambient (prepareFlags wanted ambient)) ∧
-  (∀ wanted ambient loaded : Env Γ,
-    (observeModeledFlags wanted).Valid →
-    (observeModeledFlags ambient).Valid →
-    flagsLoader.denotes (prepareFlags wanted ambient) loaded →
-    StateFrame flagsInstallChangedFields installWrites
-      (prepareFlags wanted ambient) loaded) ∧
-  (∀ post captured : Env Γ,
-    (observeModeledFlags post).Valid →
-    flagsCapture.denotes (enterCapture post) captured →
-    StateFrame captureChangedFields captureWrites post captured)
 
 /-- Unproved binding of the flags decoder to an eight-byte little-endian
 RFLAGS record at a fixed base. read64 is the existing concrete byte decoder;
@@ -330,32 +272,6 @@ def FlagsMemorySeparation (recordBase : Nat)
     a ∈ prepareWrites ∨ a ∈ installWrites ∨ a ∈ captureWrites →
     ¬ protectedAddress a)
 
-/-- Unproved endpoint-PC obligation for the flags stages. Addresses describe
-this exact stage layout, not the target instruction's eventual successor.
-The existing enterCapture uses a fixed entry; this obligation must agree with
-it rather than assuming an arbitrary handoff address. Availability is supplied
-by ProtocolFlagsFidelity with these same stage functions. These endpoint laws
-do not prove intermediate control flow, stopping, target execution count, or
-saved target-PC fidelity; those remain executable protocol obligations. -/
-def FlagsControlFlowCorrect
-    (prepareFlags : Env Γ → Env Γ → Env Γ)
-    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
-    (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
-  (∀ wanted ambient : Env Γ,
-    (observeModeledFlags wanted).Valid →
-    (observeModeledFlags ambient).Valid →
-    Env.lookup (prepareFlags wanted ambient) v_rip = loaderEntry) ∧
-  (∀ wanted ambient loaded : Env Γ,
-    (observeModeledFlags wanted).Valid →
-    (observeModeledFlags ambient).Valid →
-    flagsLoader.denotes (prepareFlags wanted ambient) loaded →
-    Env.lookup loaded v_rip = targetEntry) ∧
-  (∀ post : Env Γ, Env.lookup (enterCapture post) v_rip = captureEntry) ∧
-  (∀ post captured : Env Γ,
-    (observeModeledFlags post).Valid →
-    flagsCapture.denotes (enterCapture post) captured →
-    Env.lookup captured v_rip = captureExit)
-
 /-- Flags observation retaining the original target metadata. C and E are
 model control/outcome types, not a claim that native execution exposes a model
 edge identifier. Their native correspondence remains a separate obligation. -/
@@ -379,35 +295,85 @@ def FlagsObservationCorrect {C E : Type}
       (decodeFlags memory).map fun flags =>
         ⟨control, edge, savedPC, flags⟩
 
-/-- Combined, unproved flags-component contract. Fidelity and framing share
-exactly the same stage functions; fixed footprints belong to that instantiation.
-The architectural conversions are the concrete functions above, not arbitrary
-replacement codecs. Classification uses the same modeled flag representation.
-This conjunction does not prove that an executable invokes these components,
-establish that capture writes the agreed record, establish completeness of
-the protected-address predicate, or propagate classification failures. Those links
-remain explicit integration obligations, not consequences of these names. -/
-def FlagsProtocolContract {C E : Type} (recordBase : Nat)
-    (prepareFlags : Env Γ → Env Γ → Env Γ)
-    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
-    (decodeFlags : Mem 64 8 → Option ModeledFlags)
-    (assemble : C → E → BitVec 64 → Mem 64 8 → Option (FlagsObservation C E))
-    (classify : Env Γ → FlagsBoundaryResult)
-    (prepareWrites installWrites captureWrites : List (BitVec 64))
-    (protectedAddress : BitVec 64 → Prop)
-    (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
-  FlagsControlFlowCorrect prepareFlags flagsLoader flagsCapture
-    loaderEntry targetEntry captureEntry captureExit ∧
-  FlagsObservationCorrect decodeFlags assemble ∧
-  FlagsConversionCorrect ∧
-  FlagsArchitecturalLayoutCorrect ∧
-  FlagsRecordDecoderCorrect recordBase decodeFlags ∧
-  FlagsMemorySeparation recordBase prepareWrites installWrites captureWrites
-    protectedAddress ∧
-  FlagsBoundaryClassificationCorrect classify ∧
-  ProtocolFlagsFidelity prepareFlags flagsLoader flagsCapture decodeFlags ∧
-  FlagsProtocolFrames prepareFlags flagsLoader flagsCapture
-    prepareWrites installWrites captureWrites
+/-- Availability plus all-result correctness; NOT a divergence-freedom claim. -/
+def StageCorrect {I O : Type} (run : I → O → Prop)
+    (admissible : I → Prop) (postcond : I → O → Prop) : Prop :=
+  ∀ i, admissible i → (∃ o, run i o) ∧ ∀ o, run i o → postcond i o
+
+/-- Data only: no correctness fields or assumed laws. -/
+structure FlagsComponents (C E : Type) where
+  prepare : Env Γ → Env Γ → Env Γ
+  load : QFAbvStep Γ Γ
+  capture : QFAbvStep Γ Γ
+  decode : Mem 64 8 → Option ModeledFlags
+  assemble : C → E → BitVec 64 → Mem 64 8 → Option (FlagsObservation C E)
+  classify : Env Γ → FlagsBoundaryResult
+  recordBase : Nat
+  prepareWrites : List (BitVec 64)
+  installWrites : List (BitVec 64)
+  captureWrites : List (BitVec 64)
+  protectedAddress : BitVec 64 → Prop
+  loaderEntry : BitVec 64
+  targetEntry : BitVec 64
+  captureEntry : BitVec 64
+  captureExit : BitVec 64
+
+def admittedInput (i : Env Γ × Env Γ) : Prop :=
+  (observeModeledFlags i.1).Valid ∧ (observeModeledFlags i.2).Valid
+
+def PrepareCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
+  StageCorrect (fun i s => s = p.prepare i.1 i.2) admittedInput fun i s =>
+    StateFrame flagsInstallChangedFields p.prepareWrites i.2 s ∧
+    Env.lookup s v_rip = p.loaderEntry
+
+def LoadCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
+  StageCorrect (fun i s => p.load.denotes (p.prepare i.1 i.2) s)
+    admittedInput fun i s =>
+      observeModeledFlags s = observeModeledFlags i.1 ∧
+      StateFrame flagsInstallChangedFields p.installWrites (p.prepare i.1 i.2) s ∧
+      Env.lookup s v_rip = p.targetEntry
+
+def CaptureCorrect {C E : Type} (p : FlagsComponents C E) : Prop :=
+  StageCorrect (fun post s => p.capture.denotes (enterCapture post) s)
+    (fun post => (observeModeledFlags post).Valid) fun post s =>
+      p.decode (Env.lookup s v_mem) = some (observeModeledFlags post) ∧
+      StateFrame captureChangedFields p.captureWrites post s ∧
+      Env.lookup s v_rip = p.captureExit
+
+/-- Shared-parameter flags contract. These remain obligations, not assumed laws. -/
+def FlagsProtocolContract {C E : Type} (p : FlagsComponents C E) : Prop :=
+  PrepareCorrect p ∧ LoadCorrect p ∧ CaptureCorrect p ∧
+  (∀ post, Env.lookup (enterCapture post) v_rip = p.captureEntry) ∧
+  FlagsObservationCorrect p.decode p.assemble ∧
+  FlagsConversionCorrect ∧ FlagsArchitecturalLayoutCorrect ∧
+  FlagsRecordDecoderCorrect p.recordBase p.decode ∧
+  FlagsMemorySeparation p.recordBase p.prepareWrites p.installWrites
+    p.captureWrites p.protectedAddress ∧
+  FlagsBoundaryClassificationCorrect p.classify
+
+
+/-- The reusable frame algebra; it says nothing about intermediate faults. -/
+omit [FPInterpretation] in
+theorem stateFrame_compose
+    (fieldsA fieldsB : List (Σ s : TermSort, Var Γ s))
+    (bytesA bytesB : List (BitVec 64)) (a b c : Env Γ)
+    (first : StateFrame fieldsA bytesA a b)
+    (second : StateFrame fieldsB bytesB b c) :
+    StateFrame (fieldsA ++ fieldsB) (bytesA ++ bytesB) a c := by
+  constructor
+  · intro sort v outside
+    have ha : (⟨sort, v⟩ : Σ t : TermSort, Var Γ t) ∉ fieldsA :=
+      fun h => outside (List.mem_append.mpr (Or.inl h))
+    have hb : (⟨sort, v⟩ : Σ t : TermSort, Var Γ t) ∉ fieldsB :=
+      fun h => outside (List.mem_append.mpr (Or.inr h))
+    exact (second.1 sort v hb).trans (first.1 sort v ha)
+  · intro address outside
+    have ha : address ∉ bytesA :=
+      fun h => outside (List.mem_append.mpr (Or.inl h))
+    have hb : address ∉ bytesB :=
+      fun h => outside (List.mem_append.mpr (Or.inr h))
+    exact (second.2 address hb).trans (first.2 address ha)
+
 
 /-- Unproved composition obligation for the modeled flags protocol.
 The component contract is a conjunct to discharge, not an assumed correctness
@@ -427,43 +393,33 @@ are preserved from ambient by its frame. No target successor is required if
 the target LTS has none; target progress is a separate obligation. -/
 def FlagsModeledEndToEnd {C E : Type}
     (target : SymbolicTransitionSystem C Γ E)
-    (recordBase : Nat)
-    (prepareFlags : Env Γ → Env Γ → Env Γ)
-    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
-    (decodeFlags : Mem 64 8 → Option ModeledFlags)
-    (assemble : C → E → BitVec 64 → Mem 64 8 → Option (FlagsObservation C E))
-    (classify : Env Γ → FlagsBoundaryResult)
-    (prepareWrites installWrites captureWrites : List (BitVec 64))
-    (protectedAddress : BitVec 64 → Prop)
-    (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
-  FlagsProtocolContract recordBase prepareFlags flagsLoader flagsCapture
-    decodeFlags assemble classify prepareWrites installWrites captureWrites
-    protectedAddress loaderEntry targetEntry captureEntry captureExit ∧
+    (p : FlagsComponents C E) : Prop :=
+  FlagsProtocolContract p ∧
   ∀ (wanted ambient : Env Γ),
     (observeModeledFlags wanted).Valid →
     (observeModeledFlags ambient).Valid →
-    (∃ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded) ∧
-    (∀ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded →
+    (∃ loaded, p.load.denotes (p.prepare wanted ambient) loaded) ∧
+    (∀ loaded, p.load.denotes (p.prepare wanted ambient) loaded →
       observeModeledFlags loaded = observeModeledFlags wanted ∧
-      Env.lookup loaded v_rip = targetEntry ∧
-      StateFrame flagsInstallChangedFields (prepareWrites ++ installWrites)
+      Env.lookup loaded v_rip = p.targetEntry ∧
+      StateFrame flagsInstallChangedFields (p.prepareWrites ++ p.installWrites)
         ambient loaded ∧
       ∀ (control : C) (edge : E) (post : Config C Γ),
         target.toLTS.Tr ⟨control, loaded⟩ edge post →
-        (classify post.env =
+        (p.classify post.env =
           if (observeModeledFlags post.env).Valid then
             FlagsBoundaryResult.valid (observeModeledFlags post.env)
           else
             FlagsBoundaryResult.invalidEncoding (observeModeledFlags post.env)) ∧
         ((observeModeledFlags post.env).Valid →
-          (∃ captured, flagsCapture.denotes (enterCapture post.env) captured) ∧
-          (∀ captured, flagsCapture.denotes (enterCapture post.env) captured →
-            assemble post.control edge (Env.lookup post.env v_rip)
+          (∃ captured, p.capture.denotes (enterCapture post.env) captured) ∧
+          (∀ captured, p.capture.denotes (enterCapture post.env) captured →
+            p.assemble post.control edge (Env.lookup post.env v_rip)
                 (Env.lookup captured v_mem) =
               some ⟨post.control, edge, Env.lookup post.env v_rip,
                 observeModeledFlags post.env⟩ ∧
-            StateFrame captureChangedFields captureWrites post.env captured ∧
-            Env.lookup captured v_rip = captureExit)))
+            StateFrame captureChangedFields p.captureWrites post.env captured ∧
+            Env.lookup captured v_rip = p.captureExit)))
 
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
