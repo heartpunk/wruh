@@ -171,7 +171,8 @@ def MalformedReplyAt (events : List Event) (phase : Phase) (bytes : ByteArray) :
     | .stopped original => operationTracee operation = some original.evidence.token.tracee
     | .exited tracee _ => operationTracee operation = some tracee
 
-/-- Native transport and returned IO-error cases are evidence-backed in their own phase. Other
+/-- Native transport, returned IO errors and malformed replies are evidence-backed
+in their own phase. Other
 failure categories still need their specific classification/validation contracts;
 True in those branches deliberately asserts nothing about their causes. This is
 not named or used as a complete failure-causality claim. -/

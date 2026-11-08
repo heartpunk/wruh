@@ -33,9 +33,9 @@ Relevant installed declarations and lines:
 2. Specify transfer of the owned IO-result root and lifetime of its contained
    value/error, including the caller's extraction operation. Existing buffer
    frames alone do not describe this ownership handoff.
-3. Cover BOTH runtime IO outcomes. The current ForeignAPI/Execution skeleton
-   records Reply returns but lacks an explicit IO.Error return branch in its
-   execution relation. Errors must not be silently coerced into native errno
+3. Cover BOTH runtime IO outcomes. At investigation baseline `0a221f1a115ca89298f39aad7df3c92029bb90f4`,
+   ForeignAPI/Execution recorded Reply returns but lacked an explicit IO.Error
+   return branch in its execution relation. Errors must not be silently coerced into native errno
    replies, omitted as absent paths, or fabricated into observations.
 4. Separate returned IO errors from runtime abort/OOM paths. The promised finite
    classified completion must either include the agreed external resource/runtime
@@ -44,3 +44,8 @@ Relevant installed declarations and lines:
 
 The exact ownership and return obligations can be stated before observer
 implementation. The executable artifact binding and its proof remain separate.
+
+The returned-error representation gap above was addressed by specification
+commits `64c337392424f5d762589d35dd2a6f6e38e2e964` and
+`085c0cdf1155595d0eefb4e8b9f6076255e66ee9`. Ownership and actual foreign
+execution binding remain open; see evidence/foreign-outcomes for validation.
