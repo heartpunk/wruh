@@ -311,23 +311,45 @@ def FlagsRecordDecoderCorrect (recordBase : Nat)
   ∀ memory : Mem 64 8,
     decodeFlags memory = some (flagsFromRflags (read64 memory recordBase))
 
+/-- Unproved layout/separation obligation. The complete eight-byte flags
+record must be admitted by the capture footprint. Every stage footprint must
+avoid protected addresses, including target memory and executable code as
+specified by the eventual layout. Footprints may overlap one another; this
+predicate imposes no unnecessary pairwise separation or alignment constraint.
+The protected predicate is fixed per layout, not inferred from observed writes.
+Establishing that it includes every address needing protection is a separate
+layout/target-access obligation; choosing False does not establish privacy.
+This describes address separation, not native mapping or permissions. -/
+def FlagsMemorySeparation (recordBase : Nat)
+    (prepareWrites installWrites captureWrites : List (BitVec 64))
+    (protectedAddress : BitVec 64 → Prop) : Prop :=
+  recordBase + 8 ≤ 2^64 ∧
+  (∀ i : Nat, i < 8 →
+    BitVec.ofNat 64 (recordBase + i) ∈ captureWrites) ∧
+  (∀ a : BitVec 64,
+    a ∈ prepareWrites ∨ a ∈ installWrites ∨ a ∈ captureWrites →
+    ¬ protectedAddress a)
+
 /-- Combined, unproved flags-component contract. Fidelity and framing share
 exactly the same stage functions; fixed footprints belong to that instantiation.
 The architectural conversions are the concrete functions above, not arbitrary
 replacement codecs. Classification uses the same modeled flag representation.
 This conjunction does not prove that an executable invokes these components,
-establish that capture writes the agreed record, enforce private-memory
-separation, or propagate classification failures. Those links
+establish that capture writes the agreed record, establish completeness of
+the protected-address predicate, or propagate classification failures. Those links
 remain explicit integration obligations, not consequences of these names. -/
 def FlagsProtocolContract (recordBase : Nat)
     (prepareFlags : Env Γ → Env Γ → Env Γ)
     (flagsLoader flagsCapture : QFAbvStep Γ Γ)
     (decodeFlags : Mem 64 8 → Option ModeledFlags)
     (classify : Env Γ → FlagsBoundaryResult)
-    (prepareWrites installWrites captureWrites : List (BitVec 64)) : Prop :=
+    (prepareWrites installWrites captureWrites : List (BitVec 64))
+    (protectedAddress : BitVec 64 → Prop) : Prop :=
   FlagsConversionCorrect ∧
   FlagsArchitecturalLayoutCorrect ∧
   FlagsRecordDecoderCorrect recordBase decodeFlags ∧
+  FlagsMemorySeparation recordBase prepareWrites installWrites captureWrites
+    protectedAddress ∧
   FlagsBoundaryClassificationCorrect classify ∧
   ProtocolFlagsFidelity prepareFlags flagsLoader flagsCapture decodeFlags ∧
   FlagsProtocolFrames prepareFlags flagsLoader flagsCapture
