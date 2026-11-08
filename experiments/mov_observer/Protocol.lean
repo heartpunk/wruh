@@ -179,6 +179,33 @@ def FlagsConversionCorrect : Prop :=
   (∀ (f : ModeledFlags) (original : BitVec 64),
     flagsToRflags f original = none ↔ ¬ f.Valid)
 
+/-- Independent bit-position specification for the nine represented AMD64
+flags. Literal positions are grounded in the pinned VEX get/put_rflags source,
+not derived from modeledRflagsMask or either conversion implementation.
+Other RFLAGS bits are outside this relation, not asserted to be zero. -/
+def FlagsMatchRflags (f : ModeledFlags) (word : BitVec 64) : Prop :=
+  f.Valid ∧
+  (word.getLsbD 0 = true ↔ f.cf = 1) ∧
+  (word.getLsbD 2 = true ↔ f.pf = 1) ∧
+  (word.getLsbD 4 = true ↔ f.af = 1) ∧
+  (word.getLsbD 6 = true ↔ f.zf = 1) ∧
+  (word.getLsbD 7 = true ↔ f.sf = 1) ∧
+  (word.getLsbD 11 = true ↔ f.of_ = 1) ∧
+  (word.getLsbD 10 = true ↔ f.d = BitVec.ofNat 64 (2^64 - 1)) ∧
+  (word.getLsbD 18 = true ↔ f.ac = 1) ∧
+  (word.getLsbD 21 = true ↔ f.id = 1)
+
+/-- Unproved architectural-layout obligation, separate from codec roundtrips.
+The decoder must match the fixed bit specification for every word; every
+successful encoding must match the supplied flags. Encoding availability,
+invalid rejection and unrelated-bit preservation remain FlagsConversionCorrect.
+This is representation correspondence, not native write permission or complete
+architectural-state coverage. -/
+def FlagsArchitecturalLayoutCorrect : Prop :=
+  (∀ word : BitVec 64, FlagsMatchRflags (flagsFromRflags word) word) ∧
+  (∀ (f : ModeledFlags) (original encoded : BitVec 64),
+    flagsToRflags f original = some encoded → FlagsMatchRflags f encoded)
+
 /-- Classification evidence retains the exact observed model fields in both
 cases. Invalid is a representation failure, not a successful comparison or
 an absent sample. This record does not describe native instruction faults. -/
