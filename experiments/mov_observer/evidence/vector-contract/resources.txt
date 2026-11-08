@@ -1,0 +1,8 @@
+SubState=exited
+Result=success
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=389668864
+CPUUsageNSec=3759146000
+MemoryMax=2147483648
+MemorySwapMax=0
