@@ -409,6 +409,62 @@ def FlagsProtocolContract {C E : Type} (recordBase : Nat)
   FlagsProtocolFrames prepareFlags flagsLoader flagsCapture
     prepareWrites installWrites captureWrites
 
+/-- Unproved composition obligation for the modeled flags protocol.
+The component contract is a conjunct to discharge, not an assumed correctness
+law for project-owned code. Preparation/loading must exist for valid inputs;
+every loaded successor installs the requested flags and frames ambient state.
+Every target edge from that exact loaded state is covered, without assuming
+that the target agrees with native semantics or preserves flag validity.
+Invalid target flags retain an explicit invalid classification. Valid outcomes
+admit capture, and every capture successor must preserve the original target
+metadata in the assembled observation and satisfy the post-target frame.
+
+This uses the existing one-step target LTS, enterCapture, and concrete modeled
+state. It does not prove native execution, actual metadata acquisition, call
+sequencing/termination, or invalid-result reporting by the Lean executable.
+GPR/FP/vector installation is not added by this flags-only composition: GPRs
+are preserved from ambient by its frame. No target successor is required if
+the target LTS has none; target progress is a separate obligation. -/
+def FlagsModeledEndToEnd {C E : Type}
+    (target : SymbolicTransitionSystem C Γ E)
+    (recordBase : Nat)
+    (prepareFlags : Env Γ → Env Γ → Env Γ)
+    (flagsLoader flagsCapture : QFAbvStep Γ Γ)
+    (decodeFlags : Mem 64 8 → Option ModeledFlags)
+    (assemble : C → E → BitVec 64 → Mem 64 8 → Option (FlagsObservation C E))
+    (classify : Env Γ → FlagsBoundaryResult)
+    (prepareWrites installWrites captureWrites : List (BitVec 64))
+    (protectedAddress : BitVec 64 → Prop)
+    (loaderEntry targetEntry captureEntry captureExit : BitVec 64) : Prop :=
+  FlagsProtocolContract recordBase prepareFlags flagsLoader flagsCapture
+    decodeFlags assemble classify prepareWrites installWrites captureWrites
+    protectedAddress loaderEntry targetEntry captureEntry captureExit ∧
+  ∀ (wanted ambient : Env Γ),
+    (observeModeledFlags wanted).Valid →
+    (observeModeledFlags ambient).Valid →
+    (∃ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded) ∧
+    (∀ loaded, flagsLoader.denotes (prepareFlags wanted ambient) loaded →
+      observeModeledFlags loaded = observeModeledFlags wanted ∧
+      Env.lookup loaded v_rip = targetEntry ∧
+      StateFrame flagsInstallChangedFields (prepareWrites ++ installWrites)
+        ambient loaded ∧
+      ∀ (control : C) (edge : E) (post : Config C Γ),
+        target.toLTS.Tr ⟨control, loaded⟩ edge post →
+        (classify post.env =
+          if (observeModeledFlags post.env).Valid then
+            FlagsBoundaryResult.valid (observeModeledFlags post.env)
+          else
+            FlagsBoundaryResult.invalidEncoding (observeModeledFlags post.env)) ∧
+        ((observeModeledFlags post.env).Valid →
+          (∃ captured, flagsCapture.denotes (enterCapture post.env) captured) ∧
+          (∀ captured, flagsCapture.denotes (enterCapture post.env) captured →
+            assemble post.control edge (Env.lookup post.env v_rip)
+                (Env.lookup captured v_mem) =
+              some ⟨post.control, edge, Env.lookup post.env v_rip,
+                observeModeledFlags post.env⟩ ∧
+            StateFrame captureChangedFields captureWrites post.env captured ∧
+            Env.lookup captured v_rip = captureExit)))
+
 /-- Input fidelity, the identical target transition, exact output decoding,
 and both input/capture memory frames follow from the extracted stub semantics.
 No hypothesis asserts the observer's desired result. -/
