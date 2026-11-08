@@ -108,6 +108,41 @@ def ReturnFaithful (q : Request) (events : List Event) : Result → Prop
   | .targetExited tracee status => Ordered events (.exited tracee status)
   | .outcomeUnavailable started _ => Ordered events (.running started)
 
+/-- Which process a concrete bridge call addresses; create has no process yet. -/
+def operationTracee : Operation → Option Tracee
+  | .create => none
+  | .readRegisters stop | .writeRegisters stop _ |
+    .readMemory stop _ _ | .writeMemory stop _ _ | .singleStep stop => some stop.tracee
+  | .wait tracee | .reap tracee => some tracee
+
+/-- Exact syscall error in the same execution phase and for its tracee. The
+bridge refinement must establish errno authenticity; this relation prevents
+borrowing an error from another process or an earlier execution phase. -/
+def TransportErrorAt (events : List Event) (phase : Phase) (errno : UInt32) : Prop :=
+  ∃ before after operation transferred,
+    events = before ++ Event.transport operation (.failed errno transferred) :: after ∧
+    Ordered before phase ∧
+    match phase with
+    | .ready => operationTracee operation = none
+    | .preparing stop _ | .running stop => operationTracee operation = some stop.tracee
+    | .stopped original => operationTracee operation = some original.evidence.token.tracee
+    | .exited tracee _ => operationTracee operation = some tracee
+
+/-- Transport-error cases are evidence-backed in their own phase. Non-transport
+failure categories still need their specific classification/validation contracts;
+True in those branches deliberately asserts nothing about their causes. This is
+not named or used as a complete failure-causality claim. -/
+def TransportFailureSupported (events : List Event) : Result → Prop
+  | .setupFailed (.transport errno) =>
+      TransportErrorAt events .ready errno ∨
+      ∃ token ambient, TransportErrorAt events (.preparing token ambient) errno
+  | .captured (.failed evidence (.transport errno)) =>
+      ∃ original, original.evidence = evidence ∧
+        TransportErrorAt events (.stopped original) errno
+  | .outcomeUnavailable started (.transport errno) =>
+      TransportErrorAt events (.running started) errno
+  | _ => True
+
 /-- Whole-run finite completion, including orchestration retries and concrete
 foreign calls. Apply conditionally to the agreed external progress assumptions
 and terminating target instruction, never assume termination of our own code.
@@ -151,7 +186,7 @@ def ObserverFidelityAndTermination {State : Type}
     ∀ s result, Reaches e.step (e.initial q) s → e.returned s = some result →
       result = .setupFailed .invalidState) ∧
   ∀ s result, Reaches e.step (e.initial q) s → e.returned s = some result →
-    ReturnFaithful q (e.history s) result
+    ReturnFaithful q (e.history s) result ∧ TransportFailureSupported (e.history s) result
 
 /-- Fixed layout, chosen before observing execution. Protected-set adequacy
 must be established from mappings and target-visible state. Private preparation
