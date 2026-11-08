@@ -153,6 +153,48 @@ def TransportFailureSupported (events : List Event) : Result → Prop
       TransportErrorAt events (.running started) errno
   | _ => True
 
+/-- A target stop is supported by the exact consolidated wait receipt from
+its running phase. The receipt retains optional siginfo without synthesizing it.
+This does not classify the stop as successful instruction completion or establish
+the native acquisition of `original.post`; those obligations remain separate. -/
+def TargetStopReceipt (priorEvents : List Event) (original : FrozenStop) : Prop :=
+  ∃ before after started,
+    Ordered before (.running started) ∧
+    started.tracee = original.evidence.token.tracee ∧
+    priorEvents = before ++
+      Event.transport (.wait started.tracee)
+        (.stopped original.evidence.token original.evidence.waitStatus
+          original.evidence.siginfo) :: after
+
+/-- Exit evidence is the exact wait receipt for the same running tracee, not
+an unrelated transport status or a status taken from a later observer process. -/
+def TargetExitReceipt (priorEvents : List Event) (tracee : Tracee)
+    (status : UInt32) : Prop :=
+  ∃ before after started,
+    Ordered before (.running started) ∧ started.tracee = tracee ∧
+    priorEvents = before ++
+      Event.transport (.wait tracee) (.exited tracee status) :: after
+
+/-- Connect bridge receipts and target-outcome events within the SAME complete
+history. Receipt witnesses precede the outcome event; no immediate adjacency is
+required. Ordered supplies the single-invocation phase discipline. This evidence
+link is necessary but does not replace concrete bridge/native trace refinement. -/
+def TransportEvidenceLinked (events : List Event) : Prop :=
+  (∀ operation reply, Event.transport operation reply ∈ events →
+    OperationReplyCompatible operation reply) ∧
+  (∀ priorEvents suffix original,
+    events = priorEvents ++ Event.targetStop original :: suffix →
+    TargetStopReceipt priorEvents original) ∧
+  (∀ priorEvents suffix tracee status,
+    events = priorEvents ++ Event.targetExit tracee status :: suffix →
+    TargetExitReceipt priorEvents tracee status)
+
+/-- Apply the receipt linkage to every reachable prefix, including paths which
+later fail. It uses the same Execution as fidelity and prefix noninterference. -/
+def ObserverTransportEvidence {State : Type} (e : Execution State)
+    (q : Request) : Prop :=
+  ∀ s, Reaches e.step (e.initial q) s → TransportEvidenceLinked (e.history s)
+
 /-- Whole-run finite completion, including orchestration retries and concrete
 foreign calls. Apply conditionally to the agreed external progress assumptions
 and terminating target instruction, never assume termination of our own code.
@@ -266,6 +308,7 @@ a composition obligation only; native binding, complete profile and component
 linkage must still be discharged, rather than assumed from this conjunction. -/
 def ObserverCoreContract {State : Type} (e : Execution State)
     (q : Request) (layout : Layout) : Prop :=
-  ObserverFidelityAndTermination e q ∧ ObserverPrefixNoninterference e q layout
+  ObserverFidelityAndTermination e q ∧ ObserverPrefixNoninterference e q layout ∧
+    ObserverTransportEvidence e q
 
 end MovObserver.WholeObserver
