@@ -150,6 +150,10 @@ structure Execution (State : Type) where
   initial : Operation → State
   step : State → State → Prop
   returned : State → Option Reply
+  /-- Complete ordered host writes for this step, including writes later undone.
+  Completeness must follow from concrete bridge execution, not instrumentation
+  that is permitted to omit effects. -/
+  writes : State → State → List (Nat × BitVec 8)
 
 inductive Reaches {State : Type} (step : State → State → Prop) : State → State → Prop
   | refl (s) : Reaches step s s
@@ -169,17 +173,24 @@ def CallBufferLifetime {State : Type} (e : Execution State)
 
 /-- Prefix-level host framing, including unsuccessful calls. Input contents
 remain unchanged and every individual bridge step stays inside output or
-separately declared scratch slices. Scratch is not returned observation data.
+separately declared, state-indexed scratch slices. Scratch is disjoint from
+input/output slices. Every concrete write must occur in `e.writes`; equality of
+endpoint bytes alone cannot discharge that execution-binding obligation.
+Scratch allocation/free must be exposed as separate steps before/after use.
 Operation-specific output contents/counts are separate obligations; this frame
 is not permission to fabricate an output payload. -/
 def CallMemoryFrame {State : Type} (e : Execution State)
-    (host : State → HostState) (request : Operation) (inputs outputs scratch : List Buffer) : Prop :=
+    (host : State → HostState) (request : Operation) (inputs outputs : List Buffer) (scratch : State → List Buffer) : Prop :=
   ∀ s, Reaches e.step (e.initial request) s →
     (∀ b ∈ inputs, ∀ a, BufferContains b a →
       (host s).memory a = (host (e.initial request)).memory a) ∧
-    (∀ b ∈ outputs ++ scratch, WritableBorrow b (host s)) ∧
+    (∀ b ∈ outputs ++ scratch s, WritableBorrow b (host s)) ∧
+    (∀ b ∈ scratch s, ∀ other ∈ inputs ++ outputs, BuffersDisjoint b other) ∧
     (∀ next, e.step s next →
-      HostFrame (outputs ++ scratch) (host s).memory (host next).memory ∧
+      HostFrame (outputs ++ scratch s) (host s).memory (host next).memory ∧
+      (∀ write ∈ e.writes s next,
+        (∃ b ∈ outputs ++ scratch s, BufferContains b write.1) ∧
+        (∀ b ∈ inputs, ¬ BufferContains b write.1)) ∧
       AllocationTransitionCorrect (host s) (host next))
 
 /-- No infinite path, stuck nonterminal state, or execution past return.
