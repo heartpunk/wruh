@@ -35,7 +35,7 @@ structure View where
   tag : ObjectId → Option Nat
 
 def Live (view : View) : Reference → Prop
-  | .immediate _ => True
+  | .immediate value => value < 2^63
   | .heap object =>
       ∃ allocation, view.host.allocations object.owner = some allocation ∧
         allocation.owner = object.owner ∧ allocation.generation = object.generation ∧
@@ -134,5 +134,23 @@ def ForeignReturnOwnership {State : Type} (e : Execution State) (view : State �
     (request : Operation) : Prop :=
   ∀ state root raw, Reaches e.step (e.initial request) state →
     rawReturns state = some (root, raw) → ResultRootOwned (view state) root raw
+
+/-- Shared-execution contract: ownership, wire borrowing and frames refer to
+one host projection, and every returned outcome terminates. Apply under the
+explicit external progress/resource premises, not an assumption that our own
+code is correct. Concrete event/accessor completeness and raw-value acquisition
+remain required binding obligations, not consequences of this conjunction. -/
+def OwnedCallContract {State : Type} (e : Execution State) (view : State → View)
+    (actions : State → State → Option Action)
+    (uses : State → State → List (Reference × Authority))
+    (rawReturns : State → Option (Nat × Except IO.Error ByteArray))
+    (request : Operation) (root : Nat) (payload : Buffer) (wire : ByteArray)
+    (outputs scratch : State → List Buffer) : Prop :=
+  OwnershipSafety e view actions uses request ∧
+  RequestBorrowPreserved e view request root payload wire ∧
+  ForeignReturnOwnership e view rawReturns request ∧
+  CallBufferLifetime e (fun state => (view state).host) request [payload] ∧
+  CallDynamicMemoryFrame e (fun state => (view state).host) request [payload] outputs scratch ∧
+  CallTerminates e request ∧ CallReplyCompatible e
 
 end MovObserver.RuntimeOwnership
