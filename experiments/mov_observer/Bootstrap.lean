@@ -129,7 +129,22 @@ def movProfile : Profile Γ (List (BitVec 64)) where
   captureFrame post final :=
     StateFrame captureChangedFields (expectedWrites.map Prod.fst) post final
 
-def MovComponentObligations : Prop := ComponentObligations movProfile movConstruction
-def MovBootstrapObligation : Prop := BootstrapObligation movProfile movConstruction
+/-- Pin the concrete supervisor helpers to their intended roles; they cannot
+stand in for the MOV load/capture by installing registers or copying the answer.
+Their native refinement is still a separate obligation. -/
+def MovPreparationFrame : Prop :=
+  ∀ wanted ambient,
+    StateFrame [⟨_, v_mem⟩, ⟨_, v_rip⟩] (inputWrites.map Prod.fst)
+      ambient (prepareInput wanted ambient)
+
+def MovHandoffFrame : Prop :=
+  ∀ post, StateFrame [⟨_, v_rip⟩] [] post (enterCapture post) ∧
+    Env.lookup (enterCapture post) v_rip = BitVec.ofNat 64 0x400000
+
+def MovComponentObligations : Prop :=
+  ComponentObligations movProfile movConstruction ∧ MovPreparationFrame ∧ MovHandoffFrame
+
+def MovBootstrapObligation : Prop :=
+  BootstrapObligation movProfile movConstruction ∧ MovPreparationFrame ∧ MovHandoffFrame
 
 end MovObserver.Bootstrap
