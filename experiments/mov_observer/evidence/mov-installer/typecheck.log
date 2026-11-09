@@ -1,0 +1,8 @@
+snapshot=10474a4c9b9c96f4e19608b14d2fcf42ffb19e2b
+6af2af54f3e6e969f054154e2a4bd2eab27c2a6700de1a677b914554b1d35701  /home/heartpunk/workspaces/observer-mov-instance-10474a4c/experiments/mov_observer/Bootstrap.lean
+a9a435d7c67ded8d78aec73975441c80c8f25991f079fb7c5a648abead54c351  /home/heartpunk/workspaces/observer-mov-instance-10474a4c/experiments/mov_observer/MovInstaller.lean
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+ayxg=324752afe80b05d7fd8854834725cf5ee360f173
+Bootstrap
+MovInstaller
+'MovObserver.Bootstrap.mov_installer_contract' depends on axioms: [propext, Classical.choice, Quot.sound]
