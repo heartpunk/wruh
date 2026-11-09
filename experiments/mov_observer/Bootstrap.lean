@@ -52,20 +52,42 @@ def compose {Δ : Ctx} {m : Nat} (basis : Basis Δ m) :
   | [] => QFAbvStep.identity Δ
   | i :: rest => (basis.model i).compose (compose basis rest)
 
+/-- A typed view of arbitrary modeled state, including overlapping register or
+memory views. This is not an independently stored copy of that state. -/
+structure StateView (Δ : Ctx) where
+  Value : Type
+  read : Env Δ → Value
+
+/-- A fixed installation-boundary value, such as entry PC or initialized
+private memory. Unlike an arbitrary predicate, this requires a concrete view
+value. Requested input views are checked separately against `wanted` itself. -/
+structure BoundaryValue (Δ : Ctx) where
+  destination : StateView Δ
+  value : Env Δ → Env Δ → destination.Value
+
 /-- The intended profile is fixed independently of the proposed construction.
 Views may overlap: they are functions of the same underlying AYXG environment.
-`entry` states the actual intended input boundary, including memory/layout;
+Requested input views and concrete boundary values specify installation;
 matching a selected register list alone is not target-state equivalence.
 The caller fixes Δ and q BEFORE choosing a construction. Frames constrain
 concrete state pairs, not a second instruction semantics. quotientBoundary q
 is the associated UFDA-compatible abstraction of behavior relations. -/
 structure Profile (Δ : Ctx) (q : Setoid (Env Δ)) (Value : Type) where
   admitted : Env Δ → Env Δ → Prop
-  entry : Env Δ → Env Δ → Env Δ → Prop
+  inputViews : List (StateView Δ)
+  boundaryValues : List (BoundaryValue Δ)
   observe : Env Δ → Value
   recover : Value → Option (Quotient q)
   installFrame : Env Δ → Env Δ → Env Δ → Prop
   captureFrame : Env Δ → Env Δ → Prop
+
+/-- The requested views must equal their values in `wanted`; additional
+boundary views must equal the profile's concrete layout/control values.
+Neither the installer nor its access specifications choose these requirements. -/
+def InputInstalled {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
+    (p : Profile Δ q Value) (wanted ambient loaded : Env Δ) : Prop :=
+  (∀ v ∈ p.inputViews, v.read loaded = v.read wanted) ∧
+  (∀ b ∈ p.boundaryValues, b.destination.read loaded = b.value wanted ambient)
 
 /-- Faithful AND complete recovery relative to the fixed quotient. The first
 law permits no extra distinctions inside a class and loses none between classes.
@@ -101,7 +123,7 @@ def ComponentObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Typ
   (∀ wanted ambient, p.admitted wanted ambient →
     StageCorrect (compose c.basis c.install).denotes
       (fun s => s = c.prepare wanted ambient)
-      (fun _ loaded => p.entry wanted ambient loaded ∧
+      (fun _ loaded => InputInstalled p wanted ambient loaded ∧
         p.installFrame wanted ambient loaded)) ∧
   StageCorrect (fun post final =>
       (compose c.basis c.capture).denotes (c.handoff post) final)
@@ -136,7 +158,7 @@ def BootstrapObligation {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type
       (c.prepare wanted ambient) loaded) ∧
     (∀ (Event : Type) (T : Env Δ → Event → Env Δ → Prop)
       event loaded post final, Run c T wanted ambient event loaded post final →
-      p.entry wanted ambient loaded ∧ p.installFrame wanted ambient loaded ∧
+      InputInstalled p wanted ambient loaded ∧ p.installFrame wanted ambient loaded ∧
       (event, c.decode (Env.lookup final c.memory)) = (event, p.observe post) ∧
       p.recover (c.decode (Env.lookup final c.memory)) = some (Quotient.mk q post) ∧
       p.captureFrame post final) ∧
@@ -152,12 +174,6 @@ def CompositionTheorem : Prop :=
   ∀ (Δ : Ctx) (q : Setoid (Env Δ)) (m : Nat) (Value : Type)
     (p : Profile Δ q Value) (c : Construction Δ m Value),
     ComponentObligations p c → BootstrapObligation p c
-
-/-- A typed view of arbitrary modeled state, including overlapping register or
-memory views. This is not an independently stored copy of that state. -/
-structure StateView (Δ : Ctx) where
-  Value : Type
-  read : Env Δ → Value
 
 /-- Concrete frame meaning: every designated view retains its original value.
 The protected views are fixed by the observer profile, not selected by an
@@ -215,35 +231,44 @@ def AccessComposition : Prop :=
     AccessSequence basis spec steps pre post →
     StageCorrect (compose basis steps).denotes pre (fun _ final => post final)
 
-/-- Bind the existing frame slots to concrete preservation obligations.
-Installation compares with the ambient state, capture with the original target
-post-state. Profile authors fix both view families before choosing access steps. -/
-def ProfileFrameMeaning {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
-    (p : Profile Δ q Value) (installProtected captureProtected : List (StateView Δ)) : Prop :=
+/-- Installation contract over arbitrary AYXG access operations. The fixed
+profile determines requested views, boundary values and preserved surroundings.
+The sequence must establish all three, not just some predicate named entry.
+This is completed-stage correctness, not native termination or prefix recovery. -/
+def InstallerContract {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
+    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (spec : Fin m → AccessSpec Δ) (installProtected : List (StateView Δ)) : Prop :=
   (∀ wanted ambient loaded,
     p.installFrame wanted ambient loaded ↔ Preserves installProtected ambient loaded) ∧
-  (∀ post final, p.captureFrame post final ↔ Preserves captureProtected post final)
-
-/-- Access-to-frame obligations for the SAME construction used by Bootstrap.
-The final assertions require actual requested entry and decoded original state,
-not merely that each constituent instruction is a well-behaved accessor.
-Intermediate assertions may depend on wanted/ambient/post through these binders.
-Native binding, fault-prefix recovery and termination remain separate obligations. -/
-def AccessFrameObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
-    (p : Profile Δ q Value) (c : Construction Δ m Value)
-    (spec : Fin m → AccessSpec Δ)
-    (installProtected captureProtected : List (StateView Δ)) : Prop :=
-  ObservationComplete p ∧ ProfileFrameMeaning p installProtected captureProtected ∧
   (∀ wanted ambient, p.admitted wanted ambient →
     AccessSequence c.basis spec c.install
       (fun s => s = c.prepare wanted ambient)
-      (fun loaded => p.entry wanted ambient loaded ∧
-        Preserves installProtected ambient loaded)) ∧
+      (fun loaded =>
+        (∀ v ∈ p.inputViews, v.read loaded = v.read wanted) ∧
+        (∀ b ∈ p.boundaryValues, b.destination.read loaded = b.value wanted ambient) ∧
+        Preserves installProtected ambient loaded))
+
+/-- Capture contract over arbitrary AYXG access operations. The final record
+must recover the ORIGINAL target post-state modulo the fixed quotient, while
+preserving the fixed surrounding views. Intermediate information may relocate.
+No correctness premise about the observed target instruction is used. -/
+def CapturerContract {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
+    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (spec : Fin m → AccessSpec Δ) (captureProtected : List (StateView Δ)) : Prop :=
+  ObservationComplete p ∧
+  (∀ post final, p.captureFrame post final ↔ Preserves captureProtected post final) ∧
   (∀ post,
     AccessSequence c.basis spec c.capture (fun s => s = c.handoff post)
       (fun final => c.decode (Env.lookup final c.memory) = p.observe post ∧
         p.recover (c.decode (Env.lookup final c.memory)) = some (Quotient.mk q post) ∧
         Preserves captureProtected post final))
+
+/-- Both named contracts concern the same fixed profile and construction. -/
+def AccessFrameObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
+    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (spec : Fin m → AccessSpec Δ)
+    (installProtected captureProtected : List (StateView Δ)) : Prop :=
+  InstallerContract p c spec installProtected ∧ CapturerContract p c spec captureProtected
 
 /-- Required connection to the existing observer bootstrap, without a premise
 about the target instruction's semantics. Both composition results remain proof
@@ -282,10 +307,12 @@ def movProfile (q : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) :
     Profile Γ q (List (BitVec 64)) where
   admitted _ _ := True
-  entry wanted ambient loaded :=
-    observeGprs loaded = observeGprs wanted ∧
-    Env.lookup loaded v_rip = BitVec.ofNat 64 0x400170 ∧
-    Env.lookup loaded v_mem = prepareInputMemory wanted (Env.lookup ambient v_mem)
+  inputViews := [⟨List (BitVec 64), observeGprs⟩]
+  boundaryValues :=
+    [⟨⟨BitVec 64, fun s => Env.lookup s v_rip⟩,
+       fun _ _ => BitVec.ofNat 64 0x400170⟩,
+     ⟨⟨Mem 64 8, fun s => Env.lookup s v_mem⟩,
+       fun wanted ambient => prepareInputMemory wanted (Env.lookup ambient v_mem)⟩]
   observe := observeGprs
   recover := recover
   installFrame _ ambient loaded :=
