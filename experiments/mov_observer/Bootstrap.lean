@@ -231,13 +231,25 @@ def AccessComposition : Prop :=
     AccessSequence basis spec steps pre post →
     StageCorrect (compose basis steps).denotes pre (fun _ final => post final)
 
+/-- Input views and boundary values together cover the intended target input
+state. The caller fixes inputQ independently of the installer; harness-private
+state need not be distinguished by it. This does not replace noninterference. -/
+def InstallationCoverage
+    {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
+    (p : Profile Δ q Value) (inputQ : Setoid (Env Δ)) : Prop :=
+  ∀ wanted ambient loaded,
+    p.admitted wanted ambient →
+    InputInstalled p wanted ambient loaded →
+    inputQ.r loaded wanted
+
 /-- Installation contract over arbitrary AYXG access operations. The fixed
 profile determines requested views, boundary values and preserved surroundings.
 The sequence must establish all three, not just some predicate named entry.
 This is completed-stage correctness, not native termination or prefix recovery. -/
 def InstallerContract {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
-    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (inputQ : Setoid (Env Δ)) (p : Profile Δ q Value) (c : Construction Δ m Value)
     (spec : Fin m → AccessSpec Δ) (installProtected : List (StateView Δ)) : Prop :=
+  InstallationCoverage p inputQ ∧
   (∀ wanted ambient loaded,
     p.installFrame wanted ambient loaded ↔ Preserves installProtected ambient loaded) ∧
   (∀ wanted ambient, p.admitted wanted ambient →
@@ -265,20 +277,20 @@ def CapturerContract {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
 
 /-- Both named contracts concern the same fixed profile and construction. -/
 def AccessFrameObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
-    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (inputQ : Setoid (Env Δ)) (p : Profile Δ q Value) (c : Construction Δ m Value)
     (spec : Fin m → AccessSpec Δ)
     (installProtected captureProtected : List (StateView Δ)) : Prop :=
-  InstallerContract p c spec installProtected ∧ CapturerContract p c spec captureProtected
+  InstallerContract inputQ p c spec installProtected ∧ CapturerContract p c spec captureProtected
 
 /-- Required connection to the existing observer bootstrap, without a premise
 about the target instruction's semantics. Both composition results remain proof
 obligations; defining these Props does not discharge them. -/
 def AccessToBootstrap : Prop :=
   AccessComposition → CompositionTheorem →
-  ∀ (Δ : Ctx) (q : Setoid (Env Δ)) (m : Nat) (Value : Type)
+  ∀ (Δ : Ctx) (q inputQ : Setoid (Env Δ)) (m : Nat) (Value : Type)
     (p : Profile Δ q Value) (c : Construction Δ m Value)
     (spec : Fin m → AccessSpec Δ) (installProtected captureProtected : List (StateView Δ)),
-    AccessFrameObligations p c spec installProtected captureProtected → BootstrapObligation p c
+    AccessFrameObligations inputQ p c spec installProtected captureProtected → BootstrapObligation p c
 
 /-- Existing MOV fragments: two ALREADY COMPOSED 16-instruction models, not a
 claim that two arbitrary iforms have been generalized to every operand layout.
