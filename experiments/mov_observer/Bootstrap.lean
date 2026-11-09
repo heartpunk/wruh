@@ -71,7 +71,8 @@ and every run. Availability requires capture of EVERY target successor, not
 only those agreeing with a predicted target model. Original event metadata is
 carried unchanged, rather than inferred from the capture fragment's outcome.
 This is the completed-stage semantic obligation; it is deliberately not named
-native e2e correctness. Native linkage/prefix/termination goals are below. -/
+native e2e correctness. Native linkage, prefix recovery and actual execution
+termination remain separate obligations in the existing observer specification. -/
 def BootstrapObligation {Δ : Ctx} {m : Nat} {Value : Type}
     (p : Profile Δ Value) (c : Construction Δ m Value) : Prop :=
   ∀ wanted ambient, p.admitted wanted ambient →
