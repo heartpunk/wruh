@@ -153,6 +153,108 @@ def CompositionTheorem : Prop :=
     (p : Profile Δ q Value) (c : Construction Δ m Value),
     ComponentObligations p c → BootstrapObligation p c
 
+/-- A typed view of arbitrary modeled state, including overlapping register or
+memory views. This is not an independently stored copy of that state. -/
+structure StateView (Δ : Ctx) where
+  Value : Type
+  read : Env Δ → Value
+
+/-- Concrete frame meaning: every designated view retains its original value.
+The protected views are fixed by the observer profile, not selected by an
+implementation to excuse its effects. They can include memory outside a record. -/
+def Preserves {Δ : Ctx} (preserved : List (StateView Δ))
+    (before after : Env Δ) : Prop :=
+  ∀ v ∈ preserved, v.read after = v.read before
+
+/-- A required transfer into a state view. `value` reads the PRE-state; it may
+express copying, conversion, indexing, or a coordinated stack-position update.
+Its meaning is supplied by the specification, not inferred from a mnemonic. -/
+structure ViewTransfer (Δ : Ctx) where
+  destination : StateView Δ
+  value : Env Δ → destination.Value
+
+/-- Specification data only. An access may change several overlapping views.
+No purity, independent-register, move, or stack discipline is assumed. Changes
+not constrained here must still satisfy the subsequent sequence obligations. -/
+structure AccessSpec (Δ : Ctx) where
+  enabled : Env Δ → Prop
+  transfers : List (ViewTransfer Δ)
+  preserved : List (StateView Δ)
+
+def AccessEffect {Δ : Ctx} (a : AccessSpec Δ) (before after : Env Δ) : Prop :=
+  (∀ t ∈ a.transfers, t.destination.read after = t.value before) ∧
+  Preserves a.preserved before after
+
+/-- Obligation for an ARBITRARY quantified AYXG transition. Each instance must
+prove enabled execution and the required transfers/preservation from its full
+semantics. This does not replace those semantics with an effect summary. -/
+def AccessCorrect {Δ : Ctx} (step : QFAbvStep Δ Δ) (a : AccessSpec Δ) : Prop :=
+  StageCorrect step.denotes a.enabled (AccessEffect a)
+
+/-- A compositional certificate obligation. Intermediate assertions can express
+where original information has been saved or encoded. The implication covers
+EVERY state pair permitted by the access specification, so omitted side effects
+cannot be silently relied on as preserving information. No target is executed.
+The empty sequence must already imply the required final assertion. -/
+def AccessSequence {Δ : Ctx} {m : Nat} (basis : Basis Δ m)
+    (spec : Fin m → AccessSpec Δ) :
+    List (Fin m) → (Env Δ → Prop) → (Env Δ → Prop) → Prop
+  | [], pre, post => ∀ s, pre s → post s
+  | i :: rest, pre, post =>
+      AccessCorrect (basis.model i) (spec i) ∧
+      (∀ s, pre s → (spec i).enabled s) ∧
+      ∃ next : Env Δ → Prop,
+        (∀ before after, pre before → AccessEffect (spec i) before after → next after) ∧
+        AccessSequence basis spec rest next post
+
+/-- Generic composition theorem obligation, not a proof. It quantifies over
+all bases and access specifications; architecture instances discharge premises. -/
+def AccessComposition : Prop :=
+  ∀ (Δ : Ctx) (m : Nat) (basis : Basis Δ m) (spec : Fin m → AccessSpec Δ)
+    (steps : List (Fin m)) (pre post : Env Δ → Prop),
+    AccessSequence basis spec steps pre post →
+    StageCorrect (compose basis steps).denotes pre (fun _ final => post final)
+
+/-- Bind the existing frame slots to concrete preservation obligations.
+Installation compares with the ambient state, capture with the original target
+post-state. Profile authors fix both view families before choosing access steps. -/
+def ProfileFrameMeaning {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
+    (p : Profile Δ q Value) (installProtected captureProtected : List (StateView Δ)) : Prop :=
+  (∀ wanted ambient loaded,
+    p.installFrame wanted ambient loaded ↔ Preserves installProtected ambient loaded) ∧
+  (∀ post final, p.captureFrame post final ↔ Preserves captureProtected post final)
+
+/-- Access-to-frame obligations for the SAME construction used by Bootstrap.
+The final assertions require actual requested entry and decoded original state,
+not merely that each constituent instruction is a well-behaved accessor.
+Intermediate assertions may depend on wanted/ambient/post through these binders.
+Native binding, fault-prefix recovery and termination remain separate obligations. -/
+def AccessFrameObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
+    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (spec : Fin m → AccessSpec Δ)
+    (installProtected captureProtected : List (StateView Δ)) : Prop :=
+  ObservationComplete p ∧ ProfileFrameMeaning p installProtected captureProtected ∧
+  (∀ wanted ambient, p.admitted wanted ambient →
+    AccessSequence c.basis spec c.install
+      (fun s => s = c.prepare wanted ambient)
+      (fun loaded => p.entry wanted ambient loaded ∧
+        Preserves installProtected ambient loaded)) ∧
+  (∀ post,
+    AccessSequence c.basis spec c.capture (fun s => s = c.handoff post)
+      (fun final => c.decode (Env.lookup final c.memory) = p.observe post ∧
+        p.recover (c.decode (Env.lookup final c.memory)) = some (Quotient.mk q post) ∧
+        Preserves captureProtected post final))
+
+/-- Required connection to the existing observer bootstrap, without a premise
+about the target instruction's semantics. Both composition results remain proof
+obligations; defining these Props does not discharge them. -/
+def AccessToBootstrap : Prop :=
+  AccessComposition → CompositionTheorem →
+  ∀ (Δ : Ctx) (q : Setoid (Env Δ)) (m : Nat) (Value : Type)
+    (p : Profile Δ q Value) (c : Construction Δ m Value)
+    (spec : Fin m → AccessSpec Δ) (installProtected captureProtected : List (StateView Δ)),
+    AccessFrameObligations p c spec installProtected captureProtected → BootstrapObligation p c
+
 /-- Existing MOV fragments: two ALREADY COMPOSED 16-instruction models, not a
 claim that two arbitrary iforms have been generalized to every operand layout.
 Source bytes are fixtures/loader.bin and fixtures/observer.bin respectively. -/

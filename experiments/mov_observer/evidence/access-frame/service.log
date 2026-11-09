@@ -1,0 +1,3 @@
+Nov 09 11:16:33 nixos systemd[1]: Started [systemd-run] /run/current-system/sw/bin/bash /home/heartpunk/workspaces/observer-access-7b1de69a/check-access.sh.
+Nov 09 11:16:37 nixos systemd[1]: observer-access-7b1de69a.service: Deactivated successfully.
+Nov 09 11:16:37 nixos systemd[1]: observer-access-7b1de69a.service: Consumed 4.320s CPU time over 4.386s wall clock time, 399.9M memory peak.
