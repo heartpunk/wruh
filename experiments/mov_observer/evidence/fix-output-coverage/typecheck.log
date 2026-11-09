@@ -1,0 +1,17 @@
+snapshot=33d9bcd730b6872bbea8db7b0f0aedf7914de62d
+08bae23be2d7cb987df6087c7df930d45ac1032c9ffb7c7fc92ccbf43af852ea  /home/heartpunk/workspaces/observer-fix5-33d9bcd7/experiments/mov_observer/WholeObserver.lean
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+ayxg=324752afe80b05d7fd8854834725cf5ee360f173
+NativeBoundary
+Bridge
+Transfer
+VectorProtocol
+VectorProtocol.lean:9:323: warning: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+VectorProtocol.lean:12:92: warning: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+LegacyFp
+FaultProtocol
+WholeObserver

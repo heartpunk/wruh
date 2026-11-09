@@ -316,12 +316,43 @@ def ObserverPrefixNoninterference {State : Type} (e : Execution State)
     (q : Request) (layout : Layout) : Prop :=
   ∀ s, Reaches e.step (e.initial q) s → PrefixNoninterference q layout (e.history s)
 
-/-- Both obligations apply to exactly the same execution and request. This is
-a composition obligation only; native binding, complete profile and component
-linkage must still be discharged, rather than assumed from this conjunction. -/
+/-- The exact selected output representation of a state. Selection is fixed by
+ the request, independently of whether any execution or capture succeeds. -/
+def selectedValues (request : Request) (state : Env Γ) : CapturedValues where
+  fields := request.outputFields.map (fun ⟨sort, field⟩ =>
+    ⟨sort, field, Env.lookup state field⟩)
+  memory := request.outputMemory.map (fun a => (a, Env.lookup state v_mem a))
+
+/-- The specification fixes outputQ and recover, independently of the observer.
+Selected outputs must retain exactly its state distinctions and recover its class.
+An empty selection cannot satisfy this for a nontrivial quotient, even if all
+executions fail. This is representation completeness, not capture availability. -/
+def OutputCoverage (request : Request) (outputQ : Setoid (Env Γ))
+    (recover : CapturedValues → Option (Quotient outputQ)) : Prop :=
+  (∀ s t, selectedValues request s = selectedValues request t ↔ outputQ.r s t) ∧
+  (∀ s, recover (selectedValues request s) = some (Quotient.mk outputQ s))
+
+/-- Recovery concerns the actual returned record and the original target stop
+in the same execution history, not merely an ideal record or a predicted state. -/
+def ObserverOutputComplete {State : Type} (e : Execution State)
+    (request : Request) (outputQ : Setoid (Env Γ))
+    (recover : CapturedValues → Option (Quotient outputQ)) : Prop :=
+  OutputCoverage request outputQ recover ∧
+  ∀ s recorded values,
+    Reaches e.step (e.initial request) s →
+    e.returned s = some (.captured (.observed recorded values)) →
+    ∃ original,
+      Ordered (e.history s) (.stopped original) ∧
+      recorded = original.evidence ∧
+      values = selectedValues request original.post ∧
+      recover values = some (Quotient.mk outputQ original.post)
+
+/-- These obligations apply to the same execution, request and fixed output
+quotient. Native binding and component linkage remain separate obligations. -/
 def ObserverCoreContract {State : Type} (e : Execution State)
-    (q : Request) (layout : Layout) : Prop :=
+    (q : Request) (layout : Layout) (outputQ : Setoid (Env Γ))
+    (recover : CapturedValues → Option (Quotient outputQ)) : Prop :=
   ObserverFidelityAndTermination e q ∧ ObserverPrefixNoninterference e q layout ∧
-    ObserverTransportEvidence e q
+    ObserverTransportEvidence e q ∧ ObserverOutputComplete e q outputQ recover
 
 end MovObserver.WholeObserver
