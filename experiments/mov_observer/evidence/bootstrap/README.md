@@ -13,6 +13,10 @@ arbitrary-target endpoint obligation. Review corrections incorporated:
   while AYXG composition supports proving the component obligations.
 The final two documentation corrections are at 9cf1fc2d.
 
-Validation remains PENDING: NixOS SSH rejected authentication before any upload
-or build. No Lean typecheck ran. Static git diff --check passed. check_pipeline.sh
-now includes Bootstrap for the next authorized remote validation.
+Validation PASSED on NixOS for source 18ede57e6d36af888ee6f2916f9c3a1847b01375.
+Lean 4.34.0 typechecked Bootstrap.lean with exit 0 and no diagnostics.
+The existing matching Protocol/Pipeline dependency cache was reused; no native
+execution or proofs were added. Exact launcher, log and resource measurements
+are adjacent. The build used a two-GiB, one-CPU, no-swap child of fleet-build.slice;
+peak memory was 407412736 bytes. Sources and usable Git metadata were copied from
+the committed local snapshot; no remote source edits were made.
