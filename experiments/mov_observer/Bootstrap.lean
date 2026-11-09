@@ -31,14 +31,17 @@ structure Profile (Δ : Ctx) (Value : Type) where
 
 /-- Data only. Preparation/handoff are existing supervisor operations whose
 native implementations need their own refinement. They are not silently
-counted among the instruction forms in `basis`. -/
+counted among the instruction forms in `basis`. Decoding receives the record
+memory, never the entire final environment or a direct register oracle. -/
 structure Construction (Δ : Ctx) (m : Nat) (Value : Type) where
   basis : Basis Δ m
   install : List (Fin m)
   capture : List (Fin m)
   prepare : Env Δ → Env Δ → Env Δ
   handoff : Env Δ → Env Δ
-  decode : Env Δ → Value
+  addressWidth : Nat
+  memory : Var Δ (.array addressWidth 8)
+  decode : Mem addressWidth 8 → Value
 
 /-- Local laws are propositions about the actual composed AYXG transitions.
 Proving these laws must establish guards as well as value/frame properties.
@@ -54,7 +57,7 @@ def ComponentObligations {Δ : Ctx} {m : Nat} {Value : Type}
   StageCorrect (fun post final =>
       (compose c.basis c.capture).denotes (c.handoff post) final)
     (fun _ => True)
-    (fun post final => c.decode final = p.observe post ∧ p.captureFrame post final)
+    (fun post final => c.decode (Env.lookup final c.memory) = p.observe post ∧ p.captureFrame post final)
 
 /-- One target occurrence, opaque to the basis. In particular, T need not be
 an AYXG model and no semantic correctness claim about the target is assumed.
@@ -81,7 +84,7 @@ def BootstrapObligation {Δ : Ctx} {m : Nat} {Value : Type}
     (∀ (Event : Type) (T : Env Δ → Event → Env Δ → Prop)
       event loaded post final, Run c T wanted ambient event loaded post final →
       p.entry wanted ambient loaded ∧ p.installFrame wanted ambient loaded ∧
-      (event, c.decode final) = (event, p.observe post) ∧
+      (event, c.decode (Env.lookup final c.memory)) = (event, p.observe post) ∧
       p.captureFrame post final) ∧
     (∀ (Event : Type) (T : Env Δ → Event → Env Δ → Prop)
       event loaded post,
@@ -107,7 +110,9 @@ def movConstruction : Construction Γ 2 (List (BitVec 64)) where
   capture := [1]
   prepare := prepareInput
   handoff := enterCapture
-  decode s := decodeRecord (Env.lookup s v_mem)
+  addressWidth := 64
+  memory := v_mem
+  decode := decodeRecord
 
 /-- Concrete current GPR endpoint scope. The input bytes have their specified
 values as well as a frame outside them. This does not assert arbitrary target
