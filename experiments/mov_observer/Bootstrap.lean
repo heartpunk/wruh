@@ -73,7 +73,6 @@ The caller fixes Δ and q BEFORE choosing a construction. Frames constrain
 concrete state pairs, not a second instruction semantics. quotientBoundary q
 is the associated UFDA-compatible abstraction of behavior relations. -/
 structure Profile (Δ : Ctx) (q : Setoid (Env Δ)) (Value : Type) where
-  admitted : Env Δ → Env Δ → Prop
   inputViews : List (StateView Δ)
   boundaryValues : List (BoundaryValue Δ)
   observe : Env Δ → Value
@@ -93,7 +92,7 @@ def InputInstalled {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
 law permits no extra distinctions inside a class and loses none between classes.
 The second supplies actual recovery of that class from the representation.
 This is required independently of admission and before quantifying over runs:
-empty admission or fail-all execution cannot excuse an incomplete representation. -/
+fail-all execution cannot excuse an incomplete representation. -/
 def ObservationComplete {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
     (p : Profile Δ q Value) : Prop :=
   (∀ s t, p.observe s = p.observe t ↔ q.r s t) ∧
@@ -120,7 +119,7 @@ termination and intermediate-prefix recovery are NOT implied by it. -/
 def ComponentObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
     (p : Profile Δ q Value) (c : Construction Δ m Value) : Prop :=
   ObservationComplete p ∧
-  (∀ wanted ambient, p.admitted wanted ambient →
+  (∀ wanted ambient,
     StageCorrect (compose c.basis c.install).denotes
       (fun s => s = c.prepare wanted ambient)
       (fun _ loaded => InputInstalled p wanted ambient loaded ∧
@@ -153,7 +152,7 @@ termination remain separate obligations in the existing observer specification. 
 def BootstrapObligation {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
     (p : Profile Δ q Value) (c : Construction Δ m Value) : Prop :=
   ObservationComplete p ∧
-  ∀ wanted ambient, p.admitted wanted ambient →
+  ∀ wanted ambient,
     (∃ loaded, (compose c.basis c.install).denotes
       (c.prepare wanted ambient) loaded) ∧
     (∀ (Event : Type) (T : Env Δ → Event → Env Δ → Prop)
@@ -238,7 +237,6 @@ def InstallationCoverage
     {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
     (p : Profile Δ q Value) (inputQ : Setoid (Env Δ)) : Prop :=
   ∀ wanted ambient loaded,
-    p.admitted wanted ambient →
     InputInstalled p wanted ambient loaded →
     inputQ.r loaded wanted
 
@@ -252,7 +250,7 @@ def InstallerContract {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
   InstallationCoverage p inputQ ∧
   (∀ wanted ambient loaded,
     p.installFrame wanted ambient loaded ↔ Preserves installProtected ambient loaded) ∧
-  (∀ wanted ambient, p.admitted wanted ambient →
+  (∀ wanted ambient,
     AccessSequence c.basis spec c.install
       (fun s => s = c.prepare wanted ambient)
       (fun loaded =>
@@ -318,7 +316,6 @@ is an exposed remaining capture obligation, not permission to weaken q. -/
 def movProfile (q : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) :
     Profile Γ q (List (BitVec 64)) where
-  admitted _ _ := True
   inputViews := [⟨List (BitVec 64), observeGprs⟩]
   boundaryValues :=
     [⟨⟨BitVec 64, fun s => Env.lookup s v_rip⟩,
