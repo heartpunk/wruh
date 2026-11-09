@@ -306,47 +306,45 @@ def movConstruction : Construction Γ 2 (List (BitVec 64)) where
   memory := v_mem
   decode := decodeRecord
 
-/-- Concrete current GPR endpoint scope. The input bytes have their specified
-values as well as a frame outside them. This does not assert arbitrary target
-independence from private slots, or complete FP/vector/native-state coverage.
-The quotient and recovery map now come from the caller: the construction cannot
-silently choose a GPR-only quotient. If q retains operand memory (or FP/vector)
-distinctions, this GPR-only decoder cannot discharge ObservationComplete. That
-is an exposed remaining capture obligation, not permission to weaken q. -/
-def movProfile (q : Setoid (Env Γ))
+/-- Requested memory is part of the installation requirement, not presumed
+present in ambient memory. The fixed request selects its byte addresses; every
+selected byte must equal wanted at target entry. The existing loader does not
+yet implement these writes. Capture still has its existing GPR-only decoder. -/
+def movProfile (requestedMemory : List (BitVec 64)) (q : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) :
     Profile Γ q (List (BitVec 64)) where
-  inputViews := [⟨List (BitVec 64), observeGprs⟩]
+  inputViews :=
+    [⟨List (BitVec 64), observeGprs⟩,
+     ⟨({a : BitVec 64 // a ∈ requestedMemory} → BitVec 8),
+       fun s a => Env.lookup s v_mem a.val⟩]
   boundaryValues :=
     [⟨⟨BitVec 64, fun s => Env.lookup s v_rip⟩,
-       fun _ _ => BitVec.ofNat 64 0x400170⟩,
-     ⟨⟨Mem 64 8, fun s => Env.lookup s v_mem⟩,
-       fun wanted ambient => prepareInputMemory wanted (Env.lookup ambient v_mem)⟩]
+       fun _ _ => BitVec.ofNat 64 0x400170⟩]
   observe := observeGprs
   recover := recover
   installFrame _ ambient loaded :=
-    StateFrame inputChangedFields (inputWrites.map Prod.fst) ambient loaded
+    StateFrame inputChangedFields (requestedMemory ++ inputWrites.map Prod.fst) ambient loaded
   captureFrame post final :=
     StateFrame captureChangedFields (expectedWrites.map Prod.fst) post final
 
 /-- Pin the concrete supervisor helpers to their intended roles; they cannot
 stand in for the MOV load/capture by installing registers or copying the answer.
 Their native refinement is still a separate obligation. -/
-def MovPreparationFrame : Prop :=
+def MovPreparationFrame (requestedMemory : List (BitVec 64)) : Prop :=
   ∀ wanted ambient,
-    StateFrame [⟨_, v_mem⟩, ⟨_, v_rip⟩] (inputWrites.map Prod.fst)
+    StateFrame [⟨_, v_mem⟩, ⟨_, v_rip⟩] (requestedMemory ++ inputWrites.map Prod.fst)
       ambient (prepareInput wanted ambient)
 
 def MovHandoffFrame : Prop :=
   ∀ post, StateFrame [⟨_, v_rip⟩] [] post (enterCapture post) ∧
     Env.lookup (enterCapture post) v_rip = BitVec.ofNat 64 0x400000
 
-def MovComponentObligations (q : Setoid (Env Γ))
+def MovComponentObligations (requestedMemory : List (BitVec 64)) (q : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) : Prop :=
-  ComponentObligations (movProfile q recover) movConstruction ∧ MovPreparationFrame ∧ MovHandoffFrame
+  ComponentObligations (movProfile requestedMemory q recover) movConstruction ∧ MovPreparationFrame requestedMemory ∧ MovHandoffFrame
 
-def MovBootstrapObligation (q : Setoid (Env Γ))
+def MovBootstrapObligation (requestedMemory : List (BitVec 64)) (q : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) : Prop :=
-  BootstrapObligation (movProfile q recover) movConstruction ∧ MovPreparationFrame ∧ MovHandoffFrame
+  BootstrapObligation (movProfile requestedMemory q recover) movConstruction ∧ MovPreparationFrame requestedMemory ∧ MovHandoffFrame
 
 end MovObserver.Bootstrap
