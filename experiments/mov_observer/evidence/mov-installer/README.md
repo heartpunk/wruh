@@ -1,4 +1,9 @@
-# Concrete MOV installer certificate
+# Historical restricted MOV loader certificate — withdrawn
+
+**Withdrawn in `2adf40f32915734033491e98e2e1a3a5251bd206`.** The theorem below
+assumed requested memory was already installed. Its proof and positive review
+did not establish the requested installer. This file preserves historical
+evidence, not a current completion claim.
 
 Base: 10474a4c9b9c96f4e19608b14d2fcf42ffb19e2b.
 MovInstaller.lean SHA-256:
