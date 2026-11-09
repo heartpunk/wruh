@@ -6,7 +6,8 @@ variable [FPInterpretation]
 
 /-- Actual AYXG semantics, not effect labels. A basis member may already be an
 extracted fragment; expanding it into individual forms is a separate equality
-proof, not a claim made by this type. Byte/native linkage remains explicit below. -/
+proof, not a claim made by this type. Concrete byte/native linkage is a
+separate existing observer obligation, not discharged by this endpoint statement. -/
 structure Basis (Δ : Ctx) (m : Nat) where
   model : Fin m → QFAbvStep Δ Δ
 
@@ -72,7 +73,8 @@ structure Run {Δ : Ctx} {m : Nat} {Value Event : Type}
 /-- The semantic bootstrap goal. Soundness ranges over every target relation
 and every run. Availability requires capture of EVERY target successor, not
 only those agreeing with a predicted target model. Original event metadata is
-carried unchanged, rather than inferred from the capture fragment's outcome.
+paired unchanged with the decoded value in this semantic statement. Native
+metadata acquisition/reporting is not proved by that reflexive event equality.
 This is the completed-stage semantic obligation; it is deliberately not named
 native e2e correctness. Native linkage, prefix recovery and actual execution
 termination remain separate obligations in the existing observer specification. -/
@@ -91,8 +93,9 @@ def BootstrapObligation {Δ : Ctx} {m : Nat} {Value : Type}
       (compose c.basis c.install).denotes (c.prepare wanted ambient) loaded →
       T loaded event post → ∃ final, Run c T wanted ambient event loaded post final)
 
-/-- The reusable theorem obligation. A future proof should only use AYXG
-composition and ComponentObligations; it must not inspect or execute T. -/
+/-- The reusable theorem obligation. A future proof can eliminate StageCorrect
+in ComponentObligations without inspecting or executing T. AYXG composition
+lemmas support proving those component obligations from the basis semantics. -/
 def CompositionTheorem : Prop :=
   ∀ (Δ : Ctx) (m : Nat) (Value : Type)
     (p : Profile Δ Value) (c : Construction Δ m Value),
