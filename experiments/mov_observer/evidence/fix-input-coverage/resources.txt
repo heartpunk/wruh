@@ -1,0 +1,10 @@
+SubState=exited
+InvocationID=e9356c71f6bf4acdae1e06a8a48feb32
+Result=success
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=753119232
+CPUUsageNSec=44358273000
+CPUQuotaPerSecUSec=1s
+MemoryMax=2147483648
+MemorySwapMax=0

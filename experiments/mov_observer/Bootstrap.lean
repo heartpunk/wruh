@@ -88,6 +88,16 @@ def InputInstalled {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
   (∀ v ∈ p.inputViews, v.read loaded = v.read wanted) ∧
   (∀ b ∈ p.boundaryValues, b.destination.read loaded = b.value wanted ambient)
 
+/-- Input views and boundary values together cover the intended target input
+state. The caller fixes inputQ independently of the installer; harness-private
+state need not be distinguished by it. This does not replace noninterference. -/
+def InstallationCoverage
+    {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
+    (p : Profile Δ q Value) (inputQ : Setoid (Env Δ)) : Prop :=
+  ∀ wanted ambient loaded,
+    InputInstalled p wanted ambient loaded →
+    inputQ.r loaded wanted
+
 /-- Faithful AND complete recovery relative to the fixed quotient. The first
 law permits no extra distinctions inside a class and loses none between classes.
 The second supplies actual recovery of that class from the representation.
@@ -117,7 +127,8 @@ Proving these laws must establish guards as well as value/frame properties.
 StageCorrect supplies enabled execution and all-result correctness; native
 termination and intermediate-prefix recovery are NOT implied by it. -/
 def ComponentObligations {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
-    (p : Profile Δ q Value) (c : Construction Δ m Value) : Prop :=
+    (inputQ : Setoid (Env Δ)) (p : Profile Δ q Value) (c : Construction Δ m Value) : Prop :=
+  InstallationCoverage p inputQ ∧
   ObservationComplete p ∧
   (∀ wanted ambient,
     StageCorrect (compose c.basis c.install).denotes
@@ -150,14 +161,15 @@ This is the completed-stage semantic obligation; it is deliberately not named
 native e2e correctness. Native linkage, prefix recovery and actual execution
 termination remain separate obligations in the existing observer specification. -/
 def BootstrapObligation {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type}
-    (p : Profile Δ q Value) (c : Construction Δ m Value) : Prop :=
+    (inputQ : Setoid (Env Δ)) (p : Profile Δ q Value) (c : Construction Δ m Value) : Prop :=
+  InstallationCoverage p inputQ ∧
   ObservationComplete p ∧
   ∀ wanted ambient,
     (∃ loaded, (compose c.basis c.install).denotes
       (c.prepare wanted ambient) loaded) ∧
     (∀ (Event : Type) (T : Env Δ → Event → Env Δ → Prop)
       event loaded post final, Run c T wanted ambient event loaded post final →
-      InputInstalled p wanted ambient loaded ∧ p.installFrame wanted ambient loaded ∧
+      InputInstalled p wanted ambient loaded ∧ inputQ.r loaded wanted ∧ p.installFrame wanted ambient loaded ∧
       (event, c.decode (Env.lookup final c.memory)) = (event, p.observe post) ∧
       p.recover (c.decode (Env.lookup final c.memory)) = some (Quotient.mk q post) ∧
       p.captureFrame post final) ∧
@@ -170,9 +182,9 @@ def BootstrapObligation {Δ : Ctx} {q : Setoid (Env Δ)} {m : Nat} {Value : Type
 in ComponentObligations without inspecting or executing T. AYXG composition
 lemmas support proving those component obligations from the basis semantics. -/
 def CompositionTheorem : Prop :=
-  ∀ (Δ : Ctx) (q : Setoid (Env Δ)) (m : Nat) (Value : Type)
+  ∀ (Δ : Ctx) (q inputQ : Setoid (Env Δ)) (m : Nat) (Value : Type)
     (p : Profile Δ q Value) (c : Construction Δ m Value),
-    ComponentObligations p c → BootstrapObligation p c
+    ComponentObligations inputQ p c → BootstrapObligation inputQ p c
 
 /-- Concrete frame meaning: every designated view retains its original value.
 The protected views are fixed by the observer profile, not selected by an
@@ -230,16 +242,6 @@ def AccessComposition : Prop :=
     AccessSequence basis spec steps pre post →
     StageCorrect (compose basis steps).denotes pre (fun _ final => post final)
 
-/-- Input views and boundary values together cover the intended target input
-state. The caller fixes inputQ independently of the installer; harness-private
-state need not be distinguished by it. This does not replace noninterference. -/
-def InstallationCoverage
-    {Δ : Ctx} {q : Setoid (Env Δ)} {Value : Type}
-    (p : Profile Δ q Value) (inputQ : Setoid (Env Δ)) : Prop :=
-  ∀ wanted ambient loaded,
-    InputInstalled p wanted ambient loaded →
-    inputQ.r loaded wanted
-
 /-- Installation contract over arbitrary AYXG access operations. The fixed
 profile determines requested views, boundary values and preserved surroundings.
 The sequence must establish all three, not just some predicate named entry.
@@ -288,7 +290,7 @@ def AccessToBootstrap : Prop :=
   ∀ (Δ : Ctx) (q inputQ : Setoid (Env Δ)) (m : Nat) (Value : Type)
     (p : Profile Δ q Value) (c : Construction Δ m Value)
     (spec : Fin m → AccessSpec Δ) (installProtected captureProtected : List (StateView Δ)),
-    AccessFrameObligations inputQ p c spec installProtected captureProtected → BootstrapObligation p c
+    AccessFrameObligations inputQ p c spec installProtected captureProtected → BootstrapObligation inputQ p c
 
 /-- Existing MOV fragments: two ALREADY COMPOSED 16-instruction models, not a
 claim that two arbitrary iforms have been generalized to every operand layout.
@@ -339,12 +341,12 @@ def MovHandoffFrame : Prop :=
   ∀ post, StateFrame [⟨_, v_rip⟩] [] post (enterCapture post) ∧
     Env.lookup (enterCapture post) v_rip = BitVec.ofNat 64 0x400000
 
-def MovComponentObligations (requestedMemory : List (BitVec 64)) (q : Setoid (Env Γ))
+def MovComponentObligations (requestedMemory : List (BitVec 64)) (q inputQ : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) : Prop :=
-  ComponentObligations (movProfile requestedMemory q recover) movConstruction ∧ MovPreparationFrame requestedMemory ∧ MovHandoffFrame
+  ComponentObligations inputQ (movProfile requestedMemory q recover) movConstruction ∧ MovPreparationFrame requestedMemory ∧ MovHandoffFrame
 
-def MovBootstrapObligation (requestedMemory : List (BitVec 64)) (q : Setoid (Env Γ))
+def MovBootstrapObligation (requestedMemory : List (BitVec 64)) (q inputQ : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) : Prop :=
-  BootstrapObligation (movProfile requestedMemory q recover) movConstruction ∧ MovPreparationFrame requestedMemory ∧ MovHandoffFrame
+  BootstrapObligation inputQ (movProfile requestedMemory q recover) movConstruction ∧ MovPreparationFrame requestedMemory ∧ MovHandoffFrame
 
 end MovObserver.Bootstrap
