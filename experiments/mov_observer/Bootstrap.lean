@@ -4,7 +4,7 @@ namespace MovObserver.Bootstrap
 open Ayxg.QfAbv
 variable [FPInterpretation]
 
-/-- Minimal compatibility definitions reused from UFDA's standalone docs listing:
+/- Minimal compatibility definitions reused from UFDA's standalone docs listing:
 ufda 8ef1a02d42cbaf4e2831f7f46fd7a87603d7669f,
 docs/roadmap/compatibility.md: Rel, RelLe, RelGalois. Kept local because that
 listing is not an importable dependency. No UFDA source or dependency changed. -/
