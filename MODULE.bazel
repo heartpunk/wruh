@@ -1,7 +1,7 @@
 module(name = "wruh", version = "0.1.0")
 
 bazel_dep(name = "platforms", version = "1.1.0")
-bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "rules_python", version = "2.4.6")
 bazel_dep(name = "ifrl", version = "0.1.0")
 git_override(
     module_name = "ifrl",
