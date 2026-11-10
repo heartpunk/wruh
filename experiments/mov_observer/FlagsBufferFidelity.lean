@@ -46,17 +46,9 @@ private theorem nativePack (b0 b1 b2 b3 b4 b5 b6 b7 : UInt8) :
   change (((((((((0 : BitVec 64) ||| (b0.toBitVec.setWidth 64 <<< (0 : Nat))) ||| (b1.toBitVec.setWidth 64 <<< (8 : Nat))) ||| (b2.toBitVec.setWidth 64 <<< (16 : Nat))) ||| (b3.toBitVec.setWidth 64 <<< (24 : Nat))) ||| (b4.toBitVec.setWidth 64 <<< (32 : Nat))) ||| (b5.toBitVec.setWidth 64 <<< (40 : Nat))) ||| (b6.toBitVec.setWidth 64 <<< (48 : Nat))) ||| (b7.toBitVec.setWidth 64 <<< (56 : Nat))) = _
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
-  simp only [pack64, BitVec.getLsbD_append]
-  have cases_i : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 ∨
-      i = 8 ∨ i = 9 ∨ i = 10 ∨ i = 11 ∨ i = 12 ∨ i = 13 ∨ i = 14 ∨ i = 15 ∨
-      i = 16 ∨ i = 17 ∨ i = 18 ∨ i = 19 ∨ i = 20 ∨ i = 21 ∨ i = 22 ∨ i = 23 ∨
-      i = 24 ∨ i = 25 ∨ i = 26 ∨ i = 27 ∨ i = 28 ∨ i = 29 ∨ i = 30 ∨ i = 31 ∨
-      i = 32 ∨ i = 33 ∨ i = 34 ∨ i = 35 ∨ i = 36 ∨ i = 37 ∨ i = 38 ∨ i = 39 ∨
-      i = 40 ∨ i = 41 ∨ i = 42 ∨ i = 43 ∨ i = 44 ∨ i = 45 ∨ i = 46 ∨ i = 47 ∨
-      i = 48 ∨ i = 49 ∨ i = 50 ∨ i = 51 ∨ i = 52 ∨ i = 53 ∨ i = 54 ∨ i = 55 ∨
-      i = 56 ∨ i = 57 ∨ i = 58 ∨ i = 59 ∨ i = 60 ∨ i = 61 ∨ i = 62 ∨ i = 63 := by omega
-  rcases cases_i with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp
+  simp only [pack64, BitVec.getLsbD_append, BitVec.getLsbD_or,
+    BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth]
+  grind
 
 theorem read_writeFlagsWord (b : ByteArray) (v : UInt64) (size : 152 ≤ b.size) :
     readFlagsWord (writeFlagsWord b v) = v := by
