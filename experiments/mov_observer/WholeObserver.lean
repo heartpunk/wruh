@@ -4,6 +4,39 @@ namespace MovObserver.WholeObserver
 open Ayxg.QfAbv
 open Bridge FaultProtocol
 
+/-- One half-open byte range [start, endExclusive). Natural endpoints allow
+endExclusive = 2^64 without wrapping the last address back to zero. -/
+structure MemoryRange where
+  start : Nat
+  endExclusive : Nat
+  bytes : Array (BitVec 8)
+  ordered : start ≤ endExclusive
+  bounded : endExclusive ≤ 2^64
+  size_eq : bytes.size = endExclusive - start
+
+/-- Finite sparse image. List order is only serialization order; ranges must
+not overlap. There is no size, placement or operand-derived restriction beyond
+fitting the architecture's address space. -/
+structure SparseMemoryImage where
+  ranges : List MemoryRange
+  nonoverlapping : ranges.Pairwise (fun a b =>
+    a.endExclusive ≤ b.start ∨ b.endExclusive ≤ a.start)
+
+/-- Reuse the existing byte-addressed memory/frame vocabulary. Range validity
+ensures each indexed address is in bounds; conversion does not wrap any byte. -/
+def SparseMemoryImage.byteWrites (image : SparseMemoryImage) :
+    List (BitVec 64 × BitVec 8) :=
+  image.ranges.flatMap fun r =>
+    r.bytes.toList.zipIdx.map fun (byte, i) =>
+      (BitVec.ofNat 64 (r.start + i), byte)
+
+def SparseMemoryImage.addresses (image : SparseMemoryImage) : List (BitVec 64) :=
+  image.byteWrites.map Prod.fst
+
+structure InputState where
+  fields : List CapturedField
+  memory : SparseMemoryImage
+
 /-- Finite caller input. No predicted target outcome is an input to observation.
 The admitted platform/profile must independently validate exactly-one-instruction
 encoding, feature support, mapping permissions and coverage; byte length alone
@@ -11,17 +44,17 @@ is not a decoder or a native admission proof. -/
 structure Request where
   instruction : List (BitVec 8)
   entry : BitVec 64
-  input : CapturedValues
+  input : InputState
   outputFields : List (Σ s : TermSort, Var Γ s)
   outputMemory : List (BitVec 64)
 
 /-- Every supplied field/byte is installed exactly. Whole-array input fields
-are forbidden; finite requested memory is expressed as address-byte pairs. -/
+are forbidden; every byte of every supplied sparse range is required. -/
 def InputInstalled (q : Request) (s : Env Γ) : Prop :=
   (∀ f ∈ q.input.fields,
     (⟨f.sort, f.field⟩ : Σ t, Var Γ t) ≠ ⟨_, v_mem⟩ ∧
     Env.lookup s f.field = f.value) ∧
-  (∀ pair ∈ q.input.memory, Env.lookup s v_mem pair.1 = pair.2) ∧
+  (∀ pair ∈ q.input.memory.byteWrites, Env.lookup s v_mem pair.1 = pair.2) ∧
   Env.lookup s v_rip = q.entry ∧
   0 < q.instruction.length ∧ q.instruction.length ≤ 15 ∧
   q.entry.toNat + q.instruction.length ≤ 2^64 ∧
@@ -268,14 +301,14 @@ def installationFields (q : Request) : List (Σ s : TermSort, Var Γ s) :=
   [⟨_, v_mem⟩, ⟨_, v_rip⟩] ++ q.input.fields.map (fun f => ⟨f.sort, f.field⟩)
 
 def installationWrites (q : Request) (layout : Layout) : List (BitVec 64) :=
-  q.input.memory.map Prod.fst ++ codeAddresses q ++ layout.privateInstall
+  q.input.memory.addresses ++ codeAddresses q ++ layout.privateInstall
 
 def LayoutSeparated (q : Request) (layout : Layout) : Prop :=
   (∀ address ∈ layout.privateInstall,
-    address ∉ q.input.memory.map Prod.fst ∧ address ∉ codeAddresses q ∧
+    address ∉ q.input.memory.addresses ∧ address ∉ codeAddresses q ∧
     ¬ layout.protectedAddress address) ∧
   (∀ address ∈ layout.captureWrites,
-    address ∉ q.input.memory.map Prod.fst ∧ address ∉ codeAddresses q ∧
+    address ∉ q.input.memory.addresses ∧ address ∉ codeAddresses q ∧
     ¬ layout.protectedAddress address)
 
 /-- Intermediate installation may borrow nonrequested fields only while their
