@@ -96,7 +96,32 @@ This is a smoke result, not a coverage or correctness proof.
   general proof of the target control-flow route.
 - Requested flags must be installable through Linux's register interface;
   installation is read back and checked. No flags are silently normalized.
-- FP, vectors and structured fault observations are the next stages. Faults now
+- Extended vectors and structured fault observations remain later stages. Faults now
   abort with the unexpected stop status rather than being called observations.
 - The observer is executable, not end-to-end proved. Existing MOV and shim proofs
   are retained; this change adds no proof project or new PBT framework.
+
+## FP installation and capture (execution pending)
+
+`Request.fp` optionally supplies the Linux x86-64 512-byte legacy FP image already
+specified by `../LegacyFp.lean`. Existing GETFPREGS/SETFPREGS calls install/read it;
+no new assembly is required. `Observation` retains `requestedFp`, `installedFp`,
+and `terminalFp`. With no requested image, the actual initial FP state is still
+read and returned. With an image, installation is read back and architectural
+bytes must match. MXCSR_MASK and reserved/padding bytes remain in the raw record,
+but are not falsely required to behave as mutable architectural state.
+
+`FpTrials.lean` adds six concrete examples: FLD m64, FADD ST0/ST1, FSTP m80,
+ADDSD, masked DIVSD by zero, and ADDSD with upward rounding. The x87 examples use
+TOP=3 initially, logical ST slots and physical tag bits. They retain 80-bit
+payloads without conversion to the model's narrower fpreg representation. SSE
+examples check exact result bits, MXCSR and preservation of other architectural
+FP bytes, including the upper half of XMM0. The x87 examples check ST0, TOP/tag,
+exception status, control word and unaffected XMM/MXCSR; they do not assert every
+x87 slot or instruction-updated pointer/condition field. Every example checks
+GPRs, flags and all 1,024 requested memory bytes, including cross-page operands.
+
+Both existing Astra light reviewers found no source-level blocker. Native build
+and execution are pending restoration of fleet SSH authentication; the prior
+12-case pass above predates these FP changes. `run.sh` now runs both binaries.
+The FP trials write all requested/installed/terminal images under `out/work/`.

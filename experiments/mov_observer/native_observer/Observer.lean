@@ -22,12 +22,16 @@ structure Request where
   gprs : Array UInt64
   flags : UInt64
   memory : Array Region
+  fp : Option ByteArray := none
 structure Observation where
   gprs : Array UInt64
   -- Captured target GPRs; raw flags/context below belong to the terminal stop.
   terminalFlags : UInt64
   memory : Array Region
   rawTerminalRegisters : ByteArray
+  requestedFp : Option ByteArray
+  installedFp : ByteArray
+  terminalFp : ByteArray
 
 def zeros (n : Nat) : ByteArray := ByteArray.mk (Array.replicate n 0)
 def word (b : ByteArray) (offset : Nat) : UInt64 := Id.run do
@@ -58,6 +62,28 @@ def getRegisters (pid : UInt64) : IO ByteArray := do
   let buffer ← freshBuffer 216
   let _ ← checked "GETREGS" (traceBuffer 12 pid 0 buffer)
   return buffer
+
+/-- Linux x86-64 user_fpregs_struct, same legacy image as LegacyFp.lean.
+Retain all bytes; architectural installation excludes padding and MXCSR_MASK. -/
+def getFp (pid : UInt64) : IO ByteArray := do
+  let buffer ← freshBuffer 512
+  let _ ← checked "GETFPREGS" (traceBuffer 14 pid 0 buffer)
+  return buffer
+
+def fpStateByte (i : Nat) : Bool :=
+  i < 5 || (6 ≤ i && i < 28) ||
+  (32 ≤ i && i < 160 && (i-32)%16 < 10) || (160 ≤ i && i < 416)
+
+def installFp (pid : UInt64) (requested : Option ByteArray) : IO ByteArray := do
+  if let some image := requested then
+    if image.size != 512 then throw <| IO.userError "FP image must contain 512 bytes"
+    let _ ← checked "SETFPREGS" (traceBuffer 15 pid 0 image)
+  let installed ← getFp pid
+  if let some image := requested then
+    for i in [:512] do
+      if fpStateByte i && image[i]! != installed[i]! then
+        throw <| IO.userError s!"FP installation differs at byte {i}: requested={image[i]!}, installed={installed[i]!}"
+  return installed
 
 def readMemory (pid address : UInt64) (length : Nat) : IO ByteArray := do
   let buffer ← freshBuffer (UInt64.ofNat length)
@@ -166,15 +192,17 @@ def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r 
       let installed ← getRegisters pid
       if word installed (16*8) != UInt64.ofNat loadCode || word installed (18*8) != r.flags then
         throw <| IO.userError "loader entry PC or requested flags not installed"
+      let installedFp ← installFp pid r.fp
       -- Loader, target, JMP, and MOV capture run without debugger-injected TF.
       let _ ← checked "CONT" (trace 7 pid 0 0)
       let terminal ← stoppedAt pid (UInt64.ofNat (code+capture.size+1))
+      let terminalFp ← getFp pid
       let data ← readMemory pid (UInt64.ofNat record) 128
       let mut memory := #[]
       for region in r.memory do
         memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
       return ⟨(List.range 16).toArray.map (fun i => word data (8*i)),
-        word terminal (18*8), memory, terminal⟩
+        word terminal (18*8), memory, terminal, r.fp, installedFp, terminalFp⟩
     finally
       let killed ← killRaw pid 9
       let status ← freshBuffer 8
