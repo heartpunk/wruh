@@ -1,0 +1,8 @@
+Started [systemd-run] /run/current-system/sw/bin/bash /home/heartpunk/workspaces/observer-shim-proof-65844e28/check-flags-buffer.sh.
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+cc653f143838698954537cba575857a34f8d4e9c4938f58f0960459b1fcd53e9  FlagsBuffer.lean
+d59ed8714111a7a124123daa64f0ef646730bbc21b306a86630dbbabaf2ebb04  FlagsBufferFidelity.lean
+'MovObserver.NativeObserver.writeFlagsWord_size' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.writeFlagsWord_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.read_writeFlagsWord' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.flags_buffer_fidelity' depends on axioms: [propext, Classical.choice, Quot.sound]

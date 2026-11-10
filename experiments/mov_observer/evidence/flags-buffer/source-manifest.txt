@@ -1,0 +1,15 @@
+Base commit: b76f1a312ecca259c7fc624ac4d9b19aa8b92227
+Native snapshot: base commit plus the three runtime files below; not a clean base build.
+Runtime word and putWord definitions moved byte-for-byte unchanged from Observer.lean to FlagsBuffer.lean.
+Native build: all four executables linked; smoke execution: scalar trials only, 12 observations.
+
+Native snapshot files:
+cc653f143838698954537cba575857a34f8d4e9c4938f58f0960459b1fcd53e9  native_observer/FlagsBuffer.lean
+59f4ca0295f59aba5a5a8f0674ba44e640d361e23d716a4e303dfa3ec460c1f2  native_observer/Observer.lean
+f0a5f5192bf99a5f2dca0d420caf31cb1273ba6ed479de8dd8d05749a14c0afe  native_observer/build.sh
+
+Separate proof check source (shared FlagsBuffer as above):
+d59ed8714111a7a124123daa64f0ef646730bbc21b306a86630dbbabaf2ebb04  FlagsBufferFidelity.lean
+
+Local pipeline integration:
+11041dd36070bb3ccf8b431b926159a90184eb663acf017759b81ab321bc5212  check_pipeline.sh

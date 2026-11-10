@@ -1,0 +1,14 @@
+nixos
+InvocationID=ebe096d574c844cfb7d4df24df9961b0
+Result=success
+ExecMainStartTimestamp=Mon 2026-11-09 22:41:03 PST
+ExecMainExitTimestamp=Mon 2026-11-09 22:41:43 PST
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=569331712
+CPUUsageNSec=41654677000
+CPUQuotaPerSecUSec=2s
+MemoryMax=4294967296
+MemorySwapMax=0
+TasksMax=128
+User=heartpunk

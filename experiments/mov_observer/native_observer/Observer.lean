@@ -1,5 +1,6 @@
 import MemoryWrite
 import InstallationEncoding
+import FlagsBuffer
 namespace MovObserver.NativeObserver
 open NativeShim
 
@@ -46,14 +47,6 @@ structure Observation where
   terminalXstate : Option ByteArray
 
 def zeros (n : Nat) : ByteArray := ByteArray.mk (Array.replicate n 0)
-def word (b : ByteArray) (offset : Nat) : UInt64 := Id.run do
-  let mut v : UInt64 := 0
-  for i in [:8] do v := v ||| ((b[offset+i]!).toUInt64 <<< UInt64.ofNat (8*i))
-  return v
-def putWord (b : ByteArray) (offset : Nat) (v : UInt64) : ByteArray := Id.run do
-  let mut b := b
-  for i in [:8] do b := b.set! (offset+i) (v >>> UInt64.ofNat (8*i)).toUInt8
-  return b
 def appendLE (b : ByteArray) (v : Nat) (n : Nat) : ByteArray := Id.run do
   let mut b := b
   for i in [:n] do b := b.push (UInt8.ofNat (v / 2^(8*i)))
@@ -297,10 +290,10 @@ def observeInstruction (loader capture : ByteArray) (path : System.FilePath) (r 
       for region in r.memory do writeMemory pid region.address region.bytes
       writeMemory pid (UInt64.ofNat input) (encodeGprs r.gprs)
       let regs ← getRegisters pid
-      let regs := putWord (putWord (putWord regs (16*8) (UInt64.ofNat loadCode)) (18*8) r.flags) (15*8) 0xffffffffffffffff
+      let regs := putWord (writeFlagsWord (putWord regs (16*8) (UInt64.ofNat loadCode)) r.flags) (15*8) 0xffffffffffffffff
       let _ ← checked "SETREGS" (traceBuffer 13 pid 0 regs)
       let installed ← getRegisters pid
-      if word installed (16*8) != UInt64.ofNat loadCode || word installed (18*8) != r.flags then
+      if word installed (16*8) != UInt64.ofNat loadCode || readFlagsWord installed != r.flags then
         throw <| IO.userError "loader entry PC or requested flags not installed"
       let _ ← installFp pid r.fp
       let installedXstate ← match layout with
@@ -326,7 +319,7 @@ def observeInstruction (loader capture : ByteArray) (path : System.FilePath) (r 
       for region in r.memory do
         memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
       return ⟨fault,gprs,
-        word terminal (18*8), memory, terminal, r.fp, installedFp, terminalFp, installedXstate, terminalXstate⟩
+        readFlagsWord terminal, memory, terminal, r.fp, installedFp, terminalFp, installedXstate, terminalXstate⟩
     finally
       let killed ← killRaw pid 9
       let status ← freshBuffer 8
