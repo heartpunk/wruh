@@ -1,0 +1,10 @@
+snapshot=66180fb2afd3bead5bc51228495e11cd5c9a80f9
+1ea1128709937b25d8dab76c255176f010437c807c873c44f9e970dd07eed888  /home/heartpunk/workspaces/observer-install-66180fb2/experiments/mov_observer/SparseInstaller.lean
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+ayxg=324752afe80b05d7fd8854834725cf5ee360f173
+SparseInstaller
+'MovObserver.Bootstrap.sparse_installer_contract' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Bootstrap.installImage_payload' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Bootstrap.prepareSparse_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Bootstrap.installImage_gprs' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Bootstrap.installImage_frame' depends on axioms: [propext, Classical.choice, Quot.sound]

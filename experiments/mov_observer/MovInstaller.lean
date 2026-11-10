@@ -111,7 +111,8 @@ theorem mov_loader_access_correct : AccessCorrect loadStep movLoaderAccess := by
 
 /- The former installer certificate was withdrawn: it assumed requested
 memory was already present. The loader access lemma above is not an installer
-certificate. Installing requested target memory and reconciling its write frame
-with requested PC remain implementation obligations, not request exclusions. -/
+certificate. SparseInstaller extends preparation to write requested target memory
+and proves the combined installer contract with the existing fixed target-PC
+boundary. Native FFI refinement remains separate. -/
 #print axioms mov_loader_access_correct
 end MovObserver.Bootstrap

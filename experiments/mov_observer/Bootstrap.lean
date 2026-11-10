@@ -310,8 +310,9 @@ def movConstruction : Construction Γ 2 (List (BitVec 64)) where
 
 /-- Requested memory is part of the installation requirement, not presumed
 present in ambient memory. The fixed request selects its byte addresses; every
-selected byte must equal wanted at target entry. The existing loader does not
-yet implement these writes. Capture still has its existing GPR-only decoder. -/
+selected byte must equal wanted at target entry. SparseInstaller supplies the
+sparse preparation extension and its installer certificate. Capture still has
+its existing GPR-only decoder. -/
 def movProfile (requestedMemory : List (BitVec 64)) (q : Setoid (Env Γ))
     (recover : List (BitVec 64) → Option (Quotient q)) :
     Profile Γ q (List (BitVec 64)) where
