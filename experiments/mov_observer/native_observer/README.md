@@ -28,8 +28,7 @@ need their own routing and observations later.
 The terminal stop must be SIGTRAP with the exact expected RIP and an INT3-compatible
 siginfo code. An earlier target trap is not accepted as completed capture.
 Fresh private ByteArrays receive syscall output; borrowed inputs are not mutated.
-Normal completion kills/reaps the child and removes the generated ELF. Errors
-abort; no retry policy or structured fault observation was added.
+Normal completion kills/reaps the child and removes the generated ELF. Harness errors abort; no retry policy was added. See the fault API below.
 
 ## Run on NixOS
 
@@ -96,8 +95,8 @@ This is a smoke result, not a coverage or correctness proof.
   general proof of the target control-flow route.
 - Requested flags must be installable through Linux's register interface;
   installation is read back and checked. No flags are silently normalized.
-- Structured fault observations remain a later stage. Faults now
-  abort with the unexpected stop status rather than being called observations.
+- The supported target-fault cases are described below; other process outcomes
+  and stops outside that boundary abort the observation.
 - The observer is executable, not end-to-end proved. Existing MOV and shim proofs
   are retained; this change adds no proof project or new PBT framework.
 
@@ -126,7 +125,7 @@ Both binaries built with Lean 4.34 and passed on NixOS inside bubblewrap: all
 raw FP images are retained in `evidence/fp/`. The bounded fleet job
 `observer-fp-2.service` exited 0 with 119,812,096 bytes peak memory. No generated
 ELFs remained after cleanup. The first build caught a record-update indentation
-error, corrected locally before this successful run. `run.sh` now runs all three binaries.
+error, corrected locally before this successful run. `run.sh` now runs all four binaries.
 These are concrete smoke observations, not exhaustive FP validation.
 
 ## Vector state
@@ -165,3 +164,35 @@ regression images). The copied environment passed recursive signature verificati
 
 The native instructions ran in the existing KVM guest, not emulation or on the
 bare host. This is seven concrete smoke cases, not exhaustive vector validation.
+
+## Fault observations
+
+`observeInstruction` returns the same observation record with `fault = none` for
+successful fallthrough, or `some TargetFault` for a supported synchronous fault.
+The fault carries signal, code, optional address and raw 128-byte siginfo. The
+address is absent for SI_KERNEL, whose union field is not guaranteed meaningful.
+The raw register record retains saved restart RIP and RFLAGS, including hardware
+RF. GPRs come directly from ptrace at the fault stop; the MOV capture is not run.
+FP/xstate and every requested memory range are read while the child remains
+stopped. Partial progress is preserved; no replay or automatic retry occurs.
+`observeFallthrough` remains the strict success-only wrapper for existing callers.
+
+The current boundary is SIGILL/SIGBUS/SIGFPE/SIGSEGV with a positive kernel code
+and saved RIP exactly at the target instruction, excluding asynchronous
+BUS_MCEERR_AO. External signals, setup/capture faults, other traps and arbitrary
+control-transfer routes are not claimed as target-fault observations.
+
+`FaultTrials.lean` exercises DIV by zero, an unmapped MOV load, UD2 and a partial
+REP MOVSB store. The REP destination has one mapped byte at a page end: the first
+copy survives, the next faults, RCX becomes one, and RSI/RDI advance by one.
+A deliberately corrupted loader must raise a harness error rather than return a
+target fault. Every case checks all GPRs, modeled flags, architectural FP fields,
+requested memory and (on the capable guest) seeded extended-vector/mask state.
+
+All four target-fault examples and the loader rejection passed on both NixOS and
+the existing AVX-512 KVM guest. The full guest run also passed all twelve scalar,
+six FP and seven vector examples: 29 target observations plus the negative
+control. Evidence and raw fault snapshots are in `evidence/fault/`. Source was
+edited locally, built using the flake on NixOS, and the same binaries transferred
+to the guest. No target ELFs remained after cleanup. No proof or AYXG/native
+semantic-comparison work was added.
