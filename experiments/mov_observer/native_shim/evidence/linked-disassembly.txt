@@ -1,0 +1,31 @@
+
+probe:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+00000000000aefac <wruh_write_memory_once>:
+   aefac:	48 83 ec 20          	sub    $0x20,%rsp
+   aefb0:	48 89 74 24 10       	mov    %rsi,0x10(%rsp)
+   aefb5:	48 8d 42 18          	lea    0x18(%rdx),%rax
+   aefb9:	48 89 04 24          	mov    %rax,(%rsp)
+   aefbd:	48 8b 42 08          	mov    0x8(%rdx),%rax
+   aefc1:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+   aefc6:	48 89 44 24 18       	mov    %rax,0x18(%rsp)
+   aefcb:	48 89 e6             	mov    %rsp,%rsi
+   aefce:	ba 01 00 00 00       	mov    $0x1,%edx
+   aefd3:	4c 8d 54 24 10       	lea    0x10(%rsp),%r10
+   aefd8:	41 b8 01 00 00 00    	mov    $0x1,%r8d
+   aefde:	45 31 c9             	xor    %r9d,%r9d
+   aefe1:	b8 37 01 00 00       	mov    $0x137,%eax
+   aefe6:	0f 05                	syscall
+   aefe8:	48 83 c4 20          	add    $0x20,%rsp
+   aefec:	c3                   	ret
+
+Disassembly of section .init:
+
+Disassembly of section .fini:
+
+Disassembly of section __lcxx_override:
+
+Disassembly of section .plt:

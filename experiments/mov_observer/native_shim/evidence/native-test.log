@@ -1,0 +1,32 @@
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+ca0889592c34b8f164819f033820de7ed425b0362e0fe2eeca9a18db767dcd2a  MemoryWrite.lean
+d38a4bf92df52142e790e9ccf0fcd1ef2a13f848dc438f538bf6246055492d0e  Probe.lean
+85834d8790dd86435e321ffd3ecf9fd024e5008abadab445e5e948d5f48f52db  write_memory.S
+fa2c9f0ddbf2aa331c923bd9128f9e40acc387277f434c86e4bf13b3ecac9c0d  target.py
+
+write_memory.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <wruh_write_memory_once>:
+   0:	48 83 ec 20          	sub    $0x20,%rsp
+   4:	48 89 74 24 10       	mov    %rsi,0x10(%rsp)
+   9:	48 8d 42 18          	lea    0x18(%rdx),%rax
+   d:	48 89 04 24          	mov    %rax,(%rsp)
+  11:	48 8b 42 08          	mov    0x8(%rdx),%rax
+  15:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+  1a:	48 89 44 24 18       	mov    %rax,0x18(%rsp)
+  1f:	48 89 e6             	mov    %rsp,%rsi
+  22:	ba 01 00 00 00       	mov    $0x1,%edx
+  27:	4c 8d 54 24 10       	lea    0x10(%rsp),%r10
+  2c:	41 b8 01 00 00 00    	mov    $0x1,%r8d
+  32:	45 31 c9             	xor    %r9d,%r9d
+  35:	b8 37 01 00 00       	mov    $0x137,%eax
+  3a:	0f 05                	syscall
+  3c:	48 83 c4 20          	add    $0x20,%rsp
+  40:	c3                   	ret
+318c587381ddd44658b17e8c40b4b80a857989da16581ec7aa546a4e157f982a  shim.bin
+982c731a1fbacc7688006f44f9f7af9d9e3e0247d310a728827f49e7f1466c13  lean-abi.h
+PASS: 3 sparse ranges, 1034 bytes, full 12288-byte frame
+PASS: raw -EFAULT and zero-length return paths

@@ -1,0 +1,11 @@
+SubState=exited
+InvocationID=7e378754b4324cc491309a4307969e11
+Result=success
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=111210496
+CPUUsageNSec=2072788000
+CPUQuotaPerSecUSec=1s
+MemoryMax=2147483648
+MemorySwapMax=0
+Linux nixos 6.18.18 #1-NixOS SMP PREEMPT_DYNAMIC Fri Mar 13 16:23:30 UTC 2026 x86_64 GNU/Linux
