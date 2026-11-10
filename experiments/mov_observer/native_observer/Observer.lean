@@ -166,6 +166,25 @@ def readMemory (pid address : UInt64) (length : Nat) : IO ByteArray := do
   if n.toNat != length then throw <| IO.userError s!"short read {n}/{length}"
   return buffer
 
+/-- Replace only a region's payload after a successful exact-length read. -/
+def withReadback (region : Region) (bytes : ByteArray) : Region :=
+  { region with bytes := bytes }
+
+/-- Read back every originally requested sparse range, retaining its exact
+starting address and rejecting every short transfer through `readMemory`. -/
+def readRequestedMemory (pid : UInt64) (regions : Array Region) : IO (Array Region) := do
+  let mut result := #[]
+  for region in regions do
+    let bytes ← readMemory pid region.address region.bytes.size
+    result := result.push (withReadback region bytes)
+  return result
+
+theorem withReadback_address (region : Region) (bytes : ByteArray) :
+    (withReadback region bytes).address = region.address := rfl
+
+theorem withReadback_length (region : Region) (bytes : ByteArray) :
+    (withReadback region bytes).bytes.size = bytes.size := rfl
+
 def writeMemory (pid address : UInt64) (bytes : ByteArray) : IO Unit := do
   let n ← checked "write memory" (writeMemoryOnce pid.toUInt32 address bytes)
   if n.toNat != bytes.size then throw <| IO.userError s!"short write {n}/{bytes.size}"
@@ -315,9 +334,7 @@ def observeInstruction (loader capture : ByteArray) (path : System.FilePath) (r 
       let gprs ← if fault.isSome then pure (stoppedGprs terminal) else do
         let data ← readMemory pid (UInt64.ofNat record) 128
         pure ((List.range 16).toArray.map (fun i => word data (8*i)))
-      let mut memory := #[]
-      for region in r.memory do
-        memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
+      let memory ← readRequestedMemory pid r.memory
       return ⟨fault,gprs,
         readFlagsWord terminal, memory, terminal, r.fp, installedFp, terminalFp, installedXstate, terminalXstate⟩
     finally

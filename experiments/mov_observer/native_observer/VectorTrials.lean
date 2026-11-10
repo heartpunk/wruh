@@ -14,7 +14,7 @@ def laneValue (r lane : Nat) : UInt64 := UInt64.ofNat (0x1020304000000000+r*257+
 
 def main (args : List String) : IO Unit := do
   let [fixtureDir,workDir] := args | throw <| IO.userError "expected fixtures and work directory"
-  let some l ← vectorLayout | throw <| IO.userError "vector trials require XSAVE"
+  let some l ← vectorLayout | throw <| IO.userError "vector trials require CPU XSAVE and OSXSAVE feature bits"
   let features ← cpuid 7 0
   require ((l.enabled &&& 0xe6) == 0xe6 && (dword features 4 &&& 0x40010020) == 0x40010020)
     "these concrete trials require OS-enabled AVX2, AVX512F and AVX512BW"

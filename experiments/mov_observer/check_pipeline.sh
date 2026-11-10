@@ -9,7 +9,8 @@ export LEAN_NUM_THREADS=${LEAN_NUM_THREADS:-4}
 mkdir -p "$task_root/out"
 cp "$task_root"/{Proof,ByteCodec,Pipeline,Protocol,FlagsConversion,ContractEquivalence,Bootstrap,MovInstaller,MovCapturer,NativeBoundary,Bridge,Transfer,VectorProtocol,LegacyFp,FaultProtocol,WholeObserver,SparseInstaller,InstallationFidelity,FlagsBufferFidelity}.lean "$task_root/out/"
 cp "$task_root/native_shim/proof/"{ShimModel,ShimProof}.lean "$task_root/out/"
-cp "$task_root/native_observer/InstallationEncoding.lean" "$task_root/native_observer/FlagsBuffer.lean" "$task_root/out/"
+cp "$task_root/native_observer/InstallationEncoding.lean" "$task_root/native_observer/FlagsBuffer.lean" "$task_root/native_observer/Observer.lean" "$task_root/out/"
+cp "$task_root/native_shim/MemoryWrite.lean" "$task_root/SparseCaptureFidelity.lean" "$task_root/out/"
 cp "$task_root/models/"*.lean "$task_root/out/"
 cd "$ayxg_root"
 lake build Ayxg.QfAbv.Step Ayxg.LTS.QfAbv.SymbolicTransitionSystem
@@ -18,7 +19,7 @@ lake env bash -c '
   task_root=$1
   export LEAN_PATH="$task_root/out${LEAN_PATH:+:$LEAN_PATH}"
   cd "$task_root/out"
-  for module in Extracted Proof ByteCodec InputModel Pipeline Protocol FlagsConversion ContractEquivalence Bootstrap MovInstaller MovCapturer NativeBoundary Bridge Transfer VectorProtocol LegacyFp FaultProtocol WholeObserver SparseInstaller InstallationEncoding InstallationFidelity FlagsBuffer FlagsBufferFidelity ShimModel ShimProof; do
+  for module in Extracted Proof ByteCodec InputModel Pipeline Protocol FlagsConversion ContractEquivalence Bootstrap MovInstaller MovCapturer NativeBoundary Bridge Transfer VectorProtocol LegacyFp FaultProtocol WholeObserver SparseInstaller InstallationEncoding InstallationFidelity FlagsBuffer FlagsBufferFidelity MemoryWrite Observer SparseCaptureFidelity ShimModel ShimProof; do
     lean -o "$module.olean" "$module.lean"
   done
 ' bash "$task_root"

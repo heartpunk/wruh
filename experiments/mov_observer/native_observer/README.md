@@ -30,6 +30,17 @@ siginfo code. An earlier target trap is not accepted as completed capture.
 Fresh private ByteArrays receive syscall output; borrowed inputs are not mutated.
 Normal completion kills/reaps the child and removes the generated ELF. Harness errors abort; no retry policy was added. See the fault API below.
 
+Requested sparse ranges are read back after the target stop by `readRequestedMemory`.
+For each original region it calls `readMemory` at the same address for the same
+byte count; `readMemory` rejects any short transfer, and `withReadback` changes
+only the region's payload. `SparseCaptureFidelity.lean` converts each returned
+region to an arbitrary-sized one-range `WholeObserver.SparseMemoryImage` and
+proves each indexed readback byte is paired with its exact requested address.
+This is a pure mapping proof. The current `readRaw` contract is accepted as a
+trusted kernel/FFI boundary: its returned buffer contains the bytes read from
+the requested tracee address. This work does not implement or prove that
+contract, and it does not infer that post-target bytes equal the input payload.
+
 ## Run on NixOS
 
 Use the repository flake environment (pinned Lean 4.34, binutils and bubblewrap):
