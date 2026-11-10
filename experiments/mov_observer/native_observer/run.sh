@@ -5,7 +5,7 @@ repo=$(cd -- "$root/../../.." && pwd)
 work="$root/out/work"
 mkdir -p "$work"
 : "${BWRAP:=$(command -v bwrap)}"
-for binary in ${OBSERVER_TRIALS:-trials fp-trials vector-trials}; do
+for binary in ${OBSERVER_TRIALS:-trials fp-trials vector-trials fault-trials}; do
 "$BWRAP" --unshare-all --unshare-user --disable-userns --cap-drop ALL \
  --clearenv --new-session --die-with-parent \
  --ro-bind /nix/store /nix/store \

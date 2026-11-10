@@ -24,9 +24,17 @@ structure Request where
   memory : Array Region
   fp : Option ByteArray := none
   xstate : Option ByteArray := none
+structure TargetFault where
+  signal : UInt64
+  code : Int
+  address : Option UInt64
+  rawSiginfo : ByteArray
+
 structure Observation where
+  fault : Option TargetFault
   gprs : Array UInt64
-  -- Captured target GPRs; raw flags/context below belong to the terminal stop.
+  -- GPRs from MOV capture on success, direct stopped registers on fault.
+  -- Raw flags/context below belong to the terminal stop in either case.
   terminalFlags : UInt64
   memory : Array Region
   rawTerminalRegisters : ByteArray
@@ -168,20 +176,47 @@ def writeMemory (pid address : UInt64) (bytes : ByteArray) : IO Unit := do
   let n ← checked "write memory" (writeMemoryOnce pid.toUInt32 address bytes)
   if n.toNat != bytes.size then throw <| IO.userError s!"short write {n}/{bytes.size}"
 
-/-- Accept only our designated INT3, not an arbitrary target trap. -/
-def stoppedAt (pid expectedRip : UInt64) : IO ByteArray := do
+structure NativeStop where
+  signal : UInt64
+  regs : ByteArray
+  info : ByteArray
+
+def waitStop (pid : UInt64) : IO NativeStop := do
   let status ← freshBuffer 8
   let got ← checked "wait4" (waitRaw pid status)
   let s := word status 0
-  if got != pid || (s &&& 255) != 127 || ((s >>> 8) &&& 255) != 5 then
-    throw <| IO.userError s!"unexpected target stop: pid={got}, status={s}"
+  if got != pid || (s &&& 255) != 127 then
+    throw <| IO.userError s!"unexpected process outcome: pid={got}, status={s}"
   let regs ← getRegisters pid
   let info ← freshBuffer 128
   let _ ← checked "GETSIGINFO" (traceBuffer 0x4202 pid 0 info)
-  let reason := word info 8 &&& 0xffffffff
-  if word regs (16*8) != expectedRip || (reason != 1 && reason != 128) then
-    throw <| IO.userError s!"not the designated INT3: RIP={word regs (16*8)}, code={reason}, expected RIP={expectedRip}"
-  return regs
+  return ⟨(s >>> 8) &&& 255,regs,info⟩
+
+def isMarker (stop : NativeStop) (rip : UInt64) : Bool :=
+  let reason := dword stop.info 8
+  stop.signal == 5 && word stop.regs (16*8) == rip && (reason == 1 || reason == 128)
+
+/-- Accept only our designated INT3, not an arbitrary target trap. -/
+def stoppedAt (pid expectedRip : UInt64) : IO ByteArray := do
+  let stop ← waitStop pid
+  if !isMarker stop expectedRip then
+    throw <| IO.userError s!"not the designated INT3: signal={stop.signal}, RIP={word stop.regs (16*8)}, code={dword stop.info 8}"
+  return stop.regs
+
+/-- user_regs_struct order to the existing loader/capture GPR order. -/
+def stoppedGprs (regs : ByteArray) : Array UInt64 :=
+  #[10,11,12,5,19,4,13,14,9,8,7,6,3,2,1,0].map (fun i => word regs (8*i))
+
+/-- Positive kernel-generated synchronous fault, stopped at the target instruction.
+External signals, asynchronous BUS_MCEERR_AO, and faults in setup/capture are
+not target observations. SI_KERNEL has no guaranteed address field. -/
+def targetFault (stop : NativeStop) : Option TargetFault :=
+  let reason := dword stop.info 8
+  if #[4,7,8,11].contains stop.signal && reason > 0 && reason < 0x80000000 &&
+      !(stop.signal == 7 && reason == 5) &&
+      word stop.regs (16*8) == UInt64.ofNat target then
+    some ⟨stop.signal,reason.toNat,(if reason == 128 then none else some (word stop.info 16)),stop.info⟩
+  else none
 
 -- Reuse exact committed MOV fragments. ELF maps all requested finite ranges;
 -- bytes are installed via the existing memory-write shim after the child stops.
@@ -242,10 +277,10 @@ def makeElf (loader capture : ByteArray) (r : Request) : IO ByteArray := do
 
 /-- Natural execution for a target selected to complete by fallthrough.
 The caller supplies one fallthrough instruction; this function does not establish
-branch outcomes. Target traps before the terminal marker are unexpected outcomes.
+branch outcomes. Synchronous faults at its PC return the actual stopped state.
 Raw terminal context is retained, not relabeled as the original target PC/flags.
 No single-stepping, model execution, or differential semantics occurs here. -/
-def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
+def observeInstruction (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
   if r.fp.isSome && r.xstate.isSome then throw <| IO.userError "supply either legacy FP or full xstate, not both"
   let layout ← vectorLayout
   if r.xstate.isSome && layout.isNone then throw <| IO.userError "xstate unavailable on this CPU"
@@ -275,16 +310,23 @@ def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r 
       let installedFp ← getFp pid
       -- Loader, target, JMP, and MOV capture run without debugger-injected TF.
       let _ ← checked "CONT" (trace 7 pid 0 0)
-      let terminal ← stoppedAt pid (UInt64.ofNat (code+capture.size+1))
+      let stop ← waitStop pid
+      let fault ← if isMarker stop (UInt64.ofNat (code+capture.size+1)) then pure none
+        else match targetFault stop with
+          | some f => pure (some f)
+          | none => throw <| IO.userError s!"unexpected stop outside supported target outcome: signal={stop.signal}, RIP={word stop.regs (16*8)}, code={dword stop.info 8}"
+      let terminal := stop.regs
       let terminalXstate ← match layout with
         | some l => some <$> getXstate pid l
         | none => pure none
       let terminalFp ← getFp pid
-      let data ← readMemory pid (UInt64.ofNat record) 128
+      let gprs ← if fault.isSome then pure (stoppedGprs terminal) else do
+        let data ← readMemory pid (UInt64.ofNat record) 128
+        pure ((List.range 16).toArray.map (fun i => word data (8*i)))
       let mut memory := #[]
       for region in r.memory do
         memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
-      return ⟨(List.range 16).toArray.map (fun i => word data (8*i)),
+      return ⟨fault,gprs,
         word terminal (18*8), memory, terminal, r.fp, installedFp, terminalFp, installedXstate, terminalXstate⟩
     finally
       let killed ← killRaw pid 9
@@ -294,4 +336,10 @@ def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r 
         throw <| IO.userError s!"child cleanup failed: kill={killed.toInt64.toInt}, wait={reaped.toInt64.toInt}"
   finally
     IO.FS.removeFile path
+/-- Compatibility entry point for callers expecting successful fallthrough only. -/
+def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
+  let result ← observeInstruction loader capture path r
+  if let some f := result.fault then
+    throw <| IO.userError s!"target fault: signal={f.signal}, code={f.code}, address={repr f.address}"
+  return result
 end MovObserver.NativeObserver
