@@ -76,3 +76,46 @@ observer_fresh_buffer:
  ret
 .Ltoo_large:
  ud2
+
+/* ptrace GET/SETREGSET: return actual iovec length or raw negative errno. */
+.globl observer_regset
+.type observer_regset,@function
+observer_regset:
+ sub $16,%rsp
+ lea 24(%rdx),%rax
+ mov %rax,(%rsp)
+ mov 8(%rdx),%rax
+ mov %rax,8(%rsp)
+ mov $0x202,%edx
+ mov %rsp,%r10
+ mov $101,%eax
+ syscall
+ test %rax,%rax
+ js .Lregset_done
+ mov 8(%rsp),%rax
+.Lregset_done:
+ add $16,%rsp
+ ret
+.globl observer_cpuid
+.type observer_cpuid,@function
+observer_cpuid:
+ push %rbx
+ mov %rdx,%r8
+ mov %edi,%eax
+ mov %esi,%ecx
+ cpuid
+ mov %eax,24(%r8)
+ mov %ebx,28(%r8)
+ mov %ecx,32(%r8)
+ mov %edx,36(%r8)
+ xor %eax,%eax
+ pop %rbx
+ ret
+.globl observer_xcr0
+.type observer_xcr0,@function
+observer_xcr0:
+ xor %ecx,%ecx
+ xgetbv
+ shl $32,%rdx
+ or %rdx,%rax
+ ret

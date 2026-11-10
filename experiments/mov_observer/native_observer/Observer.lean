@@ -23,6 +23,7 @@ structure Request where
   flags : UInt64
   memory : Array Region
   fp : Option ByteArray := none
+  xstate : Option ByteArray := none
 structure Observation where
   gprs : Array UInt64
   -- Captured target GPRs; raw flags/context below belong to the terminal stop.
@@ -32,6 +33,8 @@ structure Observation where
   requestedFp : Option ByteArray
   installedFp : ByteArray
   terminalFp : ByteArray
+  installedXstate : Option ByteArray
+  terminalXstate : Option ByteArray
 
 def zeros (n : Nat) : ByteArray := ByteArray.mk (Array.replicate n 0)
 def word (b : ByteArray) (offset : Nat) : UInt64 := Id.run do
@@ -83,6 +86,76 @@ def installFp (pid : UInt64) (requested : Option ByteArray) : IO ByteArray := do
     for i in [:512] do
       if fpStateByte i && image[i]! != installed[i]! then
         throw <| IO.userError s!"FP installation differs at byte {i}: requested={image[i]!}, installed={installed[i]!}"
+  return installed
+
+@[extern "observer_regset"] opaque regset (request pid : UInt64) (buffer : @& ByteArray) : BaseIO UInt64
+@[extern "observer_cpuid"] opaque cpuidRaw (leaf subleaf : UInt64) (buffer : @& ByteArray) : BaseIO UInt64
+@[extern "observer_xcr0"] opaque xcr0 : BaseIO UInt64
+
+def cpuid (leaf subleaf : UInt64) : IO ByteArray := do
+  let b ← freshBuffer 16
+  let _ ← cpuidRaw leaf subleaf b
+  return b
+
+def dword (b : ByteArray) (i : Nat) : UInt64 := Id.run do
+  let mut v : UInt64 := 0
+  for j in [:4] do v := v ||| (b[i+j]!.toUInt64 <<< UInt64.ofNat (8*j))
+  return v
+
+/-- Standard Linux xstate UABI; offsets come from this CPU, not a fixed XSAVE size. -/
+structure VectorLayout where
+  bytes : Nat
+  enabled : UInt64
+  ymm : Nat
+  masks : Nat
+  zmmHi : Nat
+  hi16 : Nat
+  deriving Repr
+
+def vectorLayout : IO (Option VectorLayout) := do
+  let f ← cpuid 1 0
+  if (dword f 8 &&& 0x0c000000) != 0x0c000000 then return none
+  let enabled ← xcr0
+  let d ← cpuid 13 0
+  let mut offsets := #[]
+  for component in #[2,5,6,7] do
+    let c ← cpuid 13 component
+    let size := (dword c 0).toNat
+    let offset := (dword c 4).toNat
+    if (enabled &&& (1 <<< component)) != 0 && (size == 0 || offset+size > (dword d 4).toNat) then
+      throw <| IO.userError "invalid CPUID xstate component extent"
+    offsets := offsets.push offset
+  return some ⟨(dword d 4).toNat,enabled,offsets[0]!,offsets[1]!,offsets[2]!,offsets[3]!⟩
+
+def getXstate (pid : UInt64) (layout : VectorLayout) : IO ByteArray := do
+  let b ← freshBuffer (UInt64.ofNat layout.bytes)
+  let n ← checked "GETREGSET xstate" (regset 0x4204 pid b)
+  if n.toNat < 576 || n.toNat > b.size then throw <| IO.userError "invalid xstate length"
+  let b := b.extract 0 n.toNat
+  if word b 520 != 0 then throw <| IO.userError "expected standard xstate layout"
+  return b
+
+/-- Canonical vector bytes; absent XSTATE_BV components have architectural zero state. -/
+def vectorBytes (layout : VectorLayout) (b : ByteArray) : IO ByteArray := do
+  let present := word b 512
+  let mut result := ByteArray.empty
+  let components : Array (Nat × Nat × Nat) := #[(1,160,256),(2,layout.ymm,256),
+    (5,layout.masks,64),(6,layout.zmmHi,512),(7,layout.hi16,1024)]
+  for (bit,offset,size) in components do
+    if (layout.enabled &&& (1 <<< UInt64.ofNat bit)) != 0 then
+      if offset+size > b.size then throw <| IO.userError "truncated vector component"
+      result := result ++ (if (present &&& (1 <<< UInt64.ofNat bit)) == 0 then zeros size else b.extract offset (offset+size))
+  return result
+
+def installXstate (pid : UInt64) (layout : VectorLayout) (requested : Option ByteArray) : IO ByteArray := do
+  if let some b := requested then
+    let before ← getXstate pid layout
+    if b.size != before.size || word b 520 != 0 then throw <| IO.userError "invalid requested standard xstate image"
+    let n ← checked "SETREGSET xstate" (regset 0x4205 pid b)
+    if n.toNat != b.size then throw <| IO.userError "short xstate installation"
+  let installed ← getXstate pid layout
+  if let some b := requested then
+    if (← vectorBytes layout b) != (← vectorBytes layout installed) then throw <| IO.userError "vector installation differs"
   return installed
 
 def readMemory (pid address : UInt64) (length : Nat) : IO ByteArray := do
@@ -173,6 +246,9 @@ branch outcomes. Target traps before the terminal marker are unexpected outcomes
 Raw terminal context is retained, not relabeled as the original target PC/flags.
 No single-stepping, model execution, or differential semantics occurs here. -/
 def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
+  if r.fp.isSome && r.xstate.isSome then throw <| IO.userError "supply either legacy FP or full xstate, not both"
+  let layout ← vectorLayout
+  if r.xstate.isSome && layout.isNone then throw <| IO.userError "xstate unavailable on this CPU"
   IO.FS.writeBinFile path (← makeElf loader capture r)
   try
     let chmod ← IO.Process.output {cmd := "chmod", args := #["700",path.toString]}
@@ -192,17 +268,24 @@ def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r 
       let installed ← getRegisters pid
       if word installed (16*8) != UInt64.ofNat loadCode || word installed (18*8) != r.flags then
         throw <| IO.userError "loader entry PC or requested flags not installed"
-      let installedFp ← installFp pid r.fp
+      let _ ← installFp pid r.fp
+      let installedXstate ← match layout with
+        | some l => some <$> installXstate pid l r.xstate
+        | none => pure none
+      let installedFp ← getFp pid
       -- Loader, target, JMP, and MOV capture run without debugger-injected TF.
       let _ ← checked "CONT" (trace 7 pid 0 0)
       let terminal ← stoppedAt pid (UInt64.ofNat (code+capture.size+1))
+      let terminalXstate ← match layout with
+        | some l => some <$> getXstate pid l
+        | none => pure none
       let terminalFp ← getFp pid
       let data ← readMemory pid (UInt64.ofNat record) 128
       let mut memory := #[]
       for region in r.memory do
         memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
       return ⟨(List.range 16).toArray.map (fun i => word data (8*i)),
-        word terminal (18*8), memory, terminal, r.fp, installedFp, terminalFp⟩
+        word terminal (18*8), memory, terminal, r.fp, installedFp, terminalFp, installedXstate, terminalXstate⟩
     finally
       let killed ← killRaw pid 9
       let status ← freshBuffer 8

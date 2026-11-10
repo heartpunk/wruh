@@ -97,6 +97,12 @@
               '';
             };
         in {
+        nativeObserver = pkgs.mkShell {
+          packages = (builtins.filter (p: (p.name or "") == "lean")
+            ((ifrl.devShells.${system}.default.buildInputs or []) ++
+             (ifrl.devShells.${system}.default.nativeBuildInputs or []))) ++
+            [ pkgs.binutils pkgs.coreutils pkgs.bash pkgs.bubblewrap ];
+        };
         default = pkgs.mkShell {
           inputsFrom = [ ifrl.devShells.${system}.default ayxg.devShells.${system}.default ];
           packages = [
