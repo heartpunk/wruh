@@ -1,0 +1,15 @@
+nixos
+InvocationID=69720da45a314ce9a4578020415c6ace
+Result=success
+ExecMainStartTimestamp=Mon 2026-11-09 22:19:32 PST
+ExecMainExitTimestamp=Mon 2026-11-09 22:20:07 PST
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=978808832
+CPUUsageNSec=38680843000
+CPUQuotaPerSecUSec=2s
+MemoryMax=4294967296
+MemorySwapMax=0
+TasksMax=128
+User=heartpunk
+6579ee30b27658185d27557c461e4a538899755e838a133077c9b970bf6494b9  /home/heartpunk/workspaces/observer-cleanup-e7f7a9d2/experiments/mov_observer/Protocol.lean
