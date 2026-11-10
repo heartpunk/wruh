@@ -1,0 +1,24 @@
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+60fb831172ac74ccf49fba6dd3c6e2a7eab6d775e7811d41f0a3c811f8d0c44f  InstallationEncoding.lean
+cf4ca6eea2aa0d779e48e6ebf79a7a4aed135ddf6d25254cb6b58baa330b908a  InstallationFidelity.lean
+InstallationEncoding
+InstallationFidelity
+'MovObserver.byte_roundtrip' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.nativeByteRoundtrip' depends on axioms: [propext, Classical.choice, Quot.sound]
+InstallationFidelity.lean:137:56: warning: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+InstallationFidelity.lean:146:56: warning: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+InstallationFidelity.lean:152:0: warning: automatically included section variable(s) unused in theorem `MovObserver.NativeObserver.requestedGprWords_all`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+'MovObserver.NativeObserver.encodeGprs_byte' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.encoded_input_decodes' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.encoded_input_enables_loader' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.encoded_loader_gprs' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.NativeObserver.encoded_loader_fidelity' depends on axioms: [propext, Classical.choice, Quot.sound]

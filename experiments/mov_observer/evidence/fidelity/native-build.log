@@ -1,0 +1,53 @@
+warning: Git tree '/home/heartpunk/workspaces/observer-shim-proof-65844e28' is dirty
+evaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead
+evaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+6ad56e4a069816a1656139d7d5e83d62a41f70ec9811fb4791ffa5e66c6b80d4  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/vector-cases.S
+60fb831172ac74ccf49fba6dd3c6e2a7eab6d775e7811d41f0a3c811f8d0c44f  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/InstallationEncoding.lean
+9a08545cf8b9fa20a0c96d66b858538b866ee51c6c19657a04af4601a0608eb5  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Observer.lean
+2db53438276f1cefcda14e0882b1070463d6a826d6c9f21d32b8b1c602523406  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Trials.lean
+f492825e4ad6dd63b2c84e62ce0269a9500dd65193e74406ab3401b21b6d2292  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/FpTrials.lean
+8772b26bafb541a679af6210a33d4d558c0200667f533649ac675bb34a43232e  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/VectorTrials.lean
+3d74f2f9ddd87c5b5902d9acfd72a19b9d5a80a56a59fe547afcf19781253675  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/FaultTrials.lean
+0977295d6dff0d4b8d88016f79de247df2b04a0847f4752948bdec36ccbac890  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/transport.S
+85834d8790dd86435e321ffd3ecf9fd024e5008abadab445e5e948d5f48f52db  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../native_shim/write_memory.S
+5cc094a7e66b2908c690567423d51e0a07231676765493e83b0c8f4c079e5699  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../fixtures/loader.bin
+b1f9eb3a26a7f70bd278fb11f1844c408e13150bf8433605d1d92522db10b339  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../fixtures/observer.bin
+
+vector-cases.o:     file format elf64-x86-64
+
+
+Disassembly of section .text.paddq-xmm:
+
+0000000000000000 <.text.paddq-xmm>:
+   0:	66 0f d4 c1          	paddq  xmm0,xmm1
+
+Disassembly of section .text.vpxor-ymm:
+
+0000000000000000 <.text.vpxor-ymm>:
+   0:	c5 f5 ef c2          	vpxor  ymm0,ymm1,ymm2
+
+Disassembly of section .text.vpaddq-zmm:
+
+0000000000000000 <.text.vpaddq-zmm>:
+   0:	62 f1 f5 48 d4 c2    	vpaddq zmm0,zmm1,zmm2
+
+Disassembly of section .text.vpaddq-merge-high:
+
+0000000000000000 <.text.vpaddq-merge-high>:
+   0:	62 a1 f5 41 d4 c2    	vpaddq zmm16{k1},zmm17,zmm18
+
+Disassembly of section .text.vpaddq-zero-high:
+
+0000000000000000 <.text.vpaddq-zero-high>:
+   0:	62 a1 f5 c1 d4 c2    	vpaddq zmm16{k1}{z},zmm17,zmm18
+
+Disassembly of section .text.vmovdqu64-store:
+
+0000000000000000 <.text.vmovdqu64-store>:
+   0:	62 61 fe 48 7f 3f    	vmovdqu64 ZMMWORD PTR [rdi],zmm31
+
+Disassembly of section .text.kxorq:
+
+0000000000000000 <.text.kxorq>:
+   0:	c4 e1 f4 47 da       	kxorq  k3,k1,k2

@@ -1,4 +1,5 @@
 import MemoryWrite
+import InstallationEncoding
 namespace MovObserver.NativeObserver
 open NativeShim
 
@@ -294,9 +295,7 @@ def observeInstruction (loader capture : ByteArray) (path : System.FilePath) (r 
       let _ ← stoppedAt pid 0x400216
       let _ ← checked "EXITKILL" (trace 0x4200 pid 0 0x100000)
       for region in r.memory do writeMemory pid region.address region.bytes
-      let mut inputs := zeros 128
-      for i in [:16] do inputs := putWord inputs (8*i) r.gprs[i]!
-      writeMemory pid (UInt64.ofNat input) inputs
+      writeMemory pid (UInt64.ofNat input) (encodeGprs r.gprs)
       let regs ← getRegisters pid
       let regs := putWord (putWord (putWord regs (16*8) (UInt64.ofNat loadCode)) (18*8) r.flags) (15*8) 0xffffffffffffffff
       let _ ← checked "SETREGS" (traceBuffer 13 pid 0 regs)

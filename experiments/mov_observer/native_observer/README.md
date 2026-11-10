@@ -97,8 +97,8 @@ This is a smoke result, not a coverage or correctness proof.
   installation is read back and checked. No flags are silently normalized.
 - The supported target-fault cases are described below; other process outcomes
   and stops outside that boundary abort the observation.
-- The observer is executable, not end-to-end proved. Existing MOV and shim proofs
-  are retained; this change adds no proof project or new PBT framework.
+- The observer is executable, with the component proofs below. Kernel/FFI
+  behavior and complete observer correctness are not claimed proved.
 
 ## FP installation and capture
 
@@ -196,3 +196,28 @@ control. Evidence and raw fault snapshots are in `evidence/fault/`. Source was
 edited locally, built using the flake on NixOS, and the same binaries transferred
 to the guest. No target ELFs remained after cleanup. No proof or AYXG/native
 semantic-comparison work was added.
+
+## Concrete installation and capture component proofs
+
+The executable now calls `InstallationEncoding.encodeGprs` for its actual
+128-byte input record. `InstallationFidelity.encoded_loader_fidelity` proves
+that writing those bytes and setting the concrete loader entry PC enables the
+existing extracted loader and installs every one of the caller's sixteen GPRs.
+The byte encoding is proved for arbitrary values, not just the smoke examples.
+The native size-16 validation is unchanged; no input domain or quotient was
+weakened. Existing arbitrary finite sparse-memory certificates remain intact.
+
+`MovCapturer.protocol_capture_handoff_frame` discharges the existing capture
+frame obligation. `mov_capture_access_correct` and `mov_capture_sequence` prove
+exact original GPR recording, the concrete endpoint PC and preservation of every
+other modeled field/every memory byte outside the record. These quantify over
+all original post-states without assuming target semantics or preinstalled data.
+
+Both lanes typechecked on NixOS and received cross-review plus an independent
+review. Their reported transitive axioms are only `propext`, `Classical.choice`
+and `Quot.sound`. `check_pipeline.sh` includes the new modules. Evidence is in
+`../evidence/fidelity/`; the executable using the proved encoder also passed all
+29 native observations plus the loader-rejection check on the AVX guest.
+These are semantic/codec component results, not a proof of ptrace, kernel writes,
+full FP/vector conversion or the complete observer. No such boundary is hidden
+inside the new theorem premises.
