@@ -1,28 +1,32 @@
 Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
-5c0787aaae27ec2919616762b6a31e69e394b42eebeb89dc4e1db133e0619f46  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Observer.lean
-84e1ef4fa72742a8650e5daa0fe449c3e702b318a49950d5ac0d0816d5887d1f  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Trials.lean
+8481cde687b1c7661f71a73c014321fde644f3b701ee07187513adf3fd6a2cd3  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Observer.lean
+2db53438276f1cefcda14e0882b1070463d6a826d6c9f21d32b8b1c602523406  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Trials.lean
 bf586ed077f0e661e9795b06cbfb27aa396c6317b633a6dce483f4e3b7de5c77  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/transport.S
 85834d8790dd86435e321ffd3ecf9fd024e5008abadab445e5e948d5f48f52db  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../native_shim/write_memory.S
 5cc094a7e66b2908c690567423d51e0a07231676765493e83b0c8f4c079e5699  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../fixtures/loader.bin
 b1f9eb3a26a7f70bd278fb11f1844c408e13150bf8433605d1d92522db10b339  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../fixtures/observer.bin
-mov rax, rbx: RAX=42 RCX=0 RFLAGS=514 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-add rax, rbx: RAX=0 RCX=0 RFLAGS=599 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-adc rax, rbx: RAX=13 RCX=0 RFLAGS=514 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-sub rax, rbx: RAX=18446744073709551615 RCX=0 RFLAGS=663 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-xor rax, rax: RAX=0 RCX=0 RFLAGS=582 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-shl rax, 1: RAX=2 RCX=0 RFLAGS=2563 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-cmp rax, rbx: RAX=23 RCX=0 RFLAGS=582 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-cmovz rcx, rbx: RAX=0 RCX=99 RFLAGS=578 RIP=4194676 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-mov rax, [rdi]: RAX=9833440827789222417 RCX=0 RFLAGS=1538 RIP=4194675 memory[113]=9833440827789222417
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-mov [rdi], rax: RAX=16045690981116495207 RCX=0 RFLAGS=514 RIP=4194675 memory[113]=16045690981116495207
-  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes
-PASS: ten concrete native instruction observations
+mov rax, rbx: RAX=42 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+add rax, rbx: RAX=0 RCX=0 RFLAGS=599 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+adc rax, rbx: RAX=13 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+sub rax, rbx: RAX=18446744073709551615 RCX=0 RFLAGS=663 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+xor rax, rax: RAX=0 RCX=0 RFLAGS=582 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+shl rax, 1: RAX=2 RCX=0 RFLAGS=2563 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+cmp rax, rbx: RAX=23 RCX=0 RFLAGS=582 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+cmovz rcx, rbx: RAX=0 RCX=99 RFLAGS=578 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+mov rax, [rdi]: RAX=9833440827789222417 RCX=0 RFLAGS=1538 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+mov [rdi], rax: RAX=16045690981116495207 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=16045690981116495207 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+pushfq: RAX=0 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=514
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+rep movsb: RAX=0 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789268677 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+PASS: 12 concrete native instruction observations

@@ -1,20 +1,35 @@
 # Lean native instruction observer: first working path
 
-`Observer.observe` installs sixteen requested GPRs, raw RFLAGS and a finite
-nonoverlapping sparse memory image, executes one target instruction, and returns
-GPRs, RFLAGS, RIP, all requested memory regions and the raw Linux register image.
-The supervisor is Lean. Small assembly syscall leaves use the pinned Lean 4.34
-ABI. There is no Python supervisor and no authored C implementation.
+`Observer.observeFallthrough` installs sixteen requested GPRs, raw RFLAGS and a
+finite nonoverlapping sparse memory image, then runs naturally through:
 
-It reuses `../fixtures/loader.bin` and `observer.bin` (sixteen RIP-relative MOVs
-each), plus `../native_shim/write_memory.S`. Linux ptrace installs flags and
-controls single-stepping; the existing MOV loader installs GPRs. One target step
-is followed by immediate kernel-register capture, then the MOV capture fragment.
-The immediate post-target flags/RIP are retained before redirecting execution.
-Fresh, privately allocated ByteArrays receive syscall output; borrowed input
-arrays are not mutated. Normal completion kills and reaps the child and removes
-its generated ELF. Unexpected stops and syscall/cleanup errors throw IO errors;
-no retry policy has been added.
+```
+MOV loader → target → direct JMP → MOV capture → designated INT3
+```
+
+The supervisor uses PTRACE_CONT, not PTRACE_SINGLESTEP. The caller selects a
+single instruction that completes by fallthrough. This is the straight-line
+execution path, not a control-transfer router or instruction decoder.
+
+The existing `../fixtures/loader.bin` and `observer.bin` stay at their original
+addresses, preserving their RIP-relative operands. A five-byte relative jump
+after the variable-length target reaches the unchanged capture fragment.
+`../native_shim/write_memory.S` still installs requested memory. The supervisor
+is Lean with small assembly syscall leaves; no Python supervisor or authored C.
+
+`Observation.gprs` comes from the MOV capture record. `terminalFlags` and
+`rawTerminalRegisters` are explicitly the saved terminal context, not invented
+post-target RIP/flags. MOV and JMP preserve the modeled flag component
+(CF/PF/AF/ZF/SF/OF/DF/AC/ID). Raw transient/debug flags such as RF must not be
+claimed to survive from the target through capture. The original target PC is
+not independently sampled by this path. Conditional/indirect control transfers
+need their own routing and observations later.
+
+The terminal stop must be SIGTRAP with the exact expected RIP and an INT3-compatible
+siginfo code. An earlier target trap is not accepted as completed capture.
+Fresh private ByteArrays receive syscall output; borrowed inputs are not mutated.
+Normal completion kills/reaps the child and removes the generated ELF. Errors
+abort; no retry policy or structured fault observation was added.
 
 ## Run on NixOS
 
@@ -31,9 +46,9 @@ and bounded child cgroup when running remotely. The exact successful invocation,
 tool/source hashes, CPU profile, resource limits and output are in `evidence/`.
 All source edits were local; execution used a Git-bearing NixOS snapshot.
 
-## Ten concrete trials, not a PBT campaign
+## Twelve concrete trials, not a PBT campaign
 
-`Trials.lean` contains ten hand-selected inputs and expected observations:
+`Trials.lean` contains twelve hand-selected inputs and expected observations:
 
 | Instruction | Input/result inspected |
 | --- | --- |
@@ -47,16 +62,23 @@ All source edits were local; execution used a Git-bearing NixOS snapshot.
 | `cmovz rcx, rbx` | taken conditional move copies 99 |
 | `mov rax, [rdi]` | unaligned cross-page load, DF retained |
 | `mov [rdi], rax` | unaligned cross-page store |
+| `pushfq` | requested 0x202 stored at the target stack; RSP decreases by eight |
+| `rep movsb` | both bytes copied; RCX reaches zero; RSI/RDI advance by two |
 
-These are from IXYK's existing `catalog/x86_64_top_100.json` families:
+The original ten cases are from IXYK's existing `catalog/x86_64_top_100.json` families:
 MOV (1), ADD (2), CMP (9), XOR (11), SUB (17), ADC (37), SHL (38), CMOVE (42).
-Every trial checks all sixteen GPRs, defined flag bits, target endpoint, and all
+Every trial checks all sixteen GPRs, defined flag bits, terminal marker, and all
 1,034 requested bytes. Memory includes a 1,024-byte region crossing a page,
 another disjoint range sharing a mapped page, and a distant region. The eight-byte
 operand starts at 0x100000ffc and crosses into the next page. Expected values are
 concrete, written out in the trials; no semantic-model execution is involved.
 
-All ten passed inside bubblewrap on NixOS with native hardware-backed execution.
+All twelve passed inside bubblewrap on NixOS with KVM enabled. Before this fix,
+the same two added cases failed under single-stepping: PUSHFQ wrote 0x302 and
+REP MOVSB returned with RCX=1 after copying one byte. The executed reproductions
+are retained in `evidence/single-step-reproductions.log`, from revision
+2db135901ebfdecfb6bf58bdc9f46f5208735c7b. No output masking/repair hides these effects;
+the fix removes injected single-stepping from execution.
 The final build/run exited 0; child cleanup was checked, and the work directory
 was empty afterward. Technical and scope reviewers found no remaining blocker.
 This is a smoke result, not a coverage or correctness proof.
@@ -69,8 +91,9 @@ This is a smoke result, not a coverage or correctness proof.
 - Memory is not restricted to instruction operands or a fixed payload size.
   The caller supplies all ranges. ELF mapping and available memory impose native
   limits; the ELF program-header count limit is checked explicitly.
-- The caller supplies one instruction encoding, 1–15 bytes. The supervisor always
-  executes exactly one hardware single-step; it is not an instruction decoder.
+- The caller supplies one fallthrough instruction encoding, 1–15 bytes. This
+  path does not establish branch outcomes; reaching capture alone is not a
+  general proof of the target control-flow route.
 - Requested flags must be installable through Linux's register interface;
   installation is read back and checked. No flags are silently normalized.
 - FP, vectors and structured fault observations are the next stages. Faults now

@@ -49,7 +49,7 @@ def main (args : List String) : IO Unit := do
     let extra := ByteArray.mk #[18,52,86,120,154]
     let memory : Array Region := #[⟨address,bytes⟩,⟨address+1500,extra⟩,⟨0x200000001,extra⟩]
     try
-      let result ← observe loader capture (workDir ++ s!"/trial-{index}.elf")
+      let result ← observeFallthrough loader capture (workDir ++ s!"/trial-{index}.elf")
         { instruction := ByteArray.mk t.instruction, gprs := regs, flags := t.flags, memory := memory }
       let expected := (regs.set! 0 t.expectedRax).set! 1 t.expectedRcx
       let expected := if t.pushFlags then expected.set! 4 (regs[4]!-8) else expected
@@ -58,14 +58,14 @@ def main (args : List String) : IO Unit := do
       let expectedBytes := if t.pushFlags then putWord expectedBytes 245 t.flags else expectedBytes
       let expectedBytes := if t.repeatMove then (expectedBytes.set! 113 bytes[40]!).set! 114 bytes[41]! else expectedBytes
       let ok := result.gprs == expected &&
-        (result.flags &&& t.flagsMask) == (t.expectedFlags &&& t.flagsMask) &&
-        result.rip == UInt64.ofNat (target+t.instruction.size) &&
+        (result.terminalFlags &&& t.flagsMask) == (t.expectedFlags &&& t.flagsMask) &&
+        word result.rawTerminalRegisters (16*8) == UInt64.ofNat (code+capture.size+1) &&
         result.memory.size == 3 && result.memory[0]!.bytes == expectedBytes &&
         result.memory[1]!.bytes == extra && result.memory[2]!.bytes == extra
-      IO.println s!"{t.name}: RAX={result.gprs[0]!} RCX={result.gprs[1]!} RFLAGS={result.flags} RIP={result.rip} memory[113]={word result.memory[0]!.bytes 113} stack[245]={word result.memory[0]!.bytes 245}"
+      IO.println s!"{t.name}: RAX={result.gprs[0]!} RCX={result.gprs[1]!} RFLAGS={result.terminalFlags} terminalRIP={word result.rawTerminalRegisters (16*8)} memory[113]={word result.memory[0]!.bytes 113} stack[245]={word result.memory[0]!.bytes 245}"
       if !ok then
         throw <| IO.userError s!"unexpected observation; GPRs={result.gprs}, expected={expected}, expected flags={t.expectedFlags} mask={t.flagsMask}"
-      IO.println "  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes"
+      IO.println "  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes"
     catch error =>
       failures := failures+1
       IO.println s!"FAIL {t.name}: {error}"

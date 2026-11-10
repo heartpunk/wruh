@@ -1,9 +1,9 @@
-Id=observer-e2e-final-1.service
+Id=observer-natural-1.service
 Result=success
 ExecMainStatus=0
 Slice=fleet-build.slice
-MemoryPeak=113963008
-CPUUsageNSec=4214204000
+MemoryPeak=114503680
+CPUUsageNSec=4266790000
 CPUQuotaPerSecUSec=2s
 MemoryMax=4294967296
 MemorySwapMax=0
@@ -36,3 +36,6 @@ cache_alignment	: 128
 address sizes	: 40 bits physical, 48 bits virtual
 power management:
 
+total 8
+drwxr-xr-x 2 heartpunk users 4096 Nov  9 18:44 .
+drwxr-xr-x 3 heartpunk users 4096 Nov  9 18:44 ..

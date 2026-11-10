@@ -24,10 +24,10 @@ structure Request where
   memory : Array Region
 structure Observation where
   gprs : Array UInt64
-  flags : UInt64
-  rip : UInt64
+  -- Captured target GPRs; raw flags/context below belong to the terminal stop.
+  terminalFlags : UInt64
   memory : Array Region
-  rawRegisters : ByteArray
+  rawTerminalRegisters : ByteArray
 
 def zeros (n : Nat) : ByteArray := ByteArray.mk (Array.replicate n 0)
 def word (b : ByteArray) (offset : Nat) : UInt64 := Id.run do
@@ -69,27 +69,28 @@ def writeMemory (pid address : UInt64) (bytes : ByteArray) : IO Unit := do
   let n ← checked "write memory" (writeMemoryOnce pid.toUInt32 address bytes)
   if n.toNat != bytes.size then throw <| IO.userError s!"short write {n}/{bytes.size}"
 
-def stopped (pid : UInt64) (singleStep : Bool) : IO Unit := do
+/-- Accept only our designated INT3, not an arbitrary target trap. -/
+def stoppedAt (pid expectedRip : UInt64) : IO ByteArray := do
   let status ← freshBuffer 8
   let got ← checked "wait4" (waitRaw pid status)
   let s := word status 0
   if got != pid || (s &&& 255) != 127 || ((s >>> 8) &&& 255) != 5 then
-    throw <| IO.userError s!"target did not reach expected SIGTRAP stop: pid={got}, status={s}"
-  if singleStep then
-    let info ← freshBuffer 128
-    let _ ← checked "GETSIGINFO" (traceBuffer 0x4202 pid 0 info)
-    if (word info 8 &&& 0xffffffff) != 2 then
-      throw <| IO.userError "target stop was not TRAP_TRACE"
-
-def step (pid : UInt64) : IO Unit := do
-  let _ ← checked "SINGLESTEP" (trace 9 pid 0 0)
-  stopped pid true
+    throw <| IO.userError s!"unexpected target stop: pid={got}, status={s}"
+  let regs ← getRegisters pid
+  let info ← freshBuffer 128
+  let _ ← checked "GETSIGINFO" (traceBuffer 0x4202 pid 0 info)
+  let reason := word info 8 &&& 0xffffffff
+  if word regs (16*8) != expectedRip || (reason != 1 && reason != 128) then
+    throw <| IO.userError s!"not the designated INT3: RIP={word regs (16*8)}, code={reason}, expected RIP={expectedRip}"
+  return regs
 
 -- Reuse exact committed MOV fragments. ELF maps all requested finite ranges;
 -- bytes are installed via the existing memory-write shim after the child stops.
 def makeElf (loader capture : ByteArray) (r : Request) : IO ByteArray := do
   if r.gprs.size != 16 || r.instruction.size == 0 || r.instruction.size > 15 then
     throw <| IO.userError "expected sixteen GPRs and one 1–15-byte instruction"
+  if loader.size != 112 || capture.size != 112 then
+    throw <| IO.userError "expected the existing sixteen-MOV fixtures"
   let mut pages : Array (Nat × Nat) := #[(0x600000, 0x3000)]
   for i in [:r.memory.size] do
     let a := r.memory[i]!.address.toNat
@@ -127,6 +128,12 @@ def makeElf (loader capture : ByteArray) (r : Request) : IO ByteArray := do
   for i in [:capture.size] do text := text.set! i capture[i]!
   for i in [:loader.size] do text := text.set! (0x100+i) loader[i]!
   for i in [:r.instruction.size] do text := text.set! (0x170+i) r.instruction[i]!
+  -- Capture stays at its original address: preserve its RIP-relative stores.
+  -- The target falls through to a flag/GPR-neutral relative JMP into capture.
+  let continuation := 0x170+r.instruction.size
+  let jump := appendLE (ByteArray.mk #[0xe9]) (2^32-(continuation+5)) 4
+  for i in [:jump.size] do text := text.set! (continuation+i) jump[i]!
+  text := text.set! capture.size 0xcc
   -- TRACEME then INT3, no user stack dependence. Failure exits 127.
   let init := ByteArray.mk #[0x31,0xff,0x31,0xf6,0x31,0xd2,0x45,0x31,0xd2,
     0xb8,101,0,0,0,0x0f,0x05,0x48,0x85,0xc0,0x75,1,0xcc,
@@ -134,9 +141,12 @@ def makeElf (loader capture : ByteArray) (r : Request) : IO ByteArray := do
   for i in [:init.size] do text := text.set! (0x200+i) init[i]!
   return h ++ text
 
-/-- One concrete observation. No model execution or differential semantics here.
-Unexpected stops/errors abort; detailed fault outcomes are a later stage. -/
-def observe (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
+/-- Natural execution for a target selected to complete by fallthrough.
+The caller supplies one fallthrough instruction; this function does not establish
+branch outcomes. Target traps before the terminal marker are unexpected outcomes.
+Raw terminal context is retained, not relabeled as the original target PC/flags.
+No single-stepping, model execution, or differential semantics occurs here. -/
+def observeFallthrough (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
   IO.FS.writeBinFile path (← makeElf loader capture r)
   try
     let chmod ← IO.Process.output {cmd := "chmod", args := #["700",path.toString]}
@@ -144,7 +154,7 @@ def observe (loader capture : ByteArray) (path : System.FilePath) (r : Request) 
     let child ← IO.Process.spawn {cmd := path.toString}
     let pid := UInt64.ofNat child.pid.toNat
     try
-      stopped pid false
+      let _ ← stoppedAt pid 0x400216
       let _ ← checked "EXITKILL" (trace 0x4200 pid 0 0x100000)
       for region in r.memory do writeMemory pid region.address region.bytes
       let mut inputs := zeros 128
@@ -153,24 +163,18 @@ def observe (loader capture : ByteArray) (path : System.FilePath) (r : Request) 
       let regs ← getRegisters pid
       let regs := putWord (putWord (putWord regs (16*8) (UInt64.ofNat loadCode)) (18*8) r.flags) (15*8) 0xffffffffffffffff
       let _ ← checked "SETREGS" (traceBuffer 13 pid 0 regs)
-      for _ in [:16] do step pid
       let installed ← getRegisters pid
-      let slots := #[10,11,12,5,19,4,13,14,9,8,7,6,3,2,1,0]
-      for i in [:16] do
-        if word installed (8*slots[i]!) != r.gprs[i]! then throw <| IO.userError s!"GPR {i} was not installed"
-      if word installed (16*8) != UInt64.ofNat target || word installed (18*8) != r.flags then
-        throw <| IO.userError "entry PC or requested flags not installed"
-      step pid
-      let post ← getRegisters pid
-      let redirected := putWord post (16*8) (UInt64.ofNat code)
-      let _ ← checked "capture entry" (traceBuffer 13 pid 0 redirected)
-      for _ in [:16] do step pid
+      if word installed (16*8) != UInt64.ofNat loadCode || word installed (18*8) != r.flags then
+        throw <| IO.userError "loader entry PC or requested flags not installed"
+      -- Loader, target, JMP, and MOV capture run without debugger-injected TF.
+      let _ ← checked "CONT" (trace 7 pid 0 0)
+      let terminal ← stoppedAt pid (UInt64.ofNat (code+capture.size+1))
       let data ← readMemory pid (UInt64.ofNat record) 128
       let mut memory := #[]
       for region in r.memory do
         memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
       return ⟨(List.range 16).toArray.map (fun i => word data (8*i)),
-        word post (18*8), word post (16*8), memory, post⟩
+        word terminal (18*8), memory, terminal⟩
     finally
       let killed ← killRaw pid 9
       let status ← freshBuffer 8

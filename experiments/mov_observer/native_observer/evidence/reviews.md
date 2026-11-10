@@ -1,23 +1,18 @@
-# Independent Astra light reviews
+# Natural-execution revision reviews
 
 Technical reviewer: /root/observer_technical, gpt-6-astra, low reasoning.
 Scope/telos reviewer: /root/observer_scope, gpt-6-astra, low reasoning.
-Both were read-only, with builds, remote access and edits prohibited.
+Read-only source/evidence reviews; no builds, remote access, or edits.
 
-Technical final verdict: no implementation blocker. All five current
-source/script hashes match the manifest; final evidence records ten passing
-trials and exit 0 with checked cleanup.
+Technical verdict: PASS for the stated fallthrough scope. Source/script hashes
+match. Evidence records twelve passing trials and exit 0. PUSHFQ stores 0x202;
+REP MOVSB completes both bytes with RCX zero. Retained reproductions establish
+the earlier failures. Jump displacement and exact trap locations are correct.
+README distinguishes captured GPRs, terminal context, and control-flow limits.
 
-Scope final verdict: PASS. README matches the implemented first path; final
-evidence reports all ten cases passing and exit 0. No additional PBT, proof,
-FP/vector, or fault implementation belongs in this checkpoint.
+Scope verdict: PASS. Natural continuation addresses the two observed bugs without
+a proof/PBT detour. The explicit fallthrough API does not claim branch routing.
+Memory/control-flow limits and terminal-context meaning are documented, and the
+old failing reproductions retain revision provenance. No additional work requested.
 
-Addressed observations:
-- Fresh output allocation and borrowed buffer ownership checked.
-- Fixed private mappings and native ELF mapping limits documented.
-- Trials exercise full requested regions, not only operand bytes.
-- The selected operand address crosses a page boundary.
-- Cleanup syscall results are checked and ELF cleanup covers setup failures.
-- Both reviewers requested evidence for hardware acceleration rather than
-  inferring it from QEMU's guest CPU name. Parent subsequently queried QMP on
-  Entrapta VM 120: KVM enabled=true, present=true (virtualization.txt).
+Reviewed source hashes are in source-sha256.txt and native-trials.log.
