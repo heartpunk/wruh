@@ -73,8 +73,7 @@ def main (args : List String) : IO Unit := do
   let mut failures := 0
   for t in examples do
     try
-      let r := { request with instruction := ByteArray.mk t.instruction,
-        memory := #[⟨address,t.memory⟩], fp := some t.fp }
+      let r := { request with instruction := ByteArray.mk t.instruction, memory := #[⟨address,t.memory⟩], fp := some t.fp }
       let result ← observeFallthrough loader capture (workDir ++ s!"/{t.name}.elf") r
       for (suffix, bytes) in #[("requested",t.fp),("installed",result.installedFp),("terminal",result.terminalFp)] do
         IO.FS.writeBinFile (workDir ++ s!"/{t.name}-{suffix}.bin") bytes

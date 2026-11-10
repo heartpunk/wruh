@@ -101,7 +101,7 @@ This is a smoke result, not a coverage or correctness proof.
 - The observer is executable, not end-to-end proved. Existing MOV and shim proofs
   are retained; this change adds no proof project or new PBT framework.
 
-## FP installation and capture (execution pending)
+## FP installation and capture
 
 `Request.fp` optionally supplies the Linux x86-64 512-byte legacy FP image already
 specified by `../LegacyFp.lean`. Existing GETFPREGS/SETFPREGS calls install/read it;
@@ -121,7 +121,10 @@ exception status, control word and unaffected XMM/MXCSR; they do not assert ever
 x87 slot or instruction-updated pointer/condition field. Every example checks
 GPRs, flags and all 1,024 requested memory bytes, including cross-page operands.
 
-Both existing Astra light reviewers found no source-level blocker. Native build
-and execution are pending restoration of fleet SSH authentication; the prior
-12-case pass above predates these FP changes. `run.sh` now runs both binaries.
-The FP trials write all requested/installed/terminal images under `out/work/`.
+Both binaries built with Lean 4.34 and passed on NixOS inside bubblewrap: all
+12 original cases and all six FP examples. Evidence, source hashes and the 18
+raw FP images are retained in `evidence/fp/`. The bounded fleet job
+`observer-fp-2.service` exited 0 with 119,812,096 bytes peak memory. No generated
+ELFs remained after cleanup. The first build caught a record-update indentation
+error, corrected locally before this successful run. `run.sh` runs both binaries.
+These are concrete smoke observations, not exhaustive FP validation.

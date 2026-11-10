@@ -1,0 +1,40 @@
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+c512814cadee42fac8410b8fe295d3dfce8344cf2690959c698a25ba46f9359f  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Observer.lean
+2db53438276f1cefcda14e0882b1070463d6a826d6c9f21d32b8b1c602523406  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/Trials.lean
+f492825e4ad6dd63b2c84e62ce0269a9500dd65193e74406ab3401b21b6d2292  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/FpTrials.lean
+bf586ed077f0e661e9795b06cbfb27aa396c6317b633a6dce483f4e3b7de5c77  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/transport.S
+85834d8790dd86435e321ffd3ecf9fd024e5008abadab445e5e948d5f48f52db  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../native_shim/write_memory.S
+5cc094a7e66b2908c690567423d51e0a07231676765493e83b0c8f4c079e5699  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../fixtures/loader.bin
+b1f9eb3a26a7f70bd278fb11f1844c408e13150bf8433605d1d92522db10b339  /home/heartpunk/workspaces/observer-shim-proof-65844e28/experiments/mov_observer/native_observer/../fixtures/observer.bin
+mov rax, rbx: RAX=42 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+add rax, rbx: RAX=0 RCX=0 RFLAGS=599 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+adc rax, rbx: RAX=13 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+sub rax, rbx: RAX=18446744073709551615 RCX=0 RFLAGS=663 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+xor rax, rax: RAX=0 RCX=0 RFLAGS=582 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+shl rax, 1: RAX=2 RCX=0 RFLAGS=2563 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+cmp rax, rbx: RAX=23 RCX=0 RFLAGS=582 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+cmovz rcx, rbx: RAX=0 RCX=99 RFLAGS=578 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+mov rax, [rdi]: RAX=9833440827789222417 RCX=0 RFLAGS=1538 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+mov [rdi], rax: RAX=16045690981116495207 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=16045690981116495207 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+pushfq: RAX=0 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789222417 stack[245]=514
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+rep movsb: RAX=0 RCX=0 RFLAGS=514 terminalRIP=4194417 memory[113]=9833440827789268677 stack[245]=15692994827673432930
+  PASS: all 16 GPRs, defined flags, terminal marker, and all 1034 requested memory bytes
+PASS: 12 concrete native instruction observations
+PASS fld-m64: ST0 significand=13835058055282163712 exponent=16383 FSW=4096 FTW=4 XMM0.low=1192960 MXCSR=8064; GPRs/flags/memory checked
+PASS fadd-st0-st1: ST0 significand=17293822569102704640 exponent=16384 FSW=6144 FTW=24 XMM0.low=1192960 MXCSR=8064; GPRs/flags/memory checked
+PASS fstp-m80: ST0 significand=10376293541461622784 exponent=16384 FSW=8192 FTW=16 XMM0.low=1192960 MXCSR=8064; GPRs/flags/memory checked
+PASS addsd: ST0 significand=0 exponent=0 FSW=6144 FTW=0 XMM0.low=4615626668101337088 MXCSR=8064; GPRs/flags/memory checked
+PASS divsd-masked-zero: ST0 significand=0 exponent=0 FSW=6144 FTW=0 XMM0.low=9218868437227405312 MXCSR=8068; GPRs/flags/memory checked
+PASS addsd-round-up: ST0 significand=0 exponent=0 FSW=6144 FTW=0 XMM0.low=4607182418800017409 MXCSR=24480; GPRs/flags/memory checked
+PASS: six concrete FP observations; raw requested/installed/terminal images retained
