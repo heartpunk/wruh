@@ -33,11 +33,11 @@ abort; no retry policy or structured fault observation was added.
 
 ## Run on NixOS
 
-With Lean 4.34 (`lean` and `leanc`) on PATH and bubblewrap available:
+Use the repository flake environment (pinned Lean 4.34, binutils and bubblewrap):
 
 ```sh
-bash experiments/mov_observer/native_observer/build.sh
-bash experiments/mov_observer/native_observer/run.sh
+nix develop .#nativeObserver --command bash experiments/mov_observer/native_observer/build.sh
+nix develop .#nativeObserver --command bash experiments/mov_observer/native_observer/run.sh
 ```
 
 `BWRAP` can name the bubblewrap executable. Build outputs go under ignored `out/`.
@@ -96,7 +96,7 @@ This is a smoke result, not a coverage or correctness proof.
   general proof of the target control-flow route.
 - Requested flags must be installable through Linux's register interface;
   installation is read back and checked. No flags are silently normalized.
-- Extended vectors and structured fault observations remain later stages. Faults now
+- Structured fault observations remain a later stage. Faults now
   abort with the unexpected stop status rather than being called observations.
 - The observer is executable, not end-to-end proved. Existing MOV and shim proofs
   are retained; this change adds no proof project or new PBT framework.
@@ -126,5 +126,42 @@ Both binaries built with Lean 4.34 and passed on NixOS inside bubblewrap: all
 raw FP images are retained in `evidence/fp/`. The bounded fleet job
 `observer-fp-2.service` exited 0 with 119,812,096 bytes peak memory. No generated
 ELFs remained after cleanup. The first build caught a record-update indentation
-error, corrected locally before this successful run. `run.sh` runs both binaries.
+error, corrected locally before this successful run. `run.sh` now runs all three binaries.
 These are concrete smoke observations, not exhaustive FP validation.
+
+## Vector state
+
+The full xstate option uses Linux GETREGSET/SETREGSET, preserving the raw standard
+image and the actual returned iovec length. CPUID leaf 0xD supplies component
+locations; XCR0 supplies OS-enabled components. XSTATE_BV controls whether a
+component contains saved data or represents its architectural initial zeros.
+Comparisons use decoded vector bytes rather than treating XSAVE metadata as
+instruction effects. Both installed FP and xstate snapshots describe state after
+all installation. A request can supply legacy FP or full xstate, not both.
+
+`VectorTrials.lean` checks seven concrete cases assembled from `vector-cases.S`:
+legacy PADDQ XMM (upper lanes preserved), VEX VPXOR YMM (upper lanes zeroed),
+VPADDQ ZMM, VPADDQ into ZMM16 with merge and zero masks, VMOVDQU64 storing ZMM31
+across a page, and KXORQ. Each compares all 32 ZMM registers and eight opmasks,
+GPRs/flags, legacy nonvector FP state and all requested memory. The examples
+require AVX2 plus OS-enabled AVX-512F/BW; unavailable features are an explicit
+error, not a passing skipped case. On the SSE-only NixOS builder, use
+`OBSERVER_TRIALS="trials fp-trials"` to run just the earlier suites.
+
+The existing AVX-512 KVM guest uses Ubuntu with Determinate Nix. Source remains
+local; compilation uses NixOS and the same committed flake. NixOS's existing
+`fleet-builder-vm120-1` public signing key is trusted on the guest. Private key
+material remains on NixOS. The realized `nativeObserver` environment is copied
+as a signed binary cache with signature checking enabled. This avoids rebuilding
+its approximately 5 GiB closure on the guest.
+
+All seven vector cases passed on the AVX-512 guest, as did the twelve scalar and
+six FP cases. The run used a 2688-byte standard xstate image, XCR0=255, and CPUID
+component offsets 576/1088/1152/1664 for YMM-high/opmasks/ZMM-high/high16-ZMM.
+The VM's QMP query reported KVM enabled and present. The guest run exited 0;
+no generated target ELFs remained. `evidence/vector/` retains build/run logs,
+CPU/runtime metadata and requested/installed/terminal images (including the FP
+regression images). The copied environment passed recursive signature verification.
+
+The native instructions ran in the existing KVM guest, not emulation or on the
+bare host. This is seven concrete smoke cases, not exhaustive vector validation.
