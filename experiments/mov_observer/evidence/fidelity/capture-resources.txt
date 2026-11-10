@@ -1,0 +1,6 @@
+ExecMainStatus=0
+MemoryPeak=753905664
+CPUUsageNSec=78563766000
+CPUQuotaPerSecUSec=2s
+MemoryMax=4294967296
+MemorySwapMax=0

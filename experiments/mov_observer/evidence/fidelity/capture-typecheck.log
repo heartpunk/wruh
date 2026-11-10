@@ -1,0 +1,14 @@
+Lean (version 4.34.0, x86_64-unknown-linux-gnu, commit 293d5d0c0c3f3dded4688b3ccd6a33939ac5102b, Release)
+f3c11cb26196ed6b6b64f1acfbc1f2792879f101d5beeefafe230a6facc5304a  Bootstrap.lean
+e29fde4ec658921c1a613ddd55e2f08fd35d74ae0198080d8ae3b3d7dda37a07  MovInstaller.lean
+084c7dbbe1c26f538db6a9b6b3a9631c4c081c006b05a919995ee5c76f90365d  MovCapturer.lean
+'MovObserver.Bootstrap.mov_loader_access_correct' depends on axioms: [propext, Classical.choice, Quot.sound]
+MovCapturer.lean:63:8: warning: automatically included section variable(s) unused in theorem `_private.MovCapturer.0.MovObserver.Bootstrap.handoff_other`:
+  [FPInterpretation]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [FPInterpretation] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+'MovObserver.Bootstrap.protocol_capture_handoff_frame' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Bootstrap.mov_capture_access_correct' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MovObserver.Bootstrap.mov_capture_sequence' depends on axioms: [propext, Classical.choice, Quot.sound]
