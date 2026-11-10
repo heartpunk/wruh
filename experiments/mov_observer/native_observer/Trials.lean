@@ -13,6 +13,8 @@ structure Trial where
   expectedFlags : UInt64 := 0x202
   flagsMask : UInt64 := 0xffffffffffffffff
   stores : Bool := false
+  pushFlags : Bool := false
+  repeatMove : Bool := false
   deriving Inhabited
 
 def trials : Array Trial := #[
@@ -25,33 +27,47 @@ def trials : Array Trial := #[
   { name := "cmp rax, rbx", instruction := #[0x48,0x39,0xd8], rax := 23, rbx := 23, expectedRax := 23, expectedFlags := 0x246 },
   { name := "cmovz rcx, rbx", instruction := #[0x48,0x0f,0x44,0xcb], rbx := 99, rcx := 4, flags := 0x242, expectedRcx := 99, expectedFlags := 0x242 },
   { name := "mov rax, [rdi]", instruction := #[0x48,0x8b,0x07], expectedRax := 0x8877665544332211, flags := 0x602, expectedFlags := 0x602 },
-  { name := "mov [rdi], rax", instruction := #[0x48,0x89,0x07], rax := 0xdeadbeef01234567, expectedRax := 0xdeadbeef01234567, stores := true }
+  { name := "mov [rdi], rax", instruction := #[0x48,0x89,0x07], rax := 0xdeadbeef01234567, expectedRax := 0xdeadbeef01234567, stores := true },
+  { name := "pushfq", instruction := #[0x9c], pushFlags := true },
+  { name := "rep movsb", instruction := #[0xf3,0xa4], rcx := 2, repeatMove := true }
 ]
 
 def main (args : List String) : IO Unit := do
   let [fixtureDir, workDir] := args | throw <| IO.userError "expected fixture directory and work directory"
   let loader ← IO.FS.readBinFile (fixtureDir ++ "/loader.bin")
   let capture ← IO.FS.readBinFile (fixtureDir ++ "/observer.bin")
+  let mut failures := 0
   for index in [:trials.size] do
     let t := trials[index]!
     let address : UInt64 := 0x100000f8b
     let regs := (List.range 16).toArray.map (fun i => UInt64.ofNat (0x12340000+37*i))
     let regs := (((regs.set! 0 t.rax).set! 1 t.rcx).set! 3 t.rbx).set! 7 (address+113)
+    let regs := if t.pushFlags then regs.set! 4 (address+253) else regs
+    let regs := if t.repeatMove then regs.set! 6 (address+40) else regs
     let bytes := ByteArray.mk ((List.range 1024).toArray.map (fun i => UInt8.ofNat (i*17+29)))
     let bytes := putWord bytes 113 0x8877665544332211
     let extra := ByteArray.mk #[18,52,86,120,154]
     let memory : Array Region := #[⟨address,bytes⟩,⟨address+1500,extra⟩,⟨0x200000001,extra⟩]
-    let result ← observe loader capture (workDir ++ s!"/trial-{index}.elf")
-      { instruction := ByteArray.mk t.instruction, gprs := regs, flags := t.flags, memory := memory }
-    let expected := (regs.set! 0 t.expectedRax).set! 1 t.expectedRcx
-    let expectedBytes := if t.stores then putWord bytes 113 t.rax else bytes
-    let ok := result.gprs == expected &&
-      (result.flags &&& t.flagsMask) == (t.expectedFlags &&& t.flagsMask) &&
-      result.rip == UInt64.ofNat (target+t.instruction.size) &&
-      result.memory.size == 3 && result.memory[0]!.bytes == expectedBytes &&
-      result.memory[1]!.bytes == extra && result.memory[2]!.bytes == extra
-    IO.println s!"{t.name}: RAX={result.gprs[0]!} RCX={result.gprs[1]!} RFLAGS={result.flags} RIP={result.rip} memory[113]={word result.memory[0]!.bytes 113}"
-    if !ok then
-      throw <| IO.userError s!"unexpected observation; GPRs={result.gprs}, expected={expected}, expected flags={t.expectedFlags} mask={t.flagsMask}"
-    IO.println "  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes"
-  IO.println "PASS: ten concrete native instruction observations"
+    try
+      let result ← observe loader capture (workDir ++ s!"/trial-{index}.elf")
+        { instruction := ByteArray.mk t.instruction, gprs := regs, flags := t.flags, memory := memory }
+      let expected := (regs.set! 0 t.expectedRax).set! 1 t.expectedRcx
+      let expected := if t.pushFlags then expected.set! 4 (regs[4]!-8) else expected
+      let expected := if t.repeatMove then (expected.set! 6 (regs[6]!+2)).set! 7 (regs[7]!+2) else expected
+      let expectedBytes := if t.stores then putWord bytes 113 t.rax else bytes
+      let expectedBytes := if t.pushFlags then putWord expectedBytes 245 t.flags else expectedBytes
+      let expectedBytes := if t.repeatMove then (expectedBytes.set! 113 bytes[40]!).set! 114 bytes[41]! else expectedBytes
+      let ok := result.gprs == expected &&
+        (result.flags &&& t.flagsMask) == (t.expectedFlags &&& t.flagsMask) &&
+        result.rip == UInt64.ofNat (target+t.instruction.size) &&
+        result.memory.size == 3 && result.memory[0]!.bytes == expectedBytes &&
+        result.memory[1]!.bytes == extra && result.memory[2]!.bytes == extra
+      IO.println s!"{t.name}: RAX={result.gprs[0]!} RCX={result.gprs[1]!} RFLAGS={result.flags} RIP={result.rip} memory[113]={word result.memory[0]!.bytes 113} stack[245]={word result.memory[0]!.bytes 245}"
+      if !ok then
+        throw <| IO.userError s!"unexpected observation; GPRs={result.gprs}, expected={expected}, expected flags={t.expectedFlags} mask={t.flagsMask}"
+      IO.println "  PASS: all 16 GPRs, defined flags, PC, and all 1034 requested memory bytes"
+    catch error =>
+      failures := failures+1
+      IO.println s!"FAIL {t.name}: {error}"
+  if failures != 0 then throw <| IO.userError s!"{failures} observation trials failed"
+  IO.println s!"PASS: {trials.size} concrete native instruction observations"
