@@ -138,41 +138,45 @@ def makeElf (loader capture : ByteArray) (r : Request) : IO ByteArray := do
 Unexpected stops/errors abort; detailed fault outcomes are a later stage. -/
 def observe (loader capture : ByteArray) (path : System.FilePath) (r : Request) : IO Observation := do
   IO.FS.writeBinFile path (← makeElf loader capture r)
-  let chmod ← IO.Process.output {cmd := "chmod", args := #["700",path.toString]}
-  if chmod.exitCode != 0 then throw <| IO.userError chmod.stderr
-  let child ← IO.Process.spawn {cmd := path.toString}
-  let pid := UInt64.ofNat child.pid.toNat
   try
-    stopped pid false
-    let _ ← checked "EXITKILL" (trace 0x4200 pid 0 0x100000)
-    for region in r.memory do writeMemory pid region.address region.bytes
-    let mut inputs := zeros 128
-    for i in [:16] do inputs := putWord inputs (8*i) r.gprs[i]!
-    writeMemory pid (UInt64.ofNat input) inputs
-    let regs ← getRegisters pid
-    let regs := putWord (putWord (putWord regs (16*8) (UInt64.ofNat loadCode)) (18*8) r.flags) (15*8) 0xffffffffffffffff
-    let _ ← checked "SETREGS" (traceBuffer 13 pid 0 regs)
-    for _ in [:16] do step pid
-    let installed ← getRegisters pid
-    let slots := #[10,11,12,5,19,4,13,14,9,8,7,6,3,2,1,0]
-    for i in [:16] do
-      if word installed (8*slots[i]!) != r.gprs[i]! then throw <| IO.userError s!"GPR {i} was not installed"
-    if word installed (16*8) != UInt64.ofNat target || word installed (18*8) != r.flags then
-      throw <| IO.userError "entry PC or requested flags not installed"
-    step pid
-    let post ← getRegisters pid
-    let redirected := putWord post (16*8) (UInt64.ofNat code)
-    let _ ← checked "capture entry" (traceBuffer 13 pid 0 redirected)
-    for _ in [:16] do step pid
-    let data ← readMemory pid (UInt64.ofNat record) 128
-    let mut memory := #[]
-    for region in r.memory do
-      memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
-    return ⟨(List.range 16).toArray.map (fun i => word data (8*i)),
-      word post (18*8), word post (16*8), memory, post⟩
+    let chmod ← IO.Process.output {cmd := "chmod", args := #["700",path.toString]}
+    if chmod.exitCode != 0 then throw <| IO.userError chmod.stderr
+    let child ← IO.Process.spawn {cmd := path.toString}
+    let pid := UInt64.ofNat child.pid.toNat
+    try
+      stopped pid false
+      let _ ← checked "EXITKILL" (trace 0x4200 pid 0 0x100000)
+      for region in r.memory do writeMemory pid region.address region.bytes
+      let mut inputs := zeros 128
+      for i in [:16] do inputs := putWord inputs (8*i) r.gprs[i]!
+      writeMemory pid (UInt64.ofNat input) inputs
+      let regs ← getRegisters pid
+      let regs := putWord (putWord (putWord regs (16*8) (UInt64.ofNat loadCode)) (18*8) r.flags) (15*8) 0xffffffffffffffff
+      let _ ← checked "SETREGS" (traceBuffer 13 pid 0 regs)
+      for _ in [:16] do step pid
+      let installed ← getRegisters pid
+      let slots := #[10,11,12,5,19,4,13,14,9,8,7,6,3,2,1,0]
+      for i in [:16] do
+        if word installed (8*slots[i]!) != r.gprs[i]! then throw <| IO.userError s!"GPR {i} was not installed"
+      if word installed (16*8) != UInt64.ofNat target || word installed (18*8) != r.flags then
+        throw <| IO.userError "entry PC or requested flags not installed"
+      step pid
+      let post ← getRegisters pid
+      let redirected := putWord post (16*8) (UInt64.ofNat code)
+      let _ ← checked "capture entry" (traceBuffer 13 pid 0 redirected)
+      for _ in [:16] do step pid
+      let data ← readMemory pid (UInt64.ofNat record) 128
+      let mut memory := #[]
+      for region in r.memory do
+        memory := memory.push {region with bytes := ← readMemory pid region.address region.bytes.size}
+      return ⟨(List.range 16).toArray.map (fun i => word data (8*i)),
+        word post (18*8), word post (16*8), memory, post⟩
+    finally
+      let killed ← killRaw pid 9
+      let status ← freshBuffer 8
+      let reaped ← waitRaw pid status
+      if killed.toInt64.toInt < 0 || reaped != pid || (word status 0 &&& 255) == 127 then
+        throw <| IO.userError s!"child cleanup failed: kill={killed.toInt64.toInt}, wait={reaped.toInt64.toInt}"
   finally
-    let _ ← killRaw pid 9
-    let status ← freshBuffer 8
-    let _ ← waitRaw pid status
     IO.FS.removeFile path
 end MovObserver.NativeObserver

@@ -1,0 +1,38 @@
+Id=observer-e2e-final-1.service
+Result=success
+ExecMainStatus=0
+Slice=fleet-build.slice
+MemoryPeak=113963008
+CPUUsageNSec=4214204000
+CPUQuotaPerSecUSec=2s
+MemoryMax=4294967296
+MemorySwapMax=0
+TasksMax=128
+Linux nixos 6.18.18 #1-NixOS SMP PREEMPT_DYNAMIC Fri Mar 13 16:23:30 UTC 2026 x86_64 GNU/Linux
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 15
+model		: 107
+model name	: QEMU Virtual CPU version 2.5+
+stepping	: 1
+microcode	: 0x1
+cpu MHz		: 3311.998
+cache size	: 16384 KB
+physical id	: 0
+siblings	: 18
+core id		: 0
+cpu cores	: 18
+apicid		: 0
+initial apicid	: 0
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 13
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm rep_good nopl xtopology cpuid tsc_known_freq pni ssse3 cx16 sse4_1 sse4_2 x2apic popcnt aes hypervisor lahf_lm cpuid_fault pti
+bugs		: cpu_meltdown spectre_v1 spectre_v2 spec_store_bypass l1tf mds swapgs itlb_multihit bhi spectre_v2_user its
+bogomips	: 6623.99
+clflush size	: 64
+cache_alignment	: 128
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+

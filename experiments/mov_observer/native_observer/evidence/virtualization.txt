@@ -1,0 +1,7 @@
+Physical host: Entrapta
+Proxmox VM 120: nixos, running, 96000 MiB
+Read-only QMP query-kvm on /run/qemu-server/120.qmp:
+  enabled: true
+  present: true
+Verified directly after the final run. The guest's QEMU CPU model alone was
+not used as evidence of hardware acceleration.
