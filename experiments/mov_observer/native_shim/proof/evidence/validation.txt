@@ -1,0 +1,11 @@
+Extraction: exit 0, regenerated model identical.
+ShimModel: typechecked in proof run 2; unchanged afterward.
+ShimProof: final run 5 exit 0, including explicit guarded-step availability.
+Axiom audit: exit 0, 56 public theorems; only propext, Classical.choice, Quot.sound.
+No sorryAx, native-evaluation axioms, or added semantic axioms.
+Kernel ABI contract remains an explicit theorem parameter.
+Existing imported Extracted.lean and ByteCodec.lean source hashes match local sources.
+Updated check_pipeline.sh shell syntax validated; new modules appended to its sequence.
+Unchanged observer modules were not rebuilt in this step.
+Linter warnings about unused assumptions remain; no Lean errors.
+Disassembly/VEX text is retained raw, including tool-emitted trailing whitespace.

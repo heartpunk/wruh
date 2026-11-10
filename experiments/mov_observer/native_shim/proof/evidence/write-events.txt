@@ -1,0 +1,140 @@
+0: address=(bvadd #xfffffffffffffff0 rsp) size=8 value=rsi
+1: address=(bvadd #xffffffffffffffe0 rsp) size=8 value=(bvadd #x0000000000000018 rdx)
+2: address=(bvadd #xffffffffffffffe8 rsp) size=8 value=(let ((a!1 (store (store (store mem
+                                (bvadd #xfffffffffffffff0 rsp)
+                                ((_ extract 7 0) rsi))
+                         (bvadd #xfffffffffffffff1 rsp)
+                         ((_ extract 15 8) rsi))
+                  (bvadd #xfffffffffffffff2 rsp)
+                  ((_ extract 23 16) rsi))))
+(let ((a!2 (store (store (store a!1
+                                (bvadd #xfffffffffffffff3 rsp)
+                                ((_ extract 31 24) rsi))
+                         (bvadd #xfffffffffffffff4 rsp)
+                         ((_ extract 39 32) rsi))
+                  (bvadd #xfffffffffffffff5 rsp)
+                  ((_ extract 47 40) rsi))))
+(let ((a!3 (store (store (store a!2
+                                (bvadd #xfffffffffffffff6 rsp)
+                                ((_ extract 55 48) rsi))
+                         (bvadd #xfffffffffffffff7 rsp)
+                         ((_ extract 63 56) rsi))
+                  (bvadd #xffffffffffffffe0 rsp)
+                  (bvadd #x18 ((_ extract 7 0) rdx)))))
+(let ((a!4 (store (store a!3
+                         (bvadd #xffffffffffffffe1 rsp)
+                         ((_ extract 15 8) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe2 rsp)
+                  ((_ extract 23 16) (bvadd #x0000000000000018 rdx)))))
+(let ((a!5 (store (store a!4
+                         (bvadd #xffffffffffffffe3 rsp)
+                         ((_ extract 31 24) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe4 rsp)
+                  ((_ extract 39 32) (bvadd #x0000000000000018 rdx)))))
+(let ((a!6 (store (store a!5
+                         (bvadd #xffffffffffffffe5 rsp)
+                         ((_ extract 47 40) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe6 rsp)
+                  ((_ extract 55 48) (bvadd #x0000000000000018 rdx)))))
+(let ((a!7 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x000000000000000f rdx)))
+      (a!8 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x000000000000000e rdx)))
+      (a!9 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x000000000000000d rdx)))
+      (a!10 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000c rdx)))
+      (a!11 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000b rdx)))
+      (a!12 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000a rdx)))
+      (a!13 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x0000000000000009 rdx)))
+      (a!14 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x0000000000000008 rdx))))
+  (concat a!7 a!8 a!9 a!10 a!11 a!12 a!13 a!14))))))))
+3: address=(bvadd #xfffffffffffffff8 rsp) size=8 value=(let ((a!1 (store (store (store mem
+                                (bvadd #xfffffffffffffff0 rsp)
+                                ((_ extract 7 0) rsi))
+                         (bvadd #xfffffffffffffff1 rsp)
+                         ((_ extract 15 8) rsi))
+                  (bvadd #xfffffffffffffff2 rsp)
+                  ((_ extract 23 16) rsi))))
+(let ((a!2 (store (store (store a!1
+                                (bvadd #xfffffffffffffff3 rsp)
+                                ((_ extract 31 24) rsi))
+                         (bvadd #xfffffffffffffff4 rsp)
+                         ((_ extract 39 32) rsi))
+                  (bvadd #xfffffffffffffff5 rsp)
+                  ((_ extract 47 40) rsi))))
+(let ((a!3 (store (store (store a!2
+                                (bvadd #xfffffffffffffff6 rsp)
+                                ((_ extract 55 48) rsi))
+                         (bvadd #xfffffffffffffff7 rsp)
+                         ((_ extract 63 56) rsi))
+                  (bvadd #xffffffffffffffe0 rsp)
+                  (bvadd #x18 ((_ extract 7 0) rdx)))))
+(let ((a!4 (store (store a!3
+                         (bvadd #xffffffffffffffe1 rsp)
+                         ((_ extract 15 8) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe2 rsp)
+                  ((_ extract 23 16) (bvadd #x0000000000000018 rdx)))))
+(let ((a!5 (store (store a!4
+                         (bvadd #xffffffffffffffe3 rsp)
+                         ((_ extract 31 24) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe4 rsp)
+                  ((_ extract 39 32) (bvadd #x0000000000000018 rdx)))))
+(let ((a!6 (store (store a!5
+                         (bvadd #xffffffffffffffe5 rsp)
+                         ((_ extract 47 40) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe6 rsp)
+                  ((_ extract 55 48) (bvadd #x0000000000000018 rdx)))))
+(let ((a!7 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x000000000000000f rdx)))
+      (a!8 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x000000000000000e rdx)))
+      (a!9 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x000000000000000d rdx)))
+      (a!10 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000c rdx)))
+      (a!11 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000b rdx)))
+      (a!12 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000a rdx)))
+      (a!13 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x0000000000000009 rdx)))
+      (a!14 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x0000000000000008 rdx))))
+  (concat a!7 a!8 a!9 a!10 a!11 a!12 a!13 a!14))))))))

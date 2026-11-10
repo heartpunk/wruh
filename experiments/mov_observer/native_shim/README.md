@@ -17,7 +17,8 @@ frame and invokes Linux x86-64 process_vm_writev syscall 311. The raw result bit
 return in RAX: success count or negative errno. The shim does not retry, translate
 errors, allocate, resume the target, or call runtime helpers. It borrows the Lean
 ByteArray, and preserves ABI callee-saved registers and the stack pointer.
-These are implementation claims to prove later, not a completed formal proof.
+The extracted-model ABI/frame proof is now in `proof/`; its precise boundary
+is described below. This is not yet a full native FFI refinement proof.
 
 The assembled text is 65 bytes / 16 instructions / seven mnemonics:
 mov, lea, xor, sub, add, syscall, ret. It has no relocations. Exact bytes and
@@ -48,3 +49,52 @@ This is a native leaf experiment. It does not yet call through SparseMemoryImage
 map arbitrary requested addresses, implement full native GPR installation, or
 prove MemoryWriteCorrect/FFI refinement. It introduces no retry/abort policy for
 the application: the test asserts its expected outcomes only.
+
+## Exact-byte ABI/frame proof
+
+`proof/extract.py` extracts the exact committed 65 bytes at address 0x400000:
+13 instructions before the syscall, the two-byte syscall boundary, and the
+ADD/RET suffix. It asserts sizes, instruction counts, jump kinds, a single
+unconstrained successor per modeled block, and no suffix stores. Every canonical
+AYXG state field is retained. The syscall is deliberately not executed by the
+extractor; `SyscallABI` supplies its kernel return/frame contract.
+
+The exporter checks that the four ordered eight-byte write events expand to
+exactly the 32 exported byte writes. In particular, it preserves the actual
+memory expression at the ByteArray-size read, after the first two stores.
+`SizeFieldSeparate` is the geometric separation needed to show that this read
+still sees the original header. No preinstalled result or assumed frame
+preservation substitutes for these proofs.
+
+`ShimProof.lean` proves:
+- `syscall_arguments`: syscall 311 and all argument registers, including the
+  original PID bits, local/remote iovec pointers, counts of one and flags zero.
+- `descriptor_byte_0` through `descriptor_byte_31`: exact descriptor contents,
+  with the original size bytes under the stated separation condition.
+- `prefix_stack_frame`: all memory outside the 32-byte stack frame is preserved.
+- `shim_abi`: raw RAX return, RSP advanced by exactly eight bytes across RET,
+  original saved return address, all fields outside the explicit clobber list
+  preserved, and all memory outside that stack frame preserved.
+- `shim_borrowed_buffer`: the borrowed object's 24-byte header and payload remain
+  unchanged when disjoint from the stack frame.
+- `prefix_available` / `suffix_available`: the actual guarded AYXG steps are
+  enabled at the entry address and kernel resumption address respectively.
+
+The clobber list includes caller-saved GPRs, RIP, arithmetic flags and memory;
+RSP and memory receive the stronger specific conclusions above. Other modeled
+fields, including callee-saved GPRs and FP/vector state, are preserved.
+
+`SyscallABI` explicitly assumes the kernel returns raw RAX, resumes at the
+suffix, preserves RSP and caller memory, and preserves fields outside the
+listed clobbers. Caller-memory noninterference is a real assumption: a distinct
+PID alone does not exclude shared-memory aliases. This proof does not establish
+kernel progress, remote transfer correctness, or the compiler/runtime's FFI
+refinement. It proves the shim ABI/frame behavior conditional on that kernel
+contract and the extracted instruction semantics, as requested.
+
+Run the existing `../check_pipeline.sh` through the pinned environment to check
+these modules alongside the existing observer proofs. To regenerate, run
+`python proof/extract.py OUTPUT_DIRECTORY` with the repository's pinned extraction
+environment, then compare `OUTPUT_DIRECTORY/ShimModel.lean` byte-for-byte with
+`proof/ShimModel.lean`. Extraction provenance and validation are in
+`proof/evidence/`.

@@ -1,0 +1,5 @@
+ERROR    | 2026-11-09 17:02:33,692 | angr.state_plugins.unicorn_engine | failed loading "unicornlib.so", unicorn support disabled ('NoneType' object has no attribute 'unicorn_py3')
+prefix constraints [] updates ['rax', 'rdx', 'rsp', 'rsi', 'r8', 'r9', 'r10', 'rflags_CF', 'rflags_ZF', 'rflags_SF', 'rflags_OF', 'rflags_PF', 'rflags_AF', 'rip', 'mem']
+suffix constraints [] updates ['rsp', 'rflags_CF', 'rflags_ZF', 'rflags_SF', 'rflags_OF', 'rflags_PF', 'rflags_AF', 'rip', 'mem']
+prefix word writes [('18446744073709551600 + rsp', 8), ('18446744073709551584 + rsp', 8), ('18446744073709551592 + rsp', 8), ('18446744073709551608 + rsp', 8)]
+emitted 202 expression nodes

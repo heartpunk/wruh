@@ -1,0 +1,8 @@
+0x40003a:	syscall	
+IRSB {
+   
+
+   00 | ------ IMark(0x40003a, 2, 0) ------
+   01 | PUT(rcx) = 0x000000000040003c
+   NEXT: PUT(rip) = 0x000000000040003c; Ijk_Sys_syscall
+}

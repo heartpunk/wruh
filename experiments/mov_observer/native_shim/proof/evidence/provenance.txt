@@ -1,0 +1,20 @@
+Base Wruh revision: 65844e28ccaed6e8257a20bac97900cca0457bfc
+AYXG revision: 324752afe80b05d7fd8854834725cf5ee360f173
+Lean: 4.34.0
+angr / pyvex / archinfo: 10.0.4
+Z3: 5.1.0
+Extraction host: NixOS
+Extraction Python: /nix/store/mv49y1qn55ifd106gyz92mrg6iqnjr6f-python3-3.12.15-env/bin/python3
+AYXG Python path: /nix/store/prgqrm74px43hwndnivs00ii41zlmllj-source/python
+Lean binary: /nix/store/qpk7v7b4ixkpa4jfsvgmmsmdr4l23in1-lean/bin/lean
+The optional Unicorn engine was unavailable; extraction used VEX.
+Exact code bytes: ../evidence/shim.bin (relative to proof/)
+SHA256: 318c587381ddd44658b17e8c40b4b80a857989da16581ec7aa546a4e157f982a
+Load address: 0x400000
+Prefix: offsets [0,58), 13 instructions, Ijk_Boring
+Kernel boundary: offsets [58,60), syscall, Ijk_Sys_syscall
+Suffix: offsets [60,65), 2 instructions, Ijk_Ret
+Re-extraction matched ShimModel.lean byte-for-byte.
+Four ordered eight-byte writes exactly match exported 32 byte stores.
+Suffix has zero write events. Prefix/suffix each have one unconstrained successor.
+Remote snapshot contains usable .git metadata; repository source edits made locally.

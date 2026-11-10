@@ -1,0 +1,174 @@
+0x400000:	sub	rsp, 0x20
+0x400004:	mov	qword ptr [rsp + 0x10], rsi
+0x400009:	lea	rax, [rdx + 0x18]
+0x40000d:	mov	qword ptr [rsp], rax
+0x400011:	mov	rax, qword ptr [rdx + 8]
+0x400015:	mov	qword ptr [rsp + 8], rax
+0x40001a:	mov	qword ptr [rsp + 0x18], rax
+0x40001f:	mov	rsi, rsp
+0x400022:	mov	edx, 1
+0x400027:	lea	r10, [rsp + 0x10]
+0x40002c:	mov	r8d, 1
+0x400032:	xor	r9d, r9d
+0x400035:	mov	eax, 0x137
+IRSB {
+   t0:Ity_I64 t1:Ity_I64 t2:Ity_I64 t3:Ity_I64 t4:Ity_I64 t5:Ity_I64 t6:Ity_I64 t7:Ity_I64 t8:Ity_I64 t9:Ity_I64 t10:Ity_I32 t11:Ity_I32 t12:Ity_I32 t13:Ity_I64 t14:Ity_I64 t15:Ity_I64 t16:Ity_I64 t17:Ity_I64 t18:Ity_I64 t19:Ity_I64 t20:Ity_I64 t21:Ity_I64 t22:Ity_I64 t23:Ity_I64 t24:Ity_I64 t25:Ity_I64 t26:Ity_I64 t27:Ity_I64 t28:Ity_I64 t29:Ity_I64 t30:Ity_I64 t31:Ity_I64 t32:Ity_I64 t33:Ity_I64 t34:Ity_I32 t35:Ity_I64 t36:Ity_I32 t37:Ity_I64 t38:Ity_I64 t39:Ity_I64 t40:Ity_I64
+
+   00 | ------ IMark(0x400000, 4, 0) ------
+   01 | t2 = GET:I64(rsp)
+   02 | t0 = Sub64(t2,0x0000000000000020)
+   03 | PUT(rsp) = t0
+   04 | PUT(rip) = 0x0000000000400004
+   05 | ------ IMark(0x400004, 5, 0) ------
+   06 | t13 = Add64(t0,0x0000000000000010)
+   07 | t15 = GET:I64(rsi)
+   08 | STle(t13) = t15
+   09 | ------ IMark(0x400009, 4, 0) ------
+   10 | t17 = GET:I64(rdx)
+   11 | t16 = Add64(t17,0x0000000000000018)
+   12 | PUT(rip) = 0x000000000040000d
+   13 | ------ IMark(0x40000d, 4, 0) ------
+   14 | STle(t0) = t16
+   15 | PUT(rip) = 0x0000000000400011
+   16 | ------ IMark(0x400011, 4, 0) ------
+   17 | t19 = Add64(t17,0x0000000000000008)
+   18 | t21 = LDle:I64(t19)
+   19 | PUT(rip) = 0x0000000000400015
+   20 | ------ IMark(0x400015, 5, 0) ------
+   21 | t22 = Add64(t0,0x0000000000000008)
+   22 | STle(t22) = t21
+   23 | PUT(rip) = 0x000000000040001a
+   24 | ------ IMark(0x40001a, 5, 0) ------
+   25 | t25 = Add64(t0,0x0000000000000018)
+   26 | STle(t25) = t21
+   27 | ------ IMark(0x40001f, 3, 0) ------
+   28 | PUT(rsi) = t0
+   29 | ------ IMark(0x400022, 5, 0) ------
+   30 | PUT(rdx) = 0x0000000000000001
+   31 | ------ IMark(0x400027, 5, 0) ------
+   32 | t30 = Add64(t0,0x0000000000000010)
+   33 | PUT(r10) = t30
+   34 | ------ IMark(0x40002c, 6, 0) ------
+   35 | PUT(r8) = 0x0000000000000001
+   36 | ------ IMark(0x400032, 3, 0) ------
+   37 | PUT(cc_op) = 0x0000000000000013
+   38 | PUT(cc_dep1) = 0x0000000000000000
+   39 | PUT(cc_dep2) = 0x0000000000000000
+   40 | PUT(cc_ndep) = 0x0000000000000000
+   41 | PUT(r9) = 0x0000000000000000
+   42 | ------ IMark(0x400035, 5, 0) ------
+   43 | PUT(rax) = 0x0000000000000137
+   NEXT: PUT(rip) = 0x000000000040003a; Ijk_Boring
+}
+rax: #x0000000000000137
+rdx: #x0000000000000001
+rsp: (bvadd #xffffffffffffffe0 rsp)
+rsi: (bvadd #xffffffffffffffe0 rsp)
+r8: #x0000000000000001
+r9: #x0000000000000000
+r10: (bvadd #xfffffffffffffff0 rsp)
+rflags_CF: #b0
+rflags_ZF: #b1
+rflags_SF: #b0
+rflags_OF: #b0
+rflags_PF: #b1
+rflags_AF: #b0
+rip: #x000000000040003a
+mem: (let ((a!1 (store (store (store mem
+                                (bvadd #xfffffffffffffff0 rsp)
+                                ((_ extract 7 0) rsi))
+                         (bvadd #xfffffffffffffff1 rsp)
+                         ((_ extract 15 8) rsi))
+                  (bvadd #xfffffffffffffff2 rsp)
+                  ((_ extract 23 16) rsi))))
+(let ((a!2 (store (store (store a!1
+                                (bvadd #xfffffffffffffff3 rsp)
+                                ((_ extract 31 24) rsi))
+                         (bvadd #xfffffffffffffff4 rsp)
+                         ((_ extract 39 32) rsi))
+                  (bvadd #xfffffffffffffff5 rsp)
+                  ((_ extract 47 40) rsi))))
+(let ((a!3 (store (store (store a!2
+                                (bvadd #xfffffffffffffff6 rsp)
+                                ((_ extract 55 48) rsi))
+                         (bvadd #xfffffffffffffff7 rsp)
+                         ((_ extract 63 56) rsi))
+                  (bvadd #xffffffffffffffe0 rsp)
+                  (bvadd #x18 ((_ extract 7 0) rdx)))))
+(let ((a!4 (store (store a!3
+                         (bvadd #xffffffffffffffe1 rsp)
+                         ((_ extract 15 8) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe2 rsp)
+                  ((_ extract 23 16) (bvadd #x0000000000000018 rdx)))))
+(let ((a!5 (store (store a!4
+                         (bvadd #xffffffffffffffe3 rsp)
+                         ((_ extract 31 24) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe4 rsp)
+                  ((_ extract 39 32) (bvadd #x0000000000000018 rdx)))))
+(let ((a!6 (store (store a!5
+                         (bvadd #xffffffffffffffe5 rsp)
+                         ((_ extract 47 40) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe6 rsp)
+                  ((_ extract 55 48) (bvadd #x0000000000000018 rdx)))))
+(let ((a!7 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x0000000000000008 rdx)))
+      (a!9 (select (store a!6
+                          (bvadd #xffffffffffffffe7 rsp)
+                          ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                   (bvadd #x0000000000000009 rdx)))
+      (a!10 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000a rdx)))
+      (a!11 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000b rdx)))
+      (a!13 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000c rdx)))
+      (a!14 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000d rdx)))
+      (a!15 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000e rdx)))
+      (a!17 (select (store a!6
+                           (bvadd #xffffffffffffffe7 rsp)
+                           ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                    (bvadd #x000000000000000f rdx))))
+(let ((a!8 (store (store a!6
+                         (bvadd #xffffffffffffffe7 rsp)
+                         ((_ extract 63 56) (bvadd #x0000000000000018 rdx)))
+                  (bvadd #xffffffffffffffe8 rsp)
+                  a!7)))
+(let ((a!12 (store (store (store a!8 (bvadd #xffffffffffffffe9 rsp) a!9)
+                          (bvadd #xffffffffffffffea rsp)
+                          a!10)
+                   (bvadd #xffffffffffffffeb rsp)
+                   a!11)))
+(let ((a!16 (store (store (store a!12 (bvadd #xffffffffffffffec rsp) a!13)
+                          (bvadd #xffffffffffffffed rsp)
+                          a!14)
+                   (bvadd #xffffffffffffffee rsp)
+                   a!15)))
+(let ((a!18 (store (store (store a!16 (bvadd #xffffffffffffffef rsp) a!17)
+                          (bvadd #xfffffffffffffff8 rsp)
+                          a!7)
+                   (bvadd #xfffffffffffffff9 rsp)
+                   a!9)))
+(let ((a!19 (store (store (store a!18 (bvadd #xfffffffffffffffa rsp) a!10)
+                          (bvadd #xfffffffffffffffb rsp)
+                          a!11)
+                   (bvadd #xfffffffffffffffc rsp)
+                   a!13)))
+  (store (store (store a!19 (bvadd #xfffffffffffffffd rsp) a!14)
+                (bvadd #xfffffffffffffffe rsp)
+                a!15)
+         (bvadd #xffffffffffffffff rsp)
+         a!17)))))))))))))

@@ -1,0 +1,48 @@
+0x40003c:	add	rsp, 0x20
+0x400040:	ret	
+IRSB {
+   t0:Ity_I64 t1:Ity_I64 t2:Ity_I64 t3:Ity_I64 t4:Ity_I64 t5:Ity_I64 t6:Ity_I64
+
+   00 | ------ IMark(0x40003c, 4, 0) ------
+   01 | t2 = GET:I64(rsp)
+   02 | t0 = Add64(t2,0x0000000000000020)
+   03 | PUT(cc_op) = 0x0000000000000004
+   04 | PUT(cc_dep1) = t2
+   05 | PUT(cc_dep2) = 0x0000000000000020
+   06 | PUT(cc_ndep) = 0x0000000000000000
+   07 | PUT(rsp) = t0
+   08 | PUT(rip) = 0x0000000000400040
+   09 | ------ IMark(0x400040, 1, 0) ------
+   10 | t4 = LDle:I64(t0)
+   11 | t5 = Add64(t0,0x0000000000000008)
+   12 | PUT(rsp) = t5
+   13 | t6 = Sub64(t5,0x0000000000000080)
+   14 | ====== AbiHint(0xt6, 128, t4) ======
+   NEXT: PUT(rip) = t4; Ijk_Ret
+}
+rsp: (bvadd #x0000000000000028 rsp)
+rflags_CF: (ite (bvule rsp (bvadd #x0000000000000020 rsp)) #b0 #b1)
+rflags_ZF: (ite (= rsp #xffffffffffffffe0) #b1 #b0)
+rflags_SF: ((_ extract 63 63) (bvadd #x0000000000000020 rsp))
+rflags_OF: (let ((a!1 (bvnot (bvxor ((_ extract 63 63) rsp)
+                         ((_ extract 63 63) (bvadd #x0000000000000020 rsp))))))
+  (bvnot (bvor ((_ extract 63 63) rsp) a!1)))
+rflags_PF: (bvxor #b1
+       ((_ extract 0 0) rsp)
+       ((_ extract 1 1) (bvadd #x20 ((_ extract 7 0) rsp)))
+       ((_ extract 2 2) (bvadd #x20 ((_ extract 7 0) rsp)))
+       ((_ extract 3 3) (bvadd #x20 ((_ extract 7 0) rsp)))
+       ((_ extract 4 4) (bvadd #x20 ((_ extract 7 0) rsp)))
+       ((_ extract 5 5) (bvadd #x20 ((_ extract 7 0) rsp)))
+       ((_ extract 6 6) (bvadd #x20 ((_ extract 7 0) rsp)))
+       ((_ extract 7 7) (bvadd #x20 ((_ extract 7 0) rsp))))
+rflags_AF: (bvxor ((_ extract 4 4) rsp) ((_ extract 4 4) (bvadd #x0000000000000020 rsp)))
+rip: (concat (select mem (bvadd #x0000000000000027 rsp))
+        (select mem (bvadd #x0000000000000026 rsp))
+        (select mem (bvadd #x0000000000000025 rsp))
+        (select mem (bvadd #x0000000000000024 rsp))
+        (select mem (bvadd #x0000000000000023 rsp))
+        (select mem (bvadd #x0000000000000022 rsp))
+        (select mem (bvadd #x0000000000000021 rsp))
+        (select mem (bvadd #x0000000000000020 rsp)))
+mem: mem
