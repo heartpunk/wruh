@@ -263,7 +263,24 @@ def _select_candidates(
     binary_digest: str,
     seed: str | None,
     percentage: Decimal | None,
+    only_candidate_ids: list[str] | None = None,
 ) -> tuple[set[str], dict[str, Any]]:
+    if only_candidate_ids:
+        if seed is not None or percentage is not None:
+            raise ValueError("explicit candidate selection cannot be combined with sampling")
+        requested_ids = sorted(set(only_candidate_ids))
+        known_ids = {candidate["id"] for candidate in candidates}
+        unknown_ids = sorted(set(requested_ids) - known_ids)
+        if unknown_ids:
+            raise ValueError(f"unknown candidate IDs={unknown_ids}")
+        return set(requested_ids), {
+            "seed": None,
+            "requestedPercentage": None,
+            "selectedCount": len(requested_ids),
+            "samplingPolicy": "explicit-candidate-ids-v1",
+            "selectedCandidateIds": requested_ids,
+        }
+
     if seed is None or percentage is None:
         return {candidate["id"] for candidate in candidates}, {
             "seed": None,
@@ -647,6 +664,7 @@ def run(arguments: argparse.Namespace) -> int:
         binary_digest,
         arguments.sample_seed,
         arguments.sample_percentage,
+        arguments.only_candidate_id,
     )
 
     run_id = uuid.uuid4().hex
@@ -983,6 +1001,12 @@ def main() -> int:
     )
     parser.add_argument("--sample-seed", help="explicit seed for deterministic candidate sampling")
     parser.add_argument(
+        "--only-candidate-id",
+        action="append",
+        default=[],
+        help="extract only exact census candidate IDs; may be repeated",
+    )
+    parser.add_argument(
         "--sample-percentage",
         type=_sample_percentage,
         help="percentage of candidates to sample (0 through 100; requires --sample-seed)",
@@ -1025,6 +1049,8 @@ def main() -> int:
             parser.error(message + "; missing " + ", ".join(missing))
     if (arguments.sample_seed is None) != (arguments.sample_percentage is None):
         parser.error("--sample-seed and --sample-percentage must be provided together")
+    if arguments.only_candidate_id and arguments.sample_seed is not None:
+        parser.error("--only-candidate-id cannot be combined with deterministic sampling")
     if arguments.target_kind == "interpreter" and not arguments.target_implementation:
         parser.error("--target-implementation is required for interpreter targets")
     _configure_logging()
