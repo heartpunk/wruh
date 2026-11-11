@@ -34,7 +34,7 @@ else
 fi
 
 cp "$source_dir/stub.S" "$work_dir/stub.S"
-as --64 -o "$work_dir/stub.o" "$work_dir/stub.S"
+(cd -- "$work_dir" && as --64 -o stub.o stub.S)
 mkdir -p "$(dirname -- "$output")"
 ld --build-id=none -Ttext=0x400000 -e wruh_pbt_target \
   -o "$output" "$work_dir/stub.o"
