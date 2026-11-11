@@ -121,6 +121,10 @@
             # Use IFRL's shared Python environment after inherited hooks run.
             export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
             export PYTHONPATH="$PWD:${ayxg.outPath}/python''${PYTHONPATH:+:$PYTHONPATH}"
+            # Hegel's extern_lib uses buildO for a C source that includes
+            # lean/lean.h; Lake does not add the active Lean sysroot to cc's
+            # include search path for this dependency target.
+            export CPATH="$(lean --print-prefix)/include''${CPATH:+:$CPATH}"
           '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             # Keep the runtime available without shadowing the shared Lean toolchain.
             export PATH="$PATH:/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin"
