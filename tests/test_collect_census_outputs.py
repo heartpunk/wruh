@@ -49,6 +49,39 @@ class CensusOutputCollectionTests(unittest.TestCase):
             ), set())
             self.assertEqual((copied / "entries.jsonl").read_text(), '{"candidate":"fn_1"}\n')
 
+    def test_copies_sealed_read_only_bazel_outputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            testlogs = root / "bazel-testlogs"
+            outputs = testlogs / "extractor/binary_census_lua_remote_test/test.outputs"
+            outputs.mkdir(parents=True)
+            summary = outputs / "summary.json"
+            summary.write_text(json.dumps({"attempted": 4}))
+            entries = outputs / "entries.jsonl"
+            entries.write_text('{"candidate":"fn_1"}\n')
+            (outputs / "census.jsonld").write_text(json.dumps({"@graph": [
+                {"bfe:identifier": "github-actions-run:123/attempt/2"},
+                {"bfe:identifier": "git-commit:abc123"},
+            ]}))
+            for path in outputs.iterdir():
+                path.chmod(0o444)
+            outputs.chmod(0o555)
+
+            try:
+                self.assertEqual(collect(
+                    testlogs,
+                    root / "reports",
+                    run_identifier="github-actions-run:123/attempt/2",
+                    revision_identifier="git-commit:abc123",
+                ), {"lua"})
+                copied = root / "reports/lua"
+                self.assertEqual(json.loads((copied / "summary.json").read_text())["attempted"], 4)
+                self.assertTrue((copied / ".collected").exists())
+            finally:
+                outputs.chmod(0o755)
+                for path in outputs.iterdir():
+                    path.chmod(0o644)
+
     def test_current_run_inventory_failure_summary_is_collected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

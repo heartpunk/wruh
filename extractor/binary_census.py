@@ -16,7 +16,7 @@ import tarfile
 import time
 import uuid
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
@@ -263,7 +263,39 @@ def _select_candidates(
     binary_digest: str,
     seed: str | None,
     percentage: Decimal | None,
+    only_symbols: Sequence[str] | None = None,
 ) -> tuple[set[str], dict[str, Any]]:
+    if only_symbols:
+        if seed is not None or percentage is not None:
+            raise ValueError("explicit symbol selection cannot be combined with sampling")
+        requested_symbols = sorted(set(only_symbols))
+        matches = {symbol: set() for symbol in requested_symbols}
+        for candidate in candidates:
+            for symbol in candidate.get("aliases", [candidate["symbol"]]):
+                if symbol in matches:
+                    matches[symbol].add(candidate["id"])
+        missing = [symbol for symbol, ids in matches.items() if not ids]
+        ambiguous = {
+            symbol: sorted(ids)
+            for symbol, ids in matches.items()
+            if len(ids) > 1
+        }
+        if missing or ambiguous:
+            problems = []
+            if missing:
+                problems.append(f"unknown symbols={missing}")
+            if ambiguous:
+                problems.append(f"ambiguous symbols={ambiguous}")
+            raise ValueError("cannot select census symbols: " + "; ".join(problems))
+        selected_ids = {next(iter(ids)) for ids in matches.values()}
+        return selected_ids, {
+            "seed": None,
+            "requestedPercentage": None,
+            "selectedCount": len(selected_ids),
+            "samplingPolicy": "explicit-symbols-v1",
+            "selectedSymbols": requested_symbols,
+        }
+
     if seed is None or percentage is None:
         return {candidate["id"] for candidate in candidates}, {
             "seed": None,
@@ -647,6 +679,7 @@ def run(arguments: argparse.Namespace) -> int:
         binary_digest,
         arguments.sample_seed,
         arguments.sample_percentage,
+        arguments.only_symbol,
     )
 
     run_id = uuid.uuid4().hex
@@ -981,6 +1014,12 @@ def main() -> int:
         default=Path(undeclared_outputs) if undeclared_outputs else None,
         help="report directory (defaults to Bazel's test undeclared-outputs directory)",
     )
+    parser.add_argument(
+        "--only-symbol",
+        action="append",
+        default=[],
+        help="extract only exact candidate symbol names; may be repeated",
+    )
     parser.add_argument("--sample-seed", help="explicit seed for deterministic candidate sampling")
     parser.add_argument(
         "--sample-percentage",
@@ -1025,6 +1064,8 @@ def main() -> int:
             parser.error(message + "; missing " + ", ".join(missing))
     if (arguments.sample_seed is None) != (arguments.sample_percentage is None):
         parser.error("--sample-seed and --sample-percentage must be provided together")
+    if arguments.only_symbol and arguments.sample_seed is not None:
+        parser.error("--only-symbol cannot be combined with deterministic sampling")
     if arguments.target_kind == "interpreter" and not arguments.target_implementation:
         parser.error("--target-implementation is required for interpreter targets")
     _configure_logging()
