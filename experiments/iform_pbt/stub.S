@@ -1,6 +1,5 @@
 /* One exact catalogue instruction, rooted as an ELF function for Wruh. */
 .section .text
-.p2align 4
 .globl wruh_pbt_target
 .type wruh_pbt_target, @function
 wruh_pbt_target:
