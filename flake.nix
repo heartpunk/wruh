@@ -75,9 +75,13 @@
           };
           censusBochs = censusTarget {
             packageName = "bochs";
-            package = pkgs.bochs;
+            package = pkgs.bochs.override {
+              enableSDL2 = false;
+              enableWx = false;
+              enableX11 = false;
+            };
             binaryPattern = "*/bin/bochs";
-            buildConfiguration = "Nixpkgs Bochs executable, dontStrip=true";
+            buildConfiguration = "Nixpkgs Bochs executable, SDL2/Wx/X11 disabled, dontStrip=true";
           };
           censusBun = censusTarget {
             packageName = "bun";

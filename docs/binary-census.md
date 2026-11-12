@@ -52,7 +52,7 @@ Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`;
 
 ## GitHub jobs
 
-`.github/workflows/binary-census.yml` uses a GitHub-hosted `ubuntu-24.04` coordinator to build the pinned, symbol-preserving targets from `flake.lock`, submit their census tests together, and upload the available report bundle as a 14-day artifact. Developers may also run bounded local spot checks; these do not substitute for a complete census.
+`.github/workflows/binary-census.yml` uses a GitHub-hosted `ubuntu-24.04` coordinator to build the pinned, symbol-preserving targets from `flake.lock`, submit their census tests together, and upload the available report bundle as a 14-day artifact. Bounded spot checks on a build host do not substitute for a complete census.
 
 For trusted pull requests from this repository, the workflow also builds and
 publishes a PR-revision image to the existing public `ghcr.io/heartpunk/wruh-dev`
