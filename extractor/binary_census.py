@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import platform
+import sys
 import tarfile
 import time
 import uuid
@@ -128,6 +129,29 @@ def _log_candidate_completion(
         completed,
         total,
     )
+
+
+def _emit_failure(stream: Any, provenance: dict[str, Any], candidate: dict[str, Any] | None,
+                  disposition: str, failure: dict[str, str]) -> None:
+    """Flush one independently readable record to disk and the process log."""
+    event = {
+        "schema": "wruh-binary-census-failure-v1",
+        "provenance": provenance,
+        "candidate": None if candidate is None else {
+            "id": candidate["id"], "symbol": candidate["symbol"],
+            "relativeAddress": candidate["relative_address"],
+        },
+        "disposition": disposition,
+        "stage": failure["stage"],
+        "exceptionType": failure["code"],
+        "message": failure["message"],
+        "observedAt": _now(),
+    }
+    line = json.dumps(event, sort_keys=True, ensure_ascii=True) + "\n"
+    stream.write(line)
+    stream.flush()
+    sys.stderr.write("CENSUS_FAILURE " + line)
+    sys.stderr.flush()
 
 
 def _now() -> str:
@@ -620,6 +644,23 @@ def run(arguments: argparse.Namespace) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     binary_digest = _sha256(binary)
     started = _now()
+    run_id = uuid.uuid4().hex
+    census_id = f"urn:wruh:census:{_slug(arguments.target_id)}:{binary_digest[:16]}:{run_id}"
+    provenance = {
+        "censusId": census_id, "startedAt": started,
+        "targetId": arguments.target_id, "targetVersion": arguments.target_version,
+        "binaryIdentifier": binary_identifier, "binarySha256": binary_digest,
+        "wruhRevision": arguments.wruh_revision, "ayxgRevision": arguments.ayxg_revision,
+        "pythonVersion": platform.python_version(), "angrVersion": _safe_version("angr"),
+        "z3Version": _safe_version("z3-solver"), "pyvexVersion": _safe_version("pyvex"),
+        "capstoneVersion": _safe_version("capstone"), "bazelVersion": arguments.bazel_version,
+        "ciRepository": arguments.ci_repository, "ciRunId": arguments.ci_run_id,
+        "ciRunAttempt": arguments.ci_run_attempt, "ciCheckedOutSha": arguments.ci_checked_out_sha,
+        "ciPullRequestHeadSha": arguments.ci_pull_request_head_sha,
+    }
+    # Start a fresh stream even if inventory generation fails.
+    failures_path = output_dir / "failures.jsonl"
+    failures_path.write_text("", encoding="utf-8")
 
     try:
         project = angr.Project(str(binary), auto_load_libs=False)
@@ -629,6 +670,11 @@ def run(arguments: argparse.Namespace) -> int:
         object_path = Path(str(image.binary)).resolve()
         candidates = _function_candidates(project)
     except Exception as error:  # noqa: BLE001 -- record an inventory-generation failure in the report
+        with failures_path.open("a", encoding="utf-8") as failure_stream:
+            _emit_failure(failure_stream, provenance, None, "failed", {
+                "stage": "inventory-generation", "code": type(error).__name__,
+                "message": str(error)[:2000],
+            })
         _write_global_failure(
             output_dir,
             arguments.target_id,
@@ -649,8 +695,6 @@ def run(arguments: argparse.Namespace) -> int:
         arguments.sample_percentage,
     )
 
-    run_id = uuid.uuid4().hex
-    census_id = f"urn:wruh:census:{_slug(arguments.target_id)}:{binary_digest[:16]}:{run_id}"
     image_id = f"urn:wruh:image:sha256:{binary_digest}"
     binary_id = f"urn:wruh:binary:sha256:{binary_digest}"
     inventory_id = f"{census_id}/inventory"
@@ -763,6 +807,7 @@ def run(arguments: argparse.Namespace) -> int:
 
     with (
         entries_path.open("w", encoding="utf-8") as ledger,
+        failures_path.open("a", encoding="utf-8") as failure_stream,
         archive_path.open("wb") as raw_archive,
         gzip.GzipFile(filename="", mode="wb", fileobj=raw_archive, mtime=0) as compressed,
         tarfile.open(fileobj=compressed, mode="w|") as archive,
@@ -825,6 +870,9 @@ def run(arguments: argparse.Namespace) -> int:
                         "code": "KeyboardInterrupt",
                         "message": "census interrupted by user or runner",
                     }
+
+            if failure:
+                _emit_failure(failure_stream, provenance, candidate, disposition, failure)
 
             attempt_ended = _now() if selected else None
             counts[disposition] += 1

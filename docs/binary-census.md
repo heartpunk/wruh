@@ -45,8 +45,11 @@ Each run writes:
 - `census.jsonld`: BFE + PROV-O graph for the binary/image, build and inventory provenance, candidates, attempts, outcomes, failures, interruptions, and open external-call boundaries.
 - `summary.json`: candidate and outcome counts, first-observed failure-stage/code categories, and report/archive digests.
 - `entries.jsonl`: a flushed ledger row per completed attempt, so interrupted runs retain completed work.
+- `failures.jsonl`: one flushed JSON record per observed failure or interruption, including candidate, stage, exception, and fixed run, binary, source, and runtime provenance. Inventory failures have a null candidate.
 - `progress.json`: atomic partial counts refreshed every 100 candidates.
 - `function-artifacts.tar.gz`: one canonical FreshFunction JSON artifact per successful candidate.
+
+The same failure records are flushed to stderr with the `CENSUS_FAILURE ` prefix. Direct runs can follow stderr or `failures.jsonl` while the process runs. Each complete line is independently readable; an interruption during a write can leave a partial final line. Bazel test output and undeclared outputs may be buffered until the test action finishes, particularly with remote execution, so these records do not guarantee live visibility in GitHub Actions or BuildBuddy.
 
 Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`; timeout and memory exceptions are `bfe:Incomplete` with interruption observations. The process continues to later candidates after per-function failures. A runner-level interruption leaves the flushed ledger and most recent progress checkpoint as partial-run evidence. If interrupted while writing the tar stream, the archive may be unreadable; the workflow uploads available files with `if: always()`. Each job has a six-hour runner timeout.
 
