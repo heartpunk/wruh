@@ -54,7 +54,7 @@ Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`;
 
 ## GitHub jobs
 
-`.github/workflows/binary-census.yml` runs one GitHub-hosted coordinator for the targets (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`, `qemu`) on every pull request. It builds pinned, symbol-preserving targets from `flake.lock`, submits the census actions through Bazel, and uploads the available report bundle as a 14-day artifact. Bounded local spot checks can use the same runner and sampling options.
+`.github/workflows/binary-census.yml` runs one GitHub-hosted coordinator for the targets (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`, `qemu`) on every pull request. It builds pinned, symbol-preserving targets from `flake.lock`, submits the census actions through Bazel, and uploads the available report bundle as a 14-day artifact. Bounded spot checks on a build host can use the same runner and sampling options.
 
 For trusted pull requests from this repository, the workflow also builds and
 publishes a PR-revision image to the existing public `ghcr.io/heartpunk/wruh-dev`
