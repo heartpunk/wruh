@@ -16,6 +16,28 @@
       censusPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          hegelSource = pkgs.fetchFromGitHub {
+            owner = "hegeldev";
+            repo = "hegel-rust";
+            rev = "b8e2fdcf7046b55fdc84d9b7be68250324654f74";
+            hash = "sha256-Co0GWb1mytelf1edkLQxsKT4/LkIv751Tfch4zZcDJc=";
+          };
+          hegelRuntime = pkgs.rustPlatform.buildRustPackage {
+            pname = "libhegel";
+            version = "0.29.0";
+            src = hegelSource;
+            cargoLock.lockFile = "${hegelSource}/Cargo.lock";
+            cargoBuildFlags = [ "--manifest-path" "hegel-c/Cargo.toml" ];
+            CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
+            doCheck = false;
+            dontCargoInstall = true;
+            installPhase = ''
+              runHook preInstall
+              mkdir -p "$out/lib"
+              install -m755 target/x86_64-unknown-linux-gnu/release/libhegel_c.so "$out/lib/libhegel_c.so"
+              runHook postInstall
+            '';
+          };
           withSymbols = package: package.overrideAttrs (_: {
             dontStrip = true;
             stripAllList = [];
@@ -43,6 +65,7 @@
               printf '%s\n' '${unstripped.drvPath}' > "$out/package-derivation"
             '';
         in {
+          inherit hegelRuntime;
           censusLua = censusTarget {
             packageName = "lua5_5";
             package = pkgs.lua5_5;
@@ -110,6 +133,8 @@
             pkgs.git
             pkgs.jdk21_headless
             (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
+          ] ++ pkgs.lib.optionals (system == "x86_64-linux") [
+            censusPackages.x86_64-linux.hegelRuntime
           ];
           IFRL_ANGR_ENVIRONMENT = "${ifrl.packages.${system}.angr-python}";
           GHOT_NIX_ANGR_ROOT = "${ifrl.packages.${system}.angr-python}";
@@ -117,6 +142,8 @@
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
+          WRUH_HEGEL_LIBRARY = pkgs.lib.optionalString (system == "x86_64-linux")
+            "${censusPackages.x86_64-linux.hegelRuntime}/lib/libhegel_c.so";
           shellHook = ''
             # Use IFRL's shared Python environment after inherited hooks run.
             export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
