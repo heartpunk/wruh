@@ -12,7 +12,7 @@ import threading
 import time
 from collections import Counter
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, Callable
 
 
 class FunctionDiscoveryError(ValueError):
@@ -84,6 +84,7 @@ def discover_function_candidates(
     symbols: list[dict[str, Any]],
     *,
     timeout_seconds: float = 300.0,
+    on_diagnostic: Callable[[str, str, str, dict[str, Any] | None], None] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Union retained symbol entries with eligible CFGFast entry candidates.
 
@@ -100,11 +101,19 @@ def discover_function_candidates(
     started = time.monotonic()
     deadline = started + timeout_seconds
     timed_out = False
+    timeout_reported = False
+
+    def report(reason: str, code: str, message: str, candidate: dict[str, Any] | None = None) -> None:
+        if on_diagnostic is not None:
+            on_diagnostic(reason, code, message[:2000], candidate)
 
     def progress(_percentage, **kwargs):
-        nonlocal timed_out
+        nonlocal timed_out, timeout_reported
         if time.monotonic() >= deadline:
             timed_out = True
+            if not timeout_reported:
+                timeout_reported = True
+                report("timeout", "TimeoutError", f"CFGFast discovery exceeded {timeout_seconds} seconds")
             cfg = kwargs.get("cfg")
             if cfg is not None:
                 cfg.abort()
@@ -153,21 +162,28 @@ def discover_function_candidates(
             if getattr(cfg, "should_abort", False):
                 metadata["status"] = "incomplete"
                 metadata["reason"] = "timeout" if timed_out else "analysis-aborted"
-            result = _collect_candidates(project, symbols, cfg, metadata)
+                if not timed_out:
+                    report("analysis-aborted", "AnalysisAborted", "CFGFast analysis aborted before completion")
+            result = _collect_candidates(project, symbols, cfg, metadata, report)
     except _DiscoveryTimeout:
         result = None
         timed_out = True
         metadata.update(status="incomplete", reason="timeout-unfinalized-model-discarded")
+        if not timeout_reported:
+            report("timeout-unfinalized-model-discarded", "_DiscoveryTimeout",
+                   f"CFGFast discovery exceeded {timeout_seconds} seconds; unfinalized model discarded")
     except FunctionDiscoveryError as error:
         result = None
         metadata.update(status="incomplete", reason="timeout-guard-unavailable", diagnostic=str(error))
+        report("timeout-guard-unavailable", type(error).__name__, str(error))
     except Exception as error:  # noqa: BLE001 -- retain the symbol inventory after provider failures.
         result = None
         metadata.update(status="incomplete", reason="analysis-error",
                         diagnostic=f"{type(error).__name__}: {error}")
+        report("analysis-error", type(error).__name__, str(error))
 
     if result is None:
-        result = _collect_candidates(project, symbols, None, metadata)
+        result = _collect_candidates(project, symbols, None, metadata, report)
     metadata["timed_out"] = timed_out
     metadata["elapsed_seconds"] = round(time.monotonic() - started, 6)
     if timed_out:
@@ -181,6 +197,7 @@ def _collect_candidates(
     symbols: list[dict[str, Any]],
     cfg: Any,
     metadata: dict[str, Any],
+    report: Callable[[str, str, str, dict[str, Any] | None], None],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     image = project.loader.main_object
     mapped_base = int(image.mapped_base)
@@ -209,6 +226,13 @@ def _collect_candidates(
                              for block in function.blocks})
         except Exception as error:  # noqa: BLE001 -- retain per-function discovery diagnostics.
             rejected[f"block-evidence-error:{type(error).__name__}"] += 1
+            relative = address - mapped_base
+            candidate = {
+                "id": f"fn_{relative:016x}",
+                "symbol": str(getattr(function, "name", None) or f"fn_{relative:016x}"),
+                "relative_address": relative,
+            } if relative >= 0 else None
+            report("block-evidence-error", type(error).__name__, str(error), candidate)
             continue
         if not blocks or any(end <= start for start, end in blocks):
             rejected["empty-or-nonpositive-block-evidence"] += 1

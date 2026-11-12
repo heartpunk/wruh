@@ -132,6 +132,54 @@ class DiscoveryEvidenceTests(unittest.TestCase):
         self.assertEqual(report["reason"], "timeout-guard-unavailable")
         self.assertIn("active caller SIGALRM", report["diagnostic"])
 
+    def test_captured_failures_emit_at_their_observation_sites(self):
+        project = _project([])
+        events = []
+        def emit(*event):
+            events.append(event)
+        def provider(**_kwargs):
+            raise RuntimeError("provider broke")
+        project.analyses.CFGFast = provider
+        candidates, report = discover_function_candidates(project, [_named_candidate()], on_diagnostic=emit)
+        self.assertEqual(candidates, [_named_candidate()])
+        self.assertEqual(report["reason"], "analysis-error")
+        self.assertEqual(events, [("analysis-error", "RuntimeError", "provider broke", None)])
+
+        class BrokenBlocks:
+            addr = ENTRY
+            name = "broken"
+            @property
+            def blocks(self):
+                raise ValueError("bad blocks")
+        events.clear()
+        project = _project([BrokenBlocks()])
+        _, report = discover_function_candidates(project, [], on_diagnostic=emit)
+        self.assertEqual(report["rejected"]["block-evidence-error:ValueError"], 1)
+        self.assertEqual(events[0][:3], ("block-evidence-error", "ValueError", "bad blocks"))
+        self.assertEqual(events[0][3]["id"], "fn_0000000000001000")
+
+    def test_guard_and_abort_and_deadline_emit_incomplete_diagnostics(self):
+        events = []
+        project = _project([])
+        with patch.object(signal, "getitimer", return_value=(30.0, 0.0)):
+            _, report = discover_function_candidates(project, [], on_diagnostic=lambda *e: events.append(e))
+        self.assertEqual(report["reason"], "timeout-guard-unavailable")
+        self.assertEqual(events[0][0:2], ("timeout-guard-unavailable", "FunctionDiscoveryError"))
+        events.clear()
+        cfg = project.analyses.CFGFast()
+        cfg.should_abort = True
+        _, report = discover_function_candidates(project, [], on_diagnostic=lambda *e: events.append(e))
+        self.assertEqual(report["reason"], "analysis-aborted")
+        self.assertEqual(events[0][0:2], ("analysis-aborted", "AnalysisAborted"))
+        events.clear()
+        def slow(**_kwargs):
+            time.sleep(1)
+        project.analyses.CFGFast = slow
+        _, report = discover_function_candidates(project, [], timeout_seconds=0.02,
+                                                   on_diagnostic=lambda *e: events.append(e))
+        self.assertTrue(report["timed_out"])
+        self.assertEqual(events[0][0:2], ("timeout-unfinalized-model-discarded", "_DiscoveryTimeout"))
+
     def test_wall_deadline_interrupts_postprocessing_and_restores_handler(self):
         project = _project([])
         cfg = project.analyses.CFGFast()

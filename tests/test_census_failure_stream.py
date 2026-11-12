@@ -102,6 +102,55 @@ class FailureStreamTests(unittest.TestCase):
             self.assertTrue(any(n.get("bfe:diagnosticText") == "failure from cfg" for n in graph))
             self.assertTrue(json.loads((output / "summary.json").read_text())["interrupted"])
 
+    def test_cfgfast_provider_failure_is_flushed_before_discovery_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / "binary"
+            binary.write_bytes(b"fixture")
+            output = root / "out"
+            section = SimpleNamespace(vaddr=0x1000, memsize=0x100, filesize=0x100,
+                                      is_executable=True, name=".text")
+            image = SimpleNamespace(binary=str(binary), sections=[section], mapped_base=0,
+                                    linked_base=0, pic=False)
+            def provider(**_kwargs):
+                raise RuntimeError("provider failed")
+            project = SimpleNamespace(arch=SimpleNamespace(name="AMD64", bits=64),
+                                      loader=SimpleNamespace(main_object=image),
+                                      analyses=SimpleNamespace(CFGFast=provider))
+            modules = {}
+            def module(name, **values):
+                result = ModuleType(name)
+                result.__dict__.update(values)
+                modules[name] = result
+            module("angr", Project=lambda *_a, **_kw: project)
+            module("extractor.native_runtime", preload_libstdcxx=lambda: None)
+            module("extractor.amd64_state", clear_smt_translation_cache=lambda: None)
+            module("extractor.binary_cfg", build_static_cfg=lambda *_a: None)
+            module("extractor.binary_inventory", PinnedBinary=lambda *_a: object())
+            module("extractor.fresh", extract_fresh_function=lambda *_a: None)
+            argv = ["binary_census", "--binary", str(binary), "--target-id", "fixture",
+                    "--target-version", "1", "--output-dir", str(output),
+                    "--inventory-mode", "cfgfast", "--wruh-revision", "source-rev"]
+            from extractor import function_discovery
+            original = function_discovery._collect_candidates
+            def collect(*args, **kwargs):
+                event = json.loads((output / "failures.jsonl").read_text())
+                self.assertEqual(event["stage"], "cfgfast-discovery")
+                self.assertEqual(event["exceptionType"], "RuntimeError")
+                self.assertEqual(event["provenance"]["wruhRevision"], "source-rev")
+                self.assertFalse((output / "discovery.json").exists())
+                return original(*args, **kwargs)
+            with (patch.dict(sys.modules, modules), patch.object(sys, "argv", argv),
+                  patch.object(binary_census, "_function_candidates", return_value=[]),
+                  patch.object(binary_census, "_is_github_actions_runner", return_value=False),
+                  patch.object(function_discovery, "_collect_candidates", side_effect=collect),
+                  redirect_stderr(io.StringIO()), patch("sys.stdout", new=io.StringIO())):
+                self.assertEqual(binary_census.main(), 0)
+            discovery = json.loads((output / "discovery.json").read_text())
+            self.assertEqual(discovery["reason"], "analysis-error")
+            self.assertEqual(discovery["diagnostic"], "RuntimeError: provider failed")
+            self.assertEqual(discovery["status"], "incomplete")
+
     def test_capture_forwards_output_and_preserves_complete_failure_prefix(self):
         source = io.StringIO('progress\nCENSUS_FAILURE {"candidate":"fn_1"}\n'
                              'CENSUS_FAILURE {"unfinished":')

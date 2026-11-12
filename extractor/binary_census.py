@@ -681,9 +681,18 @@ def run(arguments: argparse.Namespace) -> int:
         if inventory_mode == "cfgfast":
             from extractor.function_discovery import discover_function_candidates
 
+            def report_discovery(reason: str, code: str, message: str,
+                                 candidate: dict[str, Any] | None) -> None:
+                with failures_path.open("a", encoding="utf-8") as failure_stream:
+                    _emit_failure(failure_stream, provenance, candidate, "incomplete", {
+                        "stage": "cfgfast-discovery", "code": code,
+                        "message": f"{reason}: {message}",
+                    })
+
             candidates, discovery = discover_function_candidates(
                 project, candidates,
                 timeout_seconds=getattr(arguments, "discovery_timeout_seconds", 300.0),
+                on_diagnostic=report_discovery,
             )
             discovery_path = output_dir / "discovery.json"
             discovery_path.write_text(json.dumps({
