@@ -30,6 +30,6 @@ exec timeout "${WRUH_PBT_TIMEOUT_SECONDS:-300}" bwrap \
   --setenv PYTHONPATH "/repo:$WRUH_AYXG_SOURCE/python" \
   --setenv PYTHONNOUSERSITE 1 --setenv LEAN_NUM_THREADS 1 \
   -- /repo/.lake/build/bin/wruh-iform-pbt /catalogue.jsonl \
-  /repo/experiments/iform_pbt/build_stub.sh /repo/.lake/build/bin/wruh-fresh \
-  /repo/experiments/iform_pbt/metadata.py /repo/experiments/mov_observer/fixtures \
+  /repo/tests/iform_pbt/build_stub.sh /repo/.lake/build/bin/wruh-fresh \
+  /repo/tests/iform_pbt/metadata.py /repo/tests/iform_pbt/observer/fixtures \
   /out "$3" "$4" "$5"
