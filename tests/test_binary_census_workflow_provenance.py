@@ -7,7 +7,7 @@ WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/binary-censu
 CI_SCRIPT = Path(__file__).resolve().parents[1] / "tools/run_census_ci.sh"
 BAZEL_TARGETS = Path(__file__).resolve().parents[1] / "extractor/binary_census_targets.bzl"
 BAZEL_BUILD = Path(__file__).resolve().parents[1] / "extractor/BUILD.bazel"
-TARGETS = ("lua", "quickjs", "cpython", "apache", "node", "bun")
+TARGETS = ("lua", "quickjs", "cpython", "apache", "node", "bun", "qemu")
 CI_OPTIONS = (
     "--ci-server-url",
     "--ci-repository",
