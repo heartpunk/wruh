@@ -470,5 +470,9 @@ def main() -> None:
         }, sort_keys=True))
 
 
+def test_open_call_extent():
+    main()
+
+
 if __name__ == "__main__":
     main()
