@@ -1,5 +1,6 @@
 import Lean
 import Ayxg.QfAbv.JsonCodec
+import VectorState
 
 namespace Wruh.IFormPbt
 
@@ -16,7 +17,7 @@ private def observed (name : String) : Bool :=
   #["rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
     "rip", "d", "ac", "id", "rflags_CF", "rflags_PF", "rflags_AF",
-    "rflags_ZF", "rflags_SF", "rflags_OF", "mem"].contains name
+    "rflags_ZF", "rflags_SF", "rflags_OF", "mem"].contains name || isVectorField name
 
 private def nodeAt (nodes roots : Array Json) (ref : Json) : Except String (Nat × Json) := do
   let root ← natField ref "$expr"

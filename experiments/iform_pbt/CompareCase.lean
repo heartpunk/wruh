@@ -40,7 +40,21 @@ def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     (otherScalar : String → Option Nat) (otherMemory : Nat → UInt8)
     (loader capture : ByteArray) (workPath : System.FilePath)
     (definedFlags : UInt64) (memoryAddresses : Array (Expr model.Γ (.bv 64))) : IO CaseResult := do
-  let env ← match inputEnv (c.modelInput otherScalar otherMemory) model.Γ with
+  let native ← observeInstruction loader capture workPath c.observerRequest
+  if native.fault.isSome then return .incomplete "native instruction faulted"
+  let layout ← vectorLayout
+  let mut vectorValues : Array (String × Nat) := #[]
+  for declaration in model.Γ do
+    if isVectorField declaration.name then
+      match nativeVectorField declaration.name layout native.installedFp native.installedXstate with
+      | .ok (some value) => vectorValues := vectorValues.push (declaration.name, value)
+      | .ok none => return .incomplete s!"no native vector input for {declaration.name}"
+      | .error reason => return .incomplete reason
+  let scalar := fun name =>
+    match vectorValues.find? (fun item => item.1 == name) with
+    | some (_, value) => some value
+    | none => otherScalar name
+  let env ← match inputEnv (c.modelInput scalar otherMemory) model.Γ with
     | .ok env => pure env
     | .error reason => return .incomplete reason
   let outcomes := enabledOutcomes model env
@@ -50,8 +64,6 @@ def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     let address := (Eval.evalBv env addressExpr).toNat
     if address < c.memoryAddress.toNat || address - c.memoryAddress.toNat ≥ c.memoryBytes.size then
       return .incomplete s!"modeled memory access {address} is outside the generated image"
-  let native ← observeInstruction loader capture workPath c.observerRequest
-  if native.fault.isSome then return .incomplete "native instruction faulted"
   let some (_, post) := outcomes[0]? | return .incomplete "missing model outcome"
   let modelPc ← match readBv post "rip" with
     | .ok pc => pure pc
@@ -59,7 +71,7 @@ def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
   let nativePc := 0x400170 + c.occurrence.bytes.size
   if modelPc != nativePc then
     return .incomplete s!"model target {modelPc} is not fallthrough {nativePc}"
-  match compareObserved post native definedFlags with
+  match compareObserved post native layout definedFlags with
   | .error reason => return .incomplete reason
   | .ok differences =>
     if differences.isEmpty then return .matched else return .mismatch differences

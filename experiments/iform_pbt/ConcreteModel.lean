@@ -75,7 +75,8 @@ def readMemory : {Γ : Ctx} → Env Γ → Nat → Except String Nat
 /-- Compare the state fields shared by a model and a native observation.
     The caller supplies the architecture-defined flag mask for the instruction. -/
 def compareObserved {Γ : Ctx} (post : Env Γ)
-    (native : MovObserver.NativeObserver.Observation) (definedFlags : UInt64) :
+    (native : MovObserver.NativeObserver.Observation)
+    (layout : Option MovObserver.NativeObserver.VectorLayout) (definedFlags : UInt64) :
     Except String (Array String) := do
   let names := #["rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
@@ -98,6 +99,13 @@ def compareObserved {Γ : Ctx} (post : Env Γ)
     let nativeValue := if name == "d" then (if flag == 1 then 2^64-1 else 1) else flag
     if modelValue != nativeValue then
       differences := differences.push s!"{name}: model={modelValue}, native={nativeValue}"
+  for declaration in Γ do
+    if isVectorField declaration.name then
+      let modelValue ← readBv post declaration.name
+      let some nativeValue ← nativeVectorField declaration.name layout native.terminalFp native.terminalXstate
+        | throw s!"no native vector value for {declaration.name}"
+      if modelValue != nativeValue then
+        differences := differences.push s!"{declaration.name}: model={modelValue}, native={nativeValue}"
   for region in native.memory do
     for i in [:region.bytes.size] do
       let address := region.address.toNat + i

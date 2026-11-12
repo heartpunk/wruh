@@ -29,7 +29,7 @@ private def generatedInput (name : String) : Bool :=
   #["rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "rip",
     "d", "ac", "id", "rflags_CF", "rflags_PF", "rflags_AF", "rflags_ZF",
-    "rflags_SF", "rflags_OF", "mem"].contains name
+    "rflags_SF", "rflags_OF", "mem"].contains name || isVectorField name
 
 def main (args : List String) : IO UInt32 := do
   let [cataloguePath, stubBuilder, wruh, metadataScript, fixtureDir, workDir,
@@ -87,7 +87,9 @@ def main (args : List String) : IO UInt32 := do
         let outcome ← c.compare model (fun _ => some 0) (fun _ => 0) loader capture
           (workDir ++ "/native.elf") definedFlags addresses
         match outcome with
-        | .matched => totals.modify fun t => {t with matchedCount := t.matchedCount + 1}
+        | .matched =>
+          IO.println s!"MATCH {hex} {c.occurrence.iform} sample={i}"
+          totals.modify fun t => {t with matchedCount := t.matchedCount + 1}
         | .mismatch differences =>
           holds := false
           testCase.note s!"bytes={hex} sample={i} gprs={c.gprs} flags={c.flags} memory={c.memoryBytes} differences={differences}"

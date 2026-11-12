@@ -27,7 +27,7 @@ lean_lib ObserverNative where
 
 lean_lib IFormPbt where
   srcDir := "experiments/iform_pbt"
-  globs := #[`GeneratedCase, `ExtractCase, `ModelFootprint, `ConcreteModel, `CompareCase]
+  globs := #[`GeneratedCase, `ExtractCase, `VectorState, `ModelFootprint, `ConcreteModel, `CompareCase]
 
 lean_exe «wruh-iform-pbt» where
   root := `Campaign
