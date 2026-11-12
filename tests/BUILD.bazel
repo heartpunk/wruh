@@ -4,7 +4,7 @@ py_test(
     name = "python_tests",
     srcs = glob(["test_*.py"]) + ["pytest_main.py"],
     main = "pytest_main.py",
-    data = glob(["fixtures/bun-inventory/**"]) + [
+    data = glob(["fixtures/**"]) + [
         "//:.github/workflows/binary-census.yml",
         "//:pytest.ini",
         "//corpus/open-transfers:fixture_data",
