@@ -116,6 +116,7 @@ def main (args : List String) : IO UInt32 := do
         | .error error => throw <| IO.userError error
       let accepted ← IO.mkRef 0
       let failureSerial ← IO.mkRef 0
+      let failedStates ← IO.mkRef (#[] : Array StateIdentity)
       let settings : Hegel.Settings := {
         testCases := sampleBudget * 8
         seed := some (UInt64.ofNat seed + UInt64.ofNat occurrenceIndex)
@@ -126,10 +127,12 @@ def main (args : List String) : IO UInt32 := do
       }
       let result ← Hegel.check engine settings
           "Wruh model agrees with native instruction" fun testCase => do
-        if (← accepted.get) ≥ sampleBudget then return true
+        if (← accepted.get) ≥ sampleBudget && (← failedStates.get).isEmpty then return true
         let c ← testCase.draw (generatedState occurrence address)
         let id := c.stateIdentity
-        if (← seenStates.get).contains id then return true
+        let replayingFailure := (← failedStates.get).contains id
+        if (← accepted.get) ≥ sampleBudget && !replayingFailure then return true
+        if (← seenStates.get).contains id && !replayingFailure then return true
         let i ← accepted.get
         testCase.note s!"seed={seed} occurrence={occurrenceKey} iform={occurrence.iform} bytes={hex} sample={i} gprs={c.gprs} flags={c.flags} memoryAddress={c.memoryAddress} memory={c.memoryBytes} vector={c.vectorSeed} rounding={c.sseRounding}"
         try
@@ -137,32 +140,50 @@ def main (args : List String) : IO UInt32 := do
             (workDir ++ "/native.elf") definedFlags footprint.guardInputs addresses
           match outcome with
           | .matched =>
-            seenStates.modify (·.push id)
-            accepted.modify (· + 1)
-            IO.println s!"MATCH {hex} {occurrence.iform} sample={i} rax={c.gprs[0]!} flags={c.flags} vector0={c.vectorSeed[0]!}"
-            totals.modify fun t => {t with matchedCount := t.matchedCount + 1}
+            if replayingFailure then
+              IO.println s!"FAILURE_REPLAY_DID_NOT_REPRODUCE {hex}"
+            else
+              seenStates.modify (·.push id)
+              accepted.modify (· + 1)
+              IO.println s!"MATCH {hex} {occurrence.iform} sample={i} rax={c.gprs[0]!} flags={c.flags} vector0={c.vectorSeed[0]!}"
+              totals.modify fun t => {t with matchedCount := t.matchedCount + 1}
             return true
           | .mismatch differences =>
             testCase.note s!"differences={differences}"
-            let serial ← failureSerial.get
-            failureSerial.modify (· + 1)
-            saveFailure workDir seed occurrenceIndex i serial c (reprStr differences)
-            IO.println s!"MISMATCH {hex}: {differences}"
-            totals.modify fun t => {t with mismatchCount := t.mismatchCount + 1}
+            if replayingFailure then
+              IO.println s!"FAILURE_REPLAY {hex}: {differences}"
+            else
+              failedStates.modify (·.push id)
+              seenStates.modify (·.push id)
+              accepted.modify (· + 1)
+              let serial ← failureSerial.get
+              failureSerial.modify (· + 1)
+              saveFailure workDir seed occurrenceIndex i serial c (reprStr differences)
+              IO.println s!"MISMATCH {hex}: {differences}"
+              totals.modify fun t => {t with mismatchCount := t.mismatchCount + 1}
             return false
           | .incomplete reason =>
-            seenStates.modify (·.push id)
-            accepted.modify (· + 1)
-            IO.println s!"INCOMPLETE {hex}: {reason}"
-            totals.modify fun t => {t with incomplete := t.incomplete + 1}
+            if replayingFailure then
+              IO.println s!"FAILURE_REPLAY_INCOMPLETE {hex}: {reason}"
+            else
+              seenStates.modify (·.push id)
+              accepted.modify (· + 1)
+              IO.println s!"INCOMPLETE {hex}: {reason}"
+              totals.modify fun t => {t with incomplete := t.incomplete + 1}
             return true
         catch error =>
           testCase.note s!"error for {hex}: {error}"
-          let serial ← failureSerial.get
-          failureSerial.modify (· + 1)
-          saveFailure workDir seed occurrenceIndex i serial c (toString error)
-          IO.println s!"ERROR {hex}: {error}"
-          totals.modify fun t => {t with errors := t.errors + 1}
+          if replayingFailure then
+            IO.println s!"FAILURE_REPLAY_ERROR {hex}: {error}"
+          else
+            failedStates.modify (·.push id)
+            seenStates.modify (·.push id)
+            accepted.modify (· + 1)
+            let serial ← failureSerial.get
+            failureSerial.modify (· + 1)
+            saveFailure workDir seed occurrenceIndex i serial c (toString error)
+            IO.println s!"ERROR {hex}: {error}"
+            totals.modify fun t => {t with errors := t.errors + 1}
           return false
       if result.status != .passed then failed.set true
       for report in result.reproductions do
