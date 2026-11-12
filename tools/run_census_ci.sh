@@ -8,7 +8,11 @@ target_ids=(lua quickjs cpython apache node bun)
 packages=(censusLua censusQuickjs censusCpython censusApache censusNode censusBun)
 
 # Optional exact, single-target run with live test output on this runner.
-live_target="${WRUH_CENSUS_LIVE_TARGET:-}"
+live_target="${1:-}"
+if [[ $# -gt 1 ]]; then
+  echo "usage: $0 [live-target]" >&2
+  exit 2
+fi
 if [[ -n "$live_target" ]]; then
   found=false
   for index in "${!target_ids[@]}"; do
@@ -20,7 +24,7 @@ if [[ -n "$live_target" ]]; then
     fi
   done
   if [[ "$found" != true ]]; then
-    echo "Invalid WRUH_CENSUS_LIVE_TARGET: $live_target" >&2
+    echo "Invalid live target: $live_target" >&2
     exit 2
   fi
   echo "Live census mode: $live_target runs locally on the GitHub runner."
@@ -74,7 +78,7 @@ write_run_manifest() {
     fi
   done
   python3 tools/write_census_run_manifest.py \
-    --wruh-revision "$GITHUB_SHA" \
+    --wruh-revision "$WRUH_CI_CHECKED_OUT_SHA" \
     --run-id "$WRUH_CI_RUN_ID" \
     --run-attempt "$WRUH_CI_RUN_ATTEMPT" \
     --requested-targets "${target_ids[@]}" \
@@ -110,7 +114,7 @@ bazel_args=(
   --nozip_undeclared_test_outputs
   --jobs=6
   "${repo_env_args[@]}"
-  "--test_arg=--wruh-revision=${GITHUB_SHA:?GITHUB_SHA is required}"
+  "--test_arg=--wruh-revision=${WRUH_CI_CHECKED_OUT_SHA:?WRUH_CI_CHECKED_OUT_SHA is required}"
   "--test_arg=--bazel-version=$bazel_version"
   "--test_arg=--nix-version=$nix_version"
   "--test_arg=--ci-server-url=${WRUH_CI_SERVER_URL:?WRUH_CI_SERVER_URL is required}"
@@ -133,7 +137,13 @@ for target_id in "${target_ids[@]}"; do
   bazel_args+=("//extractor:binary_census_${target_id}_remote_test")
 done
 
-bash tools/ci_bazel.sh "${bazel_args[@]}" &
+if [[ -n "$live_target" ]]; then
+  # Capture failure lines outside Bazel's sandbox while forwarding all output.
+  bash tools/ci_bazel.sh "${bazel_args[@]}" 2>&1 |
+    python3 tools/capture_census_failures.py "$report_root/live-failures.jsonl" &
+else
+  bash tools/ci_bazel.sh "${bazel_args[@]}" &
+fi
 bazel_pid=$!
 (
   while kill -0 "$bazel_pid" 2>/dev/null; do
