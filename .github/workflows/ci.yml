@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, codex/iform-pbt-minimal-draft]
+    branches: [main]
 
 permissions:
   contents: read

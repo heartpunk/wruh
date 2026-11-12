@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+platform=$(uname -s)/$(uname -m)
+if [[ $platform != Linux/x86_64 ]]; then
+  printf 'native Wruh instruction PBT requires Linux/x86_64; found %s\n' "$platform" >&2
+  exit 2
+fi
+
 if [[ $# -ne 5 ]]; then
   printf 'usage: %s CATALOGUE WORK_DIR OCCURRENCES SAMPLES_PER_OCCURRENCE SEED\n' "$0" >&2
   exit 2

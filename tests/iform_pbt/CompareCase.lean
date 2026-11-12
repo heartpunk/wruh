@@ -35,6 +35,19 @@ inductive CaseResult where
   | incomplete (reason : String)
   deriving Repr
 
+/-- Compare the modeled target of a fallthrough instruction with its native target. -/
+def fallthroughPcResult (modelPc nativePc : Nat) : CaseResult :=
+  if modelPc == nativePc then .matched
+  else .mismatch #[s!"model target {modelPc} is not fallthrough {nativePc}"]
+
+#guard match fallthroughPcResult 0x101 0x100 with
+  | .mismatch _ => true
+  | _ => false
+
+#guard match fallthroughPcResult 0x100 0x100 with
+  | .matched => true
+  | _ => false
+
 /-- Evaluate one extracted model and compare it to one native execution. -/
 def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     (otherScalar : String → Option Nat) (otherMemory : Nat → UInt8)
@@ -82,8 +95,9 @@ def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     | .ok pc => pure pc
     | .error reason => return .incomplete reason
   let nativePc := 0x400170 + c.occurrence.bytes.size
-  if modelPc != nativePc then
-    return .incomplete s!"model target {modelPc} is not fallthrough {nativePc}"
+  match fallthroughPcResult modelPc nativePc with
+  | .mismatch differences => return .mismatch differences
+  | _ => pure ()
   match compareObserved post native layout definedFlags with
   | .error reason => return .incomplete reason
   | .ok differences =>
