@@ -36,6 +36,7 @@ jobs:
           skipPush: true
       - name: Build Nix inputs and run all six censuses through Bazel
         env:
+          WRUH_CENSUS_LIVE_TARGET: ${{ vars.WRUH_CENSUS_LIVE_TARGET }}
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
           BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
