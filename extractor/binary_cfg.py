@@ -116,6 +116,17 @@ def _partition_discovered_blocks(
     return sorted(partitioned.values(), key=lambda record: record["address"])
 
 
+def _assign_discovered_call_blocks(
+    blocks: list[dict[str, Any]], calls: Any
+) -> None:
+    """Assign calls to the first block containing their instruction."""
+    for call in calls:
+        call["block"] = min(
+            record["address"] for record in blocks
+            if any(item["address"] == call["address"] for item in record["instructions"])
+        )
+
+
 def _recover_relative_jump_tables(
     pinned: PinnedBinary,
     *,
@@ -459,13 +470,7 @@ def _walk_function(
 
     if discovered_stop_points:
         blocks = _partition_discovered_blocks(blocks, discovered_stop_points)
-        for call in calls:
-            call["block"] = next(
-                record["address"] for record in blocks
-                if record["address"] <= call["address"] < record["address"] + record["size"]
-            )
-        # The same call can occur in shared decoded suffixes.
-        calls = list({call["address"]: call for call in calls}.values())
+        _assign_discovered_call_blocks(blocks, calls_by_address.values())
     blocks.sort(key=lambda record: record["address"])
     calls = sorted(
         calls_by_address.values(), key=lambda call: call["address"]

@@ -12,7 +12,10 @@ preload_libstdcxx()
 
 import angr
 
-from extractor.binary_cfg import _partition_discovered_blocks, build_static_cfg
+from extractor.binary_cfg import (
+    _assign_discovered_call_blocks, _partition_discovered_blocks, _walk_function,
+    build_static_cfg,
+)
 from extractor.binary_inventory import PinnedBinary
 from extractor.dispatch_discovery import recover_block_dispatch
 from extractor.fresh import extract_fresh_function
@@ -130,6 +133,35 @@ class DispatchDiscoveryTests(unittest.TestCase):
         self.assertEqual(blocks[0]["size"], 1)
         self.assertEqual(blocks[0]["successors"], [BASE + 1])
         self.assertIn(BASE + 1, {block["address"] for block in blocks})
+
+    def test_split_call_owner_uses_instruction_boundaries_with_overlap(self):
+        blocks = [
+            {"address": BASE, "size": 4,
+             "instructions": [{"address": BASE, "size": 4}], "successors": []},
+            {"address": BASE + 1, "size": 3,
+             "instructions": [{"address": BASE + 1, "size": 1},
+                              {"address": BASE + 2, "size": 2}], "successors": []},
+        ]
+        partitioned = _partition_discovered_blocks(blocks, {BASE + 2})
+        calls = [{"address": BASE + 2, "block": BASE + 1, "target": FIRST}]
+        _assign_discovered_call_blocks(partitioned, calls)
+        self.assertEqual(calls[0]["block"], BASE + 2)
+
+    def test_discovered_boundary_preserves_call_ownership(self):
+        pinned, _ = self.pinned(interior_target=BASE + 7)
+        raw = bytearray(pinned.artifact.read_bytes())
+        raw[0x40:0x46] = b"\xe8" + struct.pack("<i", SECOND - (FIRST + 5)) + b"\xc3"
+        pinned.artifact.write_bytes(raw)
+        project = angr.load_shellcode(bytes(raw), arch="amd64", load_address=BASE)
+        pinned = PinnedBinary(pinned.artifact, pinned.manifest, project)
+        _, calls, _ = _walk_function(
+            pinned, root_name="interpreter", root=pinned.manifest["roots"]["interpreter"],
+            jump_tables={},
+        )
+        call, = calls
+        self.assertEqual(call["address"], FIRST)
+        self.assertEqual(call["block"], FIRST)
+        self.assertEqual(call["target"], SECOND)
 
     def test_call_at_open_scope_end_retains_its_boundary(self):
         pinned, _ = self.pinned(terminal_call=True)
