@@ -333,5 +333,9 @@ def main():
     print('dispatch coverage passed: absolute/relative, sized/unresolved, exact state and corruption controls')
 
 
+def test_dispatch_coverage():
+    main()
+
+
 if __name__ == '__main__':
     main()
