@@ -603,6 +603,10 @@ def _write_progress(
     temporary.replace(output_dir / "progress.json")
 
 
+def _global_failure_disposition(error: Exception) -> str:
+    return "incomplete" if isinstance(error, (MemoryError, TimeoutError)) else "failed"
+
+
 def _write_global_failure(
     output_dir: Path,
     target_id: str,
@@ -623,7 +627,10 @@ def _write_global_failure(
         "attempted": 0,
         "dispositions": {},
         "failureCategories": {f"{stage}:{type(error).__name__}": 1},
-        "globalFailure": {"stage": stage, "code": type(error).__name__, "message": str(error)[:2000]},
+        "globalFailure": {
+            "stage": stage, "code": type(error).__name__, "message": str(error)[:2000],
+            "disposition": _global_failure_disposition(error),
+        },
     }
     if ci_run_id is not None and ci_run_attempt is not None and ci_checked_out_sha:
         summary["provenance"] = {
@@ -716,7 +723,7 @@ def run(arguments: argparse.Namespace) -> int:
             _LOGGER.info("CFGFast inventory status=%s candidates=%d", discovery["status"], len(candidates))
     except Exception as error:  # noqa: BLE001 -- record an inventory-generation failure in the report
         with failures_path.open("a", encoding="utf-8") as failure_stream:
-            _emit_failure(failure_stream, provenance, None, "failed", {
+            _emit_failure(failure_stream, provenance, None, _global_failure_disposition(error), {
                 "stage": "inventory-generation", "code": type(error).__name__,
                 "message": str(error)[:2000],
             })
@@ -730,7 +737,7 @@ def run(arguments: argparse.Namespace) -> int:
             ci_run_attempt=arguments.ci_run_attempt,
             ci_checked_out_sha=arguments.ci_checked_out_sha,
         )
-        print(f"inventory-generation failed: {type(error).__name__}: {error}")
+        print(f"inventory-generation {_global_failure_disposition(error)}: {type(error).__name__}: {error}")
         return 2
 
     selected_candidate_ids, sampling = _select_candidates(

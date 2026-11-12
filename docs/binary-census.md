@@ -62,6 +62,8 @@ Each run writes:
 
 The same failure records are flushed to stderr with the `CENSUS_FAILURE ` prefix. Direct runs can follow stderr or `failures.jsonl` while the process runs. Each complete line is independently readable; an interruption during a write can leave a partial final line. Bazel test output and undeclared outputs may be buffered until the test action finishes, particularly with remote execution, so these records do not guarantee live visibility in GitHub Actions or BuildBuddy.
 
+Inventory-generation `MemoryError` and `TimeoutError` are reported as incomplete in the failure stream and global failure summary; other inventory exceptions are failed. Both retain a nonzero exit status. No per-candidate disposition is inferred when inventory generation cannot finish.
+
 Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`; timeout and memory exceptions are `bfe:Incomplete` with interruption observations. The process continues to later candidates after per-function failures. A runner-level interruption leaves the flushed ledger and most recent progress checkpoint as partial-run evidence. If interrupted while writing the tar stream, the archive may be unreadable; the workflow uploads available files with `if: always()`. Each job has a six-hour runner timeout.
 
 ## GitHub jobs

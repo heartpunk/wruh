@@ -160,6 +160,42 @@ class FailureStreamTests(unittest.TestCase):
         self.assertIn('progress\n', forwarded.getvalue())
         self.assertIn('{"unfinished":', forwarded.getvalue())
 
+    def test_inventory_resource_errors_are_incomplete_and_preserve_nonzero_exit(self):
+        for error, expected in ((MemoryError("out of memory"), "incomplete"),
+                                (TimeoutError("deadline"), "incomplete"),
+                                (RuntimeError("bad image"), "failed")):
+            with self.subTest(error=type(error).__name__), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                binary = root / "binary"
+                binary.write_bytes(b"fixture")
+                output = root / "out"
+                modules = {}
+                def module(name, **values):
+                    result = ModuleType(name)
+                    result.__dict__.update(values)
+                    modules[name] = result
+                def fail_project(*_args, **_kwargs):
+                    raise error
+                module("angr", Project=fail_project)
+                module("extractor.native_runtime", preload_libstdcxx=lambda: None)
+                module("extractor.amd64_state", clear_smt_translation_cache=lambda: None)
+                module("extractor.binary_cfg", build_static_cfg=lambda *_a: None)
+                module("extractor.binary_inventory", PinnedBinary=lambda *_a: object())
+                module("extractor.fresh", extract_fresh_function=lambda *_a: None)
+                argv = ["binary_census", "--binary", str(binary), "--target-id", "fixture",
+                        "--target-version", "1", "--output-dir", str(output)]
+                with (patch.dict(sys.modules, modules), patch.object(sys, "argv", argv),
+                      patch.object(binary_census, "_is_github_actions_runner", return_value=False),
+                      redirect_stderr(io.StringIO()), patch("sys.stdout", new=io.StringIO())):
+                    self.assertEqual(binary_census.main(), 2)
+                event = json.loads((output / "failures.jsonl").read_text())
+                summary = json.loads((output / "summary.json").read_text())
+                self.assertEqual(event["disposition"], expected)
+                self.assertEqual(event["exceptionType"], type(error).__name__)
+                self.assertEqual(summary["globalFailure"]["disposition"], expected)
+                self.assertEqual(summary["globalFailure"]["message"], str(error))
+                self.assertEqual(summary["dispositions"], {})
+
     def test_inventory_failure_has_no_candidate(self):
         stream = io.StringIO()
         with redirect_stderr(io.StringIO()):
