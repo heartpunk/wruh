@@ -9,6 +9,7 @@ _CENSUS_REMOTE_TARGETS = [
     ("apache", "generic", None),
     ("node", "interpreter", "Node.js"),
     ("bun", "interpreter", "Bun"),
+    ("bochs", "generic", None),
 ]
 
 

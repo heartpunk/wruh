@@ -36,7 +36,7 @@ Sampling metadata (`seed`, the requested decimal percentage, selected count, and
 
 The initial policy enumerates defined, sized ELF `STT_FUNC` symbols in the main object loaded by angr. Symbols sharing one entry address are one candidate; the largest declared extent wins, then the lexically first symbol name, while all aliases are retained. Candidate identifiers use the object's relative virtual address. The runner currently targets AMD64 ELF and records unsupported architectures as a census-level inventory failure.
 
-This is an auditable binary-symbol inventory, not a claim to find anonymous functions, source-level functions without ELF symbols, code in dependent shared objects, or dynamically generated code. The pinned census targets are Lua's shared library, QuickJS's `qjs` executable, CPython's `libpython` shared library, Apache HTTP Server's `httpd` executable, Node.js's `node` executable, and Bun's `bun` executable. Apache is recorded as a generic binary; Lua, QuickJS, CPython, Node.js, and Bun are recorded as interpreters. Nix builds these artifacts with stripping disabled.
+This is an auditable binary-symbol inventory, not a claim to find anonymous functions, source-level functions without ELF symbols, code in dependent shared objects, or dynamically generated code. The pinned census targets are Lua's shared library, QuickJS's `qjs` executable, CPython's `libpython` shared library, Apache HTTP Server's `httpd` executable, Node.js's `node` executable, Bun's `bun` executable, and Bochs's `bochs` executable. Apache and Bochs are recorded as generic binaries; Lua, QuickJS, CPython, Node.js, and Bun are recorded as interpreters. Nix builds these artifacts with stripping disabled.
 
 ## Reports
 
@@ -52,7 +52,7 @@ Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`;
 
 ## GitHub jobs
 
-`.github/workflows/binary-census.yml` runs six independent top-level jobs (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`) on GitHub-hosted `ubuntu-24.04` for every pull request. Each job builds its pinned, symbol-preserving target from `flake.lock`, runs the generic Bazel target, and uploads its report bundle as a 14-day artifact. No census is run on the developer workstation.
+`.github/workflows/binary-census.yml` uses a GitHub-hosted `ubuntu-24.04` coordinator to build the pinned, symbol-preserving targets from `flake.lock`, submit their census tests together, and upload the available report bundle as a 14-day artifact. Developers may also run bounded local spot checks; these do not substitute for a complete census.
 
 For trusted pull requests from this repository, the workflow also builds and
 publishes a PR-revision image to the existing public `ghcr.io/heartpunk/wruh-dev`

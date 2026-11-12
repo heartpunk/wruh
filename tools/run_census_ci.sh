@@ -4,8 +4,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-target_ids=(lua quickjs cpython apache node bun)
-packages=(censusLua censusQuickjs censusCpython censusApache censusNode censusBun)
+target_ids=(lua quickjs cpython apache node bun bochs)
+packages=(censusLua censusQuickjs censusCpython censusApache censusNode censusBun censusBochs)
 report_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/wruh-census"
 mkdir -p "$report_root"
 
@@ -16,7 +16,7 @@ cachix_push_enabled="${CACHIX_PUSH_ENABLED:-false}"
 unset CACHIX_PUSH_ENABLED
 
 # Nix stays on GitHub Actions. Each output becomes a declared Bazel input;
-# the six census TestRunner actions are then submitted in one Bazel invocation.
+# the census TestRunner actions are then submitted in one Bazel invocation.
 repo_env_args=()
 for index in "${!target_ids[@]}"; do
   target_id="${target_ids[$index]}"

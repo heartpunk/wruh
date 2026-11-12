@@ -73,6 +73,12 @@
             binaryPattern = "*/bin/node";
             buildConfiguration = "Nixpkgs Node.js executable, dontStrip=true";
           };
+          censusBochs = censusTarget {
+            packageName = "bochs";
+            package = pkgs.bochs;
+            binaryPattern = "*/bin/bochs";
+            buildConfiguration = "Nixpkgs Bochs executable, dontStrip=true";
+          };
           censusBun = censusTarget {
             packageName = "bun";
             package = pkgs.bun;
