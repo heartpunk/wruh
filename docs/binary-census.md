@@ -45,8 +45,11 @@ Each run writes:
 - `census.jsonld`: BFE + PROV-O graph for the binary/image, build and inventory provenance, candidates, attempts, outcomes, failures, interruptions, and open external-call boundaries.
 - `summary.json`: candidate and outcome counts, first-observed failure-stage/code categories, and report/archive digests.
 - `entries.jsonl`: a flushed ledger row per completed attempt, so interrupted runs retain completed work.
+- `failures.jsonl`: one flushed JSON record per observed failure or interruption, including candidate, stage, exception, and fixed run, binary, source, and runtime provenance. Inventory failures have a null candidate.
 - `progress.json`: atomic partial counts refreshed every 100 candidates.
 - `function-artifacts.tar.gz`: one canonical FreshFunction JSON artifact per successful candidate.
+
+The same failure records are flushed to stderr with the `CENSUS_FAILURE ` prefix. Direct runs can follow stderr or `failures.jsonl` while the process runs. Each complete line is independently readable; an interruption during a write can leave a partial final line. Bazel test output and undeclared outputs may be buffered until the test action finishes, particularly with remote execution, so these records do not guarantee live visibility in GitHub Actions or BuildBuddy.
 
 Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`; timeout and memory exceptions are `bfe:Incomplete` with interruption observations. The process continues to later candidates after per-function failures. A runner-level interruption leaves the flushed ledger and most recent progress checkpoint as partial-run evidence. If interrupted while writing the tar stream, the archive may be unreadable; the workflow uploads available files with `if: always()`. Each job has a six-hour runner timeout.
 
@@ -73,3 +76,5 @@ endpoint, and instance name.
 
 The workflow passes the PR number and GitHub PR ID, PR head repository and commit, checked-out commit, repository and server URL, workflow run ID and attempt, workflow name, and job ID as CLI arguments. The JSON-LD graph identifies the PR and commit resources as PROV entities, links the census activity to the workflow attempt, and records the run's PR and commit inputs. Local runs outside GitHub Actions may omit all `--ci-*` arguments. On a GitHub Actions runner, detected through `GITHUB_ACTIONS=true` or standard runner environment markers such as `GITHUB_RUN_ID`, the CLI requires every `--ci-*` provenance argument and fails with an explicit list of missing arguments if the workflow does not pass them. Partial metadata is rejected in all environments.
 
+
+The separately dispatched **Live binary census** workflow runs one full PR census on a GitHub-hosted runner with `--test_output=streamed`; its job log shows `CENSUS_FAILURE` lines while the test runs. It does not replace or change the required six-target PR workflow. The workflow saves observed lines in `live-failures.jsonl` outside Bazel's sandbox, so an interrupted test can retain them when the job reaches artifact upload. A hard job termination can prevent upload; already displayed job logs are the live observation path. Remote Bazel execution can buffer test output, so the live test runs locally on the GitHub runner. Standard public `ubuntu-24.04` runners provide 4 CPUs, 16 GB RAM and 14 GB disk; the six-hour limit includes setup and building inputs. These resources have not been established as sufficient for every full target.
