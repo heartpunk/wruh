@@ -132,7 +132,7 @@ ayxg_python_repository = repository_rule(
 )
 
 
-_CENSUS_TARGETS = ["lua", "quickjs", "cpython", "apache", "node", "bun"]
+_CENSUS_TARGETS = ["lua", "quickjs", "cpython", "apache", "node", "bun", "qemu"]
 _CENSUS_OUTPUTS_ENV = [
     "WRUH_CENSUS_{}_OUTPUT".format(target.upper())
     for target in _CENSUS_TARGETS

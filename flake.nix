@@ -73,6 +73,12 @@
             binaryPattern = "*/bin/node";
             buildConfiguration = "Nixpkgs Node.js executable, dontStrip=true";
           };
+          censusQemu = censusTarget {
+            packageName = "qemu";
+            package = pkgs.qemu;
+            binaryPattern = "*/bin/qemu-system-x86_64";
+            buildConfiguration = "Nixpkgs QEMU x86_64 system emulator executable, dontStrip=true";
+          };
           censusBun = censusTarget {
             packageName = "bun";
             package = pkgs.bun;
