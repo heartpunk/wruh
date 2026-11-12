@@ -77,6 +77,7 @@ JSONLD_CONTEXT: dict[str, Any] = {
     "bfe:inventoryDescription": "bfe:inventoryDescription",
     "bfe:candidateAddressValue": {"@id": "bfe:candidateAddressValue", "@type": "xsd:nonNegativeInteger"},
     "bfe:declaredExtentBytes": {"@id": "bfe:declaredExtentBytes", "@type": "xsd:nonNegativeInteger"},
+    "bfe:recoveredExtentBytes": {"@id": "bfe:recoveredExtentBytes", "@type": "xsd:nonNegativeInteger"},
     "bfe:failureStage": "bfe:failureStage",
     "bfe:failureCode": "bfe:failureCode",
     "bfe:diagnosticText": "bfe:diagnosticText",
@@ -348,12 +349,12 @@ def _entry_nodes(
         "@type": "bfe:FunctionCandidate",
         "bfe:candidateInObject": {"@id": binary_id},
         "bfe:candidateIdentityBasis": [
-            {"@id": "bfe:SizedSymbol"},
+            {"@id": "bfe:CFGFastEntry" if candidate.get("identity_basis") == "cfgfast" else "bfe:SizedSymbol"},
             {"@id": "bfe:UniqueEntryAddress"},
         ],
         "bfe:candidateAddressSpace": {"@id": "bfe:ObjectVirtualAddress"},
         "bfe:candidateAddressValue": candidate["object_virtual_address"],
-        "bfe:declaredExtentBytes": candidate["size"],
+        ("bfe:recoveredExtentBytes" if candidate.get("identity_basis") == "cfgfast" else "bfe:declaredExtentBytes"): candidate["size"],
         "bfe:candidateAliasIdentifier": candidate["aliases"],
     }]
     attempt_node: dict[str, Any] | None = None
@@ -512,6 +513,7 @@ def _write_report(
     artifact_path: Path,
     interrupted: bool,
     sampling: dict[str, Any],
+    inventory: dict[str, Any] | None = None,
 ) -> None:
     census_node = next(node for node in graph if node.get("@id") == census_id)
     census_node["prov:endedAtTime"] = ended
@@ -534,6 +536,8 @@ def _write_report(
         "reportSha256": _sha256(report_path),
         "interrupted": interrupted,
     }
+    if inventory is not None:
+        summary["inventory"] = inventory
     (output_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
@@ -551,6 +555,7 @@ def _write_progress(
     failures: Counter[str],
     sampling: dict[str, Any],
     interrupted: bool = False,
+    inventory: dict[str, Any] | None = None,
 ) -> None:
     payload = {
         "schema": "wruh-binary-function-census-progress-v1",
@@ -564,6 +569,8 @@ def _write_progress(
         "interrupted": interrupted,
         "updatedAt": _now(),
     }
+    if inventory is not None:
+        payload["inventory"] = inventory
     temporary = output_dir / "progress.json.tmp"
     temporary.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
@@ -620,6 +627,8 @@ def run(arguments: argparse.Namespace) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     binary_digest = _sha256(binary)
     started = _now()
+    inventory_mode = getattr(arguments, "inventory_mode", "symbols")
+    inventory = None
 
     try:
         project = angr.Project(str(binary), auto_load_libs=False)
@@ -628,6 +637,33 @@ def run(arguments: argparse.Namespace) -> int:
         image = project.loader.main_object
         object_path = Path(str(image.binary)).resolve()
         candidates = _function_candidates(project)
+        if inventory_mode == "cfgfast":
+            from extractor.function_discovery import discover_function_candidates
+
+            candidates, discovery = discover_function_candidates(
+                project, candidates,
+                timeout_seconds=getattr(arguments, "discovery_timeout_seconds", 300.0),
+            )
+            discovery_path = output_dir / "discovery.json"
+            discovery_path.write_text(json.dumps({
+                "schema": "wruh-function-discovery-v1",
+                "binarySha256": binary_digest,
+                **discovery,
+                "candidates": [{
+                    "id": candidate["id"],
+                    "identityBasis": candidate.get("identity_basis", "symbol"),
+                    "objectVirtualAddress": candidate["object_virtual_address"],
+                    "recoveredBlocksRelativeToImage": candidate.get("block_ranges", []),
+                    "envelopeHasGaps": candidate.get("envelope_has_gaps", False),
+                } for candidate in candidates],
+            }, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
+            inventory = {
+                "mode": inventory_mode,
+                "status": discovery["status"],
+                "discoveryReport": discovery_path.name,
+                "discoveryReportSha256": _sha256(discovery_path),
+            }
+            _LOGGER.info("CFGFast inventory status=%s candidates=%d", discovery["status"], len(candidates))
     except Exception as error:  # noqa: BLE001 -- record an inventory-generation failure in the report
         _write_global_failure(
             output_dir,
@@ -706,6 +742,16 @@ def run(arguments: argparse.Namespace) -> int:
         "prov:startedAtTime": census_started,
     }
     graph.extend(ci_nodes)
+    if inventory is not None:
+        discovery_id = f"{census_id}/discovery"
+        graph.append({
+            "@id": discovery_id,
+            "@type": "prov:Entity",
+            "bfe:identifier": inventory["discoveryReport"],
+            "bfe:contentDigest": "sha256:" + inventory["discoveryReportSha256"],
+            "rdfs:label": "CFGFast discovery evidence (" + inventory["status"] + ")",
+        })
+        inventory_activity_node["prov:used"] = [{"@id": discovery_id}]
     graph.extend([
         {
             "@id": binary_id,
@@ -731,6 +777,11 @@ def run(arguments: argparse.Namespace) -> int:
                 "coalesce aliases by rebased entry address; select the largest declared "
                 "extent and then the lexically first symbol name; retain all alias names. "
                 "Candidates are keyed by the object's relative virtual address."
+                + (" Augment symbols with bounded CFGFast static discovery in main-object executable ranges; "
+                   "exclude PLT and simulated procedures. Recovered extents are block envelopes, "
+                   "not declared symbols or proven complete semantic function boundaries. "
+                   "Discovery parameters, block ranges and completion status are in discovery.json."
+                   if inventory_mode == "cfgfast" else "")
             ),
         },
         {
@@ -759,6 +810,7 @@ def run(arguments: argparse.Namespace) -> int:
         counts=counts,
         failures=failure_categories,
         sampling=sampling,
+        inventory=inventory,
     )
 
     with (
@@ -876,6 +928,7 @@ def run(arguments: argparse.Namespace) -> int:
                     counts=counts,
                     failures=failure_categories,
                     sampling=sampling,
+                    inventory=inventory,
                 )
             # The extractor keeps an unbounded Angr-to-Z3 AST memo.
             # Its entries are local to one function and must not make
@@ -896,6 +949,7 @@ def run(arguments: argparse.Namespace) -> int:
         counts=counts,
         failures=failure_categories,
         sampling=sampling,
+        inventory=inventory,
         interrupted=interrupted,
     )
     _write_report(
@@ -912,6 +966,7 @@ def run(arguments: argparse.Namespace) -> int:
         artifact_path=archive_path,
         interrupted=interrupted,
         sampling=sampling,
+        inventory=inventory,
     )
     print(json.dumps({
         "target": arguments.target_id,
@@ -947,10 +1002,14 @@ def _is_github_actions_runner(environ: Mapping[str, str] | None = None) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Extract every eligible function symbol into PROV-O / BFE census reports.")
+    parser = argparse.ArgumentParser(description="Extract inventoried binary function candidates into PROV-O / BFE census reports.")
     parser.add_argument("--binary", required=True, type=Path, help="ELF executable or shared object to census")
     parser.add_argument("--binary-identifier", help="stable source path recorded in the report")
     parser.add_argument("--target-id", required=True)
+    parser.add_argument("--inventory-mode", choices=("symbols", "cfgfast"), default="symbols",
+                        help="augment the symbol inventory with CFGFast discovery")
+    parser.add_argument("--discovery-timeout-seconds", type=float, default=300.0,
+                        help="bounded CFGFast discovery time; incomplete discovery is recorded")
     parser.add_argument("--target-kind", choices=("generic", "interpreter"), default="generic")
     parser.add_argument("--target-implementation")
     parser.add_argument("--target-version", required=True)
@@ -988,6 +1047,8 @@ def main() -> int:
         help="percentage of candidates to sample (0 through 100; requires --sample-seed)",
     )
     arguments = parser.parse_args()
+    if not 0 < arguments.discovery_timeout_seconds < float("inf"):
+        parser.error("--discovery-timeout-seconds must be finite and positive")
     if arguments.build_configuration is not None:
         arguments.build_configuration = " ".join(arguments.build_configuration)
     if not arguments.binary.is_absolute():
