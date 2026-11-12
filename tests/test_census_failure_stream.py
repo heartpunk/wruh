@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from extractor import binary_census
 from extractor.binary_census import _emit_failure
+from tools.capture_census_failures import capture
 
 
 class FailureStreamTests(unittest.TestCase):
@@ -100,6 +101,15 @@ class FailureStreamTests(unittest.TestCase):
             graph = json.loads((output / "census.jsonld").read_text())["@graph"]
             self.assertTrue(any(n.get("bfe:diagnosticText") == "failure from cfg" for n in graph))
             self.assertTrue(json.loads((output / "summary.json").read_text())["interrupted"])
+
+    def test_capture_forwards_output_and_preserves_complete_failure_prefix(self):
+        source = io.StringIO('progress\nCENSUS_FAILURE {"candidate":"fn_1"}\n'
+                             'CENSUS_FAILURE {"unfinished":')
+        retained, forwarded = io.StringIO(), io.StringIO()
+        capture(source, retained, forwarded)
+        self.assertEqual(retained.getvalue(), '{"candidate":"fn_1"}\n')
+        self.assertIn('progress\n', forwarded.getvalue())
+        self.assertIn('{"unfinished":', forwarded.getvalue())
 
     def test_inventory_failure_has_no_candidate(self):
         stream = io.StringIO()
