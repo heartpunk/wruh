@@ -335,6 +335,12 @@ bfe:declaredExtentBytes a owl:DatatypeProperty ;
     rdfs:label "declared extent in bytes"@en ;
     rdfs:comment "An optional extent reported by the inventory policy; it is not assumed to be a complete semantic function boundary."@en .
 
+bfe:recoveredExtentBytes a owl:DatatypeProperty ;
+    rdfs:domain bfe:FunctionCandidate ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:label "recovered block envelope in bytes"@en ;
+    rdfs:comment "An inferred envelope from an inventory provider's recovered blocks, not a declared symbol extent or proof of a complete semantic function boundary. Retain the provider's block-range evidence."@en .
+
 bfe:failureStage a owl:DatatypeProperty ;
     rdfs:domain bfe:FailureObservation ;
     rdfs:range xsd:string ;
@@ -403,6 +409,9 @@ bfe:IdentityBasis a owl:Class ;
 bfe:SizedSymbol a owl:NamedIndividual, bfe:IdentityBasis ;
     rdfs:label "sized symbol"@en ;
     rdfs:comment "A candidate is keyed by a symbol-table entry with a declared size, subject to the stated alias policy."@en .
+bfe:CFGFastEntry a owl:NamedIndividual, bfe:IdentityBasis ;
+    rdfs:label "CFGFast recovered entry"@en ;
+    rdfs:comment "An entry recovered by bounded static CFGFast discovery, with heuristic block membership and completion status retained in the inventory-generation evidence."@en .
 bfe:UniqueEntryAddress a owl:NamedIndividual, bfe:IdentityBasis ;
     rdfs:label "unique entry address"@en ;
     rdfs:comment "Candidates are keyed by deduplicated function entry addresses, subject to the stated symbol-boundary and alias policies."@en .

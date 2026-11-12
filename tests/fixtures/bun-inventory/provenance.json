@@ -1,0 +1,74 @@
+{
+  "carve": {
+    "bytesHex": "554889e54885ff74194885f6740ac7060a00000031c0eb05b80100000089471c5dc3b8010000005dc3",
+    "externalCalls": [],
+    "instructionOffsets": [
+      0,
+      1,
+      4,
+      7,
+      9,
+      12,
+      14,
+      20,
+      22,
+      24,
+      29,
+      32,
+      33,
+      34,
+      39,
+      40
+    ],
+    "instructionPointerRelativeMemoryReferences": [],
+    "length": 41,
+    "path": "napi_get_version.bin",
+    "placement": "The test copies the bytes unchanged to offset 0x40 of a compiler-free ELF .text section. All relative branches remain within these 41 bytes.",
+    "returnInstructionOffsets": [
+      33,
+      40
+    ],
+    "rewrittenBytes": false,
+    "sha256": "a942da11845b6a008ce32f9ce732481b443232c6925051fc03ea98e6a37acb83"
+  },
+  "function": "napi_get_version",
+  "license": "MIT",
+  "origin": {
+    "archiveMember": "bun-linux-x64-baseline/bun",
+    "archiveSha256": "c678040f14fe0440eb839d37cbd0ce4c051a32da72806ac97de6a6aab6bf728f",
+    "archiveUrl": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.2/bun-linux-x64-baseline.zip",
+    "binarySha256": "a83d263767d839e4d2649ca8e35d07159c7afc99afdc96d731ced29e056dda0c",
+    "fileOffset": 36986112,
+    "objectVirtualAddress": 39116032,
+    "release": "bun-v1.4.2",
+    "symbolExtentBytes": 41
+  },
+  "regression": "The wrapper deliberately omits a symbol for the carved target. The symbols-only inventory loads the ELF successfully but cannot select that function; CFG recovery must identify it before fresh extraction and JSON round-trip can succeed.",
+  "relatedCensus": {
+    "binarySha256": "62fbc811a40e3ad0c0fc4bde563d4cac4383cde27133420f19896e1edf00d62e",
+    "candidateId": "fn_000000000234ed00",
+    "declaredExtentBytes": 41,
+    "disposition": "extracted",
+    "invocationId": "dbc9d474-cadc-41b7-b813-02160b4259b4",
+    "objectVirtualAddress": 39116032,
+    "relationship": "The census binary and the upstream release binary have different hashes. The named function has the same address and extent, and was extracted in that census. The committed bytes are carved from the upstream release, not claimed byte-identical to the census binary.",
+    "reportSha256": "cd6cc3710612638676ac6ae0af352464a68c2e224720d17dbd1b531394249985",
+    "wruhRevision": "762a31e7a80273607459427dfde0d47dbc24d25a"
+  },
+  "schema": "wruh-carved-function-fixture-v1",
+  "source": {
+    "endLine": 1612,
+    "excerptSha256": "2b0634805ae05ad906e06b147344bd6855006f10cbd303a489f2cb481f554430",
+    "path": "src/runtime/napi/napi_body.rs",
+    "repository": "https://github.com/oven-sh/bun",
+    "revision": "744846f844374847c902b5e7fd59b4342a51ef99",
+    "startLine": 1603,
+    "url": "https://github.com/oven-sh/bun/blob/744846f844374847c902b5e7fd59b4342a51ef99/src/runtime/napi/napi_body.rs#L1603-L1612"
+  },
+  "upstreamLicense": {
+    "path": "LICENSE.md",
+    "savedAs": "LICENSE.upstream.md",
+    "sha256": "b9caf52728691b4057e371232c221a132883198be2f3d2ddf92c90404c984b1a",
+    "url": "https://github.com/oven-sh/bun/blob/744846f844374847c902b5e7fd59b4342a51ef99/LICENSE.md"
+  }
+}
