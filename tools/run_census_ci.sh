@@ -6,6 +6,25 @@ cd "$repo_root"
 
 target_ids=(lua quickjs cpython apache node bun)
 packages=(censusLua censusQuickjs censusCpython censusApache censusNode censusBun)
+
+# Optional exact, single-target run with live test output on this runner.
+live_target="${WRUH_CENSUS_LIVE_TARGET:-}"
+if [[ -n "$live_target" ]]; then
+  found=false
+  for index in "${!target_ids[@]}"; do
+    if [[ "${target_ids[$index]}" == "$live_target" ]]; then
+      target_ids=("${target_ids[$index]}")
+      packages=("${packages[$index]}")
+      found=true
+      break
+    fi
+  done
+  if [[ "$found" != true ]]; then
+    echo "Invalid WRUH_CENSUS_LIVE_TARGET: $live_target" >&2
+    exit 2
+  fi
+  echo "Live census mode: $live_target runs locally on the GitHub runner."
+fi
 report_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/wruh-census"
 mkdir -p "$report_root"
 
@@ -106,6 +125,10 @@ bazel_args=(
   "--test_arg=--ci-workflow=${WRUH_CI_WORKFLOW:?WRUH_CI_WORKFLOW is required}"
   "--test_arg=--ci-job=${WRUH_CI_JOB:?WRUH_CI_JOB is required}"
 )
+if [[ -n "$live_target" ]]; then
+  # Bazel streams test output only when executing tests locally and serially.
+  bazel_args+=(--test_output=streamed)
+fi
 for target_id in "${target_ids[@]}"; do
   bazel_args+=("//extractor:binary_census_${target_id}_remote_test")
 done
