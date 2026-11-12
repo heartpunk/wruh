@@ -138,6 +138,7 @@
             (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
           ] ++ pkgs.lib.optionals (system == "x86_64-linux") [
             censusPackages.x86_64-linux.hegelRuntime
+            pkgs.bubblewrap
           ];
           IFRL_ANGR_ENVIRONMENT = "${ifrl.packages.${system}.angr-python}";
           GHOT_NIX_ANGR_ROOT = "${ifrl.packages.${system}.angr-python}";

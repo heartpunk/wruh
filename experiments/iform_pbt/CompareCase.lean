@@ -41,7 +41,8 @@ def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     (loader capture : ByteArray) (workPath : System.FilePath)
     (definedFlags : UInt64) (memoryAddresses : Array (Expr model.Γ (.bv 64))) : IO CaseResult := do
   let native ← observeInstruction loader capture workPath c.observerRequest
-  if native.fault.isSome then return .incomplete "native instruction faulted"
+  if let some fault := native.fault then
+    return .incomplete s!"native fault signal={fault.signal} code={fault.code} address={reprStr fault.address}"
   let layout ← vectorLayout
   let mut vectorValues : Array (String × Nat) := #[]
   for declaration in model.Γ do

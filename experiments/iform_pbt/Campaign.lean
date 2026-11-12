@@ -50,8 +50,9 @@ def main (args : List String) : IO UInt32 := do
   let settings : Hegel.Settings := {
     testCases := occurrenceBudget
     seed := some (UInt64.ofNat seed)
-    phases := #[.generate]
-    database := .disabled
+    phases := #[.reuse, .generate]
+    database := .path (workDir ++ "/hegel-db")
+    databaseKey := some "wruh-native-instruction"
     suppressHealthChecks := #[.tooSlow, .testCasesTooLarge, .largeInitialTestCase]
   }
   let result ← Hegel.check engine settings
