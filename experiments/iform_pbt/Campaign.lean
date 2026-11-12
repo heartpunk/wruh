@@ -88,11 +88,11 @@ def main (args : List String) : IO UInt32 := do
           (workDir ++ "/native.elf") definedFlags addresses
         match outcome with
         | .matched =>
-          IO.println s!"MATCH {hex} {c.occurrence.iform} sample={i}"
+          IO.println s!"MATCH {hex} {c.occurrence.iform} sample={i} rax={c.gprs[0]!} flags={c.flags} vector0={c.vectorSeed[0]!}"
           totals.modify fun t => {t with matchedCount := t.matchedCount + 1}
         | .mismatch differences =>
           holds := false
-          testCase.note s!"bytes={hex} sample={i} gprs={c.gprs} flags={c.flags} memory={c.memoryBytes} differences={differences}"
+          testCase.note s!"bytes={hex} sample={i} gprs={c.gprs} flags={c.flags} memory={c.memoryBytes} vector={c.vectorSeed} rounding={c.sseRounding} differences={differences}"
           IO.println s!"MISMATCH {hex}: {differences}"
           totals.modify fun t => {t with mismatchCount := t.mismatchCount + 1}
         | .incomplete reason =>

@@ -23,6 +23,8 @@ structure GeneratedCase where
   flags : UInt64
   memoryAddress : UInt64
   memoryBytes : ByteArray
+  vectorSeed : ByteArray
+  sseRounding : UInt64
   deriving Inhabited
 
 private def hexDigit (c : Char) : Except String Nat :=
@@ -106,12 +108,16 @@ def generatedState (occurrence : Occurrence) : Generator NativeGen GeneratedCase
   let gprs ← chooseGprs.generate
   let flags ← chooseFlags.generate
   let memoryBytes ← chooseMemory.generate
+  let vectorSeed ← (Generator.bytes 2112 2112).generate
+  let sseRounding ← DataSource.chooseNat 0 3
   pure {
     occurrence
     gprs
     flags
     memoryAddress := 0x100000000
     memoryBytes
+    vectorSeed
+    sseRounding := UInt64.ofNat sseRounding
   }⟩
 
 def generatedCase (catalogue : Array Occurrence) : Generator NativeGen GeneratedCase := ⟨do
@@ -125,6 +131,8 @@ def GeneratedCase.observerRequest (c : GeneratedCase) : MovObserver.NativeObserv
   { instruction := c.occurrence.bytes
     gprs := c.gprs
     flags := c.flags
-    memory := #[{ address := c.memoryAddress, bytes := c.memoryBytes }] }
+    memory := #[{ address := c.memoryAddress, bytes := c.memoryBytes }]
+    vectorSeed := some c.vectorSeed
+    sseRounding := c.sseRounding }
 
 end Wruh.IFormPbt
