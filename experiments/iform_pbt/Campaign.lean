@@ -61,13 +61,13 @@ def main (args : List String) : IO UInt32 := do
     let hex := instructionHex first.occurrence.bytes
     testCase.note s!"iform={first.occurrence.iform} bytes={hex}"
     try
+      let artifactPath := System.FilePath.mk (workDir ++ "/model.json")
+      let model ← first.extractModel stubBuilder wruh (workDir ++ "/fixture.elf") artifactPath "wruh_pbt_target"
       let (fallthrough, definedFlags) ← metadata icedPython metadataScript first.occurrence.bytes
       if !fallthrough then
         IO.println s!"INCOMPLETE {hex}: instruction does not fall through"
         totals.modify fun t => {t with incomplete := t.incomplete + sampleBudget}
         return true
-      let artifactPath := System.FilePath.mk (workDir ++ "/model.json")
-      let model ← first.extractModel stubBuilder wruh (workDir ++ "/fixture.elf") artifactPath "wruh_pbt_target"
       let json ← match Json.parse (← IO.FS.readFile artifactPath) with
         | .ok json => pure json
         | .error error => throw <| IO.userError error
