@@ -36,7 +36,9 @@ Sampling metadata (`seed`, the requested decimal percentage, selected count, and
 
 The initial policy enumerates defined, sized ELF `STT_FUNC` symbols in the main object loaded by angr. Symbols sharing one entry address are one candidate; the largest declared extent wins, then the lexically first symbol name, while all aliases are retained. Candidate identifiers use the object's relative virtual address. The runner currently targets AMD64 ELF and records unsupported architectures as a census-level inventory failure.
 
-This is an auditable binary-symbol inventory, not a claim to find anonymous functions, source-level functions without ELF symbols, code in dependent shared objects, or dynamically generated code. The pinned census targets are Lua's shared library, QuickJS's `qjs` executable, CPython's `libpython` shared library, Apache HTTP Server's `httpd` executable, Node.js's `node` executable, and Bun's `bun` executable. Apache is recorded as a generic binary; Lua, QuickJS, CPython, Node.js, and Bun are recorded as interpreters. Nix builds these artifacts with stripping disabled.
+This is an auditable binary-symbol inventory, not a claim to find anonymous functions, source-level functions without ELF symbols, code in dependent shared objects, or dynamically generated code. The pinned census targets are Lua's shared library, QuickJS's `qjs` executable, CPython's `libpython` shared library, Apache HTTP Server's `httpd` executable, Node.js's `node` executable, Bun's `bun` executable, and QEMU's `qemu-system-x86_64` executable. Apache and QEMU are recorded as generic binaries; Lua, QuickJS, CPython, Node.js, and Bun are recorded as interpreters. Nix builds these artifacts with stripping disabled.
+
+QEMU is an AMD64 host executable: this census extracts its compiled host functions, including translator implementation code where inventoried. It does not directly extract or establish the semantics of guest instructions executed by QEMU, nor include dynamically generated code.
 
 ## Reports
 
@@ -52,7 +54,7 @@ Per-function CFG or extraction errors are preserved as `bfe:FailureObservation`;
 
 ## GitHub jobs
 
-`.github/workflows/binary-census.yml` runs six independent top-level jobs (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`) on GitHub-hosted `ubuntu-24.04` for every pull request. Each job builds its pinned, symbol-preserving target from `flake.lock`, runs the generic Bazel target, and uploads its report bundle as a 14-day artifact. No census is run on the developer workstation.
+`.github/workflows/binary-census.yml` runs one GitHub-hosted coordinator for the targets (`lua`, `quickjs`, `cpython`, `apache`, `node`, `bun`, `qemu`) on every pull request. It builds pinned, symbol-preserving targets from `flake.lock`, submits the census actions through Bazel, and uploads the available report bundle as a 14-day artifact. Bounded spot checks on a build host can use the same runner and sampling options.
 
 For trusted pull requests from this repository, the workflow also builds and
 publishes a PR-revision image to the existing public `ghcr.io/heartpunk/wruh-dev`
