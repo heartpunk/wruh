@@ -1,0 +1,67 @@
+@prefix cat: <https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#> .
+@prefix br: <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-representation.ttl#> .
+@prefix cco: <https://www.commoncoreontologies.org/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+<https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl>
+    a owl:Ontology ;
+    owl:imports <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-representation.ttl> ;
+    rdfs:label "Instruction catalogue vocabulary"@en ;
+    rdfs:comment "A provisional vocabulary for the recorded decoder classifications and source references in the instruction catalogue."@en .
+
+cat:xedIform a rdf:Property ; rdfs:label "XED instruction form"@en ;
+    rdfs:comment "The name of the XED iform enum returned when decoding the recorded bytes."@en .
+cat:icedCode a rdf:Property ; rdfs:label "iced instruction code"@en ;
+    rdfs:comment "The numeric iced-x86 Code returned when decoding the recorded bytes."@en .
+cat:instructionBytes a rdf:Property ; rdfs:label "instruction bytes"@en ;
+    rdfs:comment "The exact byte sequence recorded for one decoded instruction."@en .
+cat:decodeBitness a rdf:Property ; rdfs:label "decode bitness"@en ;
+    rdfs:comment "The decoder mode bitness, in bits."@en .
+cat:xedOperandWidth a rdf:Property ; rdfs:label "XED operand width"@en ;
+    rdfs:comment "The effective operand width reported by XED, in bits; not a list of widths for all operands."@en .
+cat:occurrence a rdf:Property ; rdfs:subPropertyOf cco:ont00001808 ; rdfs:label "source occurrence"@en ;
+    rdfs:comment "A reference to an occurrence of the recorded bytes in a successful census function artifact."@en .
+cat:targetId a rdf:Property ; rdfs:label "census target identifier"@en ;
+    rdfs:comment "The target identifier recorded by the source census."@en .
+cat:binarySha256 a rdf:Property ; rdfs:label "binary SHA-256"@en ;
+    rdfs:comment "The SHA-256 digest of the binary image recorded by the source census."@en .
+cat:functionId a rdf:Property ; rdfs:label "function identifier"@en ;
+    rdfs:comment "The function identifier in the successful census function artifact."@en .
+cat:canonicalAddress a rdf:Property ; rdfs:subPropertyOf br:canonicalAddress ; rdfs:label "canonical address"@en ;
+    rdfs:comment "The numeric canonical address recorded by the decoded instruction origin; its interpretation follows the source artifact."@en .
+cat:staticOccurrenceId a rdf:Property ; rdfs:subPropertyOf br:staticOccurrenceId ; rdfs:label "static occurrence identifier"@en ;
+    rdfs:comment "The static occurrence identifier within the source function artifact."@en .
+
+cat:EncodingRecord a rdfs:Class ; rdfs:subClassOf cco:ont00000958, prov:Entity ; rdfs:label "instruction encoding record"@en ;
+    rdfs:comment "A catalogue record for an exact decoded instruction byte sequence and its recorded classifications and occurrences."@en .
+cat:SourceOccurrence a rdfs:Class ; rdfs:subClassOf br:InstructionOccurrence ; rdfs:label "source occurrence reference"@en ;
+    rdfs:comment "A reference to one static occurrence in a successful function artifact of a census target."@en .
+cat:SourceFileSet a rdfs:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "census source file set"@en ;
+    rdfs:comment "A description of the preserved files downloaded for one census target."@en .
+cat:SourceFile a rdfs:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "preserved source file"@en ;
+    rdfs:comment "A file preserved as evidence from a census run."@en .
+cat:CatalogueFile a rdfs:Class ; rdfs:subClassOf prov:Entity ; rdfs:label "catalogue JSONL file"@en ;
+    rdfs:comment "A generated file containing instruction encoding records."@en .
+cat:sourceFile a rdf:Property ; rdfs:label "source file"@en ;
+    rdfs:comment "Relates a census source file set to a description of one preserved file."@en .
+cat:sourceRun a rdf:Property ; rdfs:label "source workflow run"@en ;
+    rdfs:comment "Identifies the workflow run attempt associated with the source census reports."@en .
+cat:extractionRevision a rdf:Property ; rdfs:label "extraction revision"@en ;
+    rdfs:comment "Identifies the Wruh checkout revision recorded by the source census reports."@en .
+cat:fileSha256 a rdf:Property ; rdfs:label "file SHA-256"@en ;
+    rdfs:comment "The SHA-256 digest of the exact file bytes."@en .
+cat:fileSizeBytes a rdf:Property ; rdfs:label "file size"@en ;
+    rdfs:comment "The size of the exact file bytes, in bytes."@en .
+cat:mediaType a rdf:Property ; rdfs:label "media type"@en ;
+    rdfs:comment "The media type describing the file representation."@en .
+cat:filePurpose a rdf:Property ; rdfs:label "file purpose"@en ;
+    rdfs:comment "A short description of the role of the file in this evidence set."@en .
+cat:xedVersion a rdf:Property ; rdfs:label "XED version"@en ;
+    rdfs:comment "The XED release used to classify the catalogue's recorded instruction bytes."@en .
+cat:icedVersion a rdf:Property ; rdfs:label "iced-x86 version"@en ;
+    rdfs:comment "The iced-x86 release used to classify the catalogue's recorded instruction bytes."@en .
+cat:sourceFileSet a rdf:Property ; rdfs:subPropertyOf prov:wasDerivedFrom ; rdfs:label "source file set"@en ;
+    rdfs:comment "Links a generated catalogue file to a description of source files used to generate it."@en .

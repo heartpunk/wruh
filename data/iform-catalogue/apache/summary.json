@@ -1,0 +1,27 @@
+{
+  "artifactArchive": "function-artifacts.tar.gz",
+  "artifactArchiveSha256": "36cd300e88d62e27e636620ce6ad3ad9a2c966544d12837bce81489075ddb006",
+  "attempted": 1160,
+  "binarySha256": "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9",
+  "dispositions": {
+    "extracted": 911,
+    "failed": 249
+  },
+  "endedAt": "2026-11-05T17:49:59Z",
+  "failureCategories": {
+    "cfg:InventoryError": 248,
+    "extraction:UnsupportedTheoryError": 1
+  },
+  "interrupted": false,
+  "inventoryCandidates": 1160,
+  "reportSha256": "41c319520b2800678a076c7ab0fe1027f3b27d7afdc2a79192dddcef4ce22eb6",
+  "sampling": {
+    "requestedPercentage": null,
+    "samplingPolicy": "full-census-v1",
+    "seed": null,
+    "selectedCount": 1160
+  },
+  "schema": "wruh-binary-function-census-summary-v1",
+  "startedAt": "2026-11-05T17:24:06Z",
+  "targetId": "apache"
+}
