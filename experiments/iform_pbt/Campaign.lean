@@ -58,6 +58,9 @@ def main (args : List String) : IO UInt32 := do
   let result ← Hegel.check engine settings
       "Wruh model agrees with native instruction" fun testCase => do
     let first ← testCase.draw (generatedCase catalogue)
+    let mut cases := #[first]
+    for _ in [1:sampleBudget] do
+      cases := cases.push (← testCase.draw (generatedState first.occurrence))
     let hex := instructionHex first.occurrence.bytes
     testCase.note s!"iform={first.occurrence.iform} bytes={hex}"
     try
@@ -84,7 +87,7 @@ def main (args : List String) : IO UInt32 := do
         | .error error => throw <| IO.userError error
       let mut holds := true
       for i in [:sampleBudget] do
-        let c ← if i == 0 then pure first else testCase.draw (generatedState first.occurrence)
+        let c := cases[i]!
         let outcome ← c.compare model (fun _ => some 0) (fun _ => 0) loader capture
           (workDir ++ "/native.elf") definedFlags addresses
         match outcome with
