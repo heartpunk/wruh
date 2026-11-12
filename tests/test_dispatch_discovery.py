@@ -151,9 +151,12 @@ class DispatchDiscoveryTests(unittest.TestCase):
         pinned, _ = self.pinned(interior_target=BASE + 7)
         raw = bytearray(pinned.artifact.read_bytes())
         raw[0x40:0x46] = b"\xe8" + struct.pack("<i", SECOND - (FIRST + 5)) + b"\xc3"
+        # Keep both the interior split and a reachable call in the dispatch table.
+        struct.pack_into("<Q", raw, 0x108, FIRST)
         pinned.artifact.write_bytes(raw)
         project = angr.load_shellcode(bytes(raw), arch="amd64", load_address=BASE)
-        pinned = PinnedBinary(pinned.artifact, pinned.manifest, project)
+        manifest = {**pinned.manifest, "image_sha256": hashlib.sha256(raw).hexdigest()}
+        pinned = PinnedBinary(pinned.artifact, manifest, project)
         _, calls, _ = _walk_function(
             pinned, root_name="interpreter", root=pinned.manifest["roots"]["interpreter"],
             jump_tables={},
