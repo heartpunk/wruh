@@ -79,6 +79,9 @@ jobs:
           git config --global --add url.https://github.com/.insteadOf git@github.com:
       - name: Allow bubblewrap user namespaces on the hosted runner
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Record the runner CPU and environment
+        run: |
+          { uname -a; lscpu; } | tee "$RUNNER_TEMP/wruh-iform-pbt-cpu.txt"
       - name: Build the native PBT executables
         run: nix develop --no-write-lock-file --command lake build wruh-iform-pbt wruh-fresh
       - name: Run a seeded native PBT campaign
@@ -97,6 +100,7 @@ jobs:
           path: |
             ${{ runner.temp }}/wruh-iform-pbt.log
             ${{ runner.temp }}/wruh-iform-pbt/failure-*.json
+            ${{ runner.temp }}/wruh-iform-pbt-cpu.txt
           if-no-files-found: ignore
           retention-days: 30
 
@@ -125,6 +129,9 @@ jobs:
           git config --global --add url.https://github.com/.insteadOf git@github.com:
       - name: Allow bubblewrap user namespaces on the hosted runner
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Record the runner CPU and environment
+        run: |
+          { uname -a; lscpu; } | tee "$RUNNER_TEMP/wruh-iform-pbt-cpu.txt"
       - name: Build the native PBT executables
         run: nix develop --no-write-lock-file --command lake build wruh-iform-pbt wruh-fresh
       - name: Run the seeded 50,000-comparison campaign
@@ -143,5 +150,6 @@ jobs:
           path: |
             ${{ runner.temp }}/wruh-iform-pbt-medium.log
             ${{ runner.temp }}/wruh-iform-pbt/failure-*.json
+            ${{ runner.temp }}/wruh-iform-pbt-cpu.txt
           if-no-files-found: ignore
           retention-days: 30
