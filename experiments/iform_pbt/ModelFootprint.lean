@@ -9,6 +9,7 @@ structure ModelFootprint where
   inputs : Array String
   unobservedWrites : Array String
   readsMemory : Bool
+  memoryAddresses : Array Nat
   deriving Repr
 
 private def observed (name : String) : Bool :=
@@ -25,21 +26,29 @@ private def nodeAt (nodes roots : Array Json) (ref : Json) : Except String (Nat 
   pure (index, node)
 
 private partial def visit (nodes : Array Json) (index : Nat)
-    (seen vars : Array Nat) (readsMemory : Bool) : Except String (Array Nat × Array Nat × Bool) := do
-  if seen.contains index then return (seen, vars, readsMemory)
+    (seen vars addresses : Array Nat) (readsMemory : Bool) :
+    Except String (Array Nat × Array Nat × Array Nat × Bool) := do
+  if seen.contains index then return (seen, vars, addresses, readsMemory)
   let some node := nodes[index]? | throw "model expression node out of bounds"
   let op ← (← field node "op").getStr?
   if op == "let_par" then throw "model contains scoped bindings that need dependency analysis"
   let mut seen := seen.push index
   let mut vars := vars
+  let mut addresses := addresses
   let mut readsMemory := readsMemory || op == "select"
   if op == "var" then vars := vars.push (← natField node "index")
-  for arg in (← (← field node "args").getArr?) do
-    let (nextSeen, nextVars, nextReads) ← visit nodes (← arg.getNat?) seen vars readsMemory
+  let args ← (← field node "args").getArr?
+  for arg in args do
+    let (nextSeen, nextVars, nextAddresses, nextReads) ←
+      visit nodes (← arg.getNat?) seen vars addresses readsMemory
     seen := nextSeen
     vars := nextVars
+    addresses := nextAddresses
     readsMemory := nextReads
-  pure (seen, vars, readsMemory)
+  if op == "select" || op == "store" then
+    let some address := args[1]? | throw "memory operation has no address"
+    addresses := addresses.push (← address.getNat?)
+  pure (seen, vars, addresses, readsMemory)
 
 /-- Identify model inputs and modeled writes relevant to a single stub site.
     Unknown binding structures are reported as incomplete rather than guessed. -/
@@ -78,16 +87,18 @@ def modelFootprint (artifact : Json) (functionId : String) (address : Nat) :
           unobservedWrites := unobservedWrites.push name
   let mut seen := #[]
   let mut vars := #[]
+  let mut addresses := #[]
   let mut readsMemory := false
   for root in rootsToVisit do
-    let (s, v, r) ← visit nodes root seen vars readsMemory
+    let (s, v, a, r) ← visit nodes root seen vars addresses readsMemory
     seen := s
     vars := v
+    addresses := a
     readsMemory := r
   let mut inputs := #[]
   for index in vars do
     let some name := names[index]? | throw "model variable index out of bounds"
     if !inputs.contains name then inputs := inputs.push name
-  pure ⟨inputs, unobservedWrites, readsMemory⟩
+  pure ⟨inputs, unobservedWrites, readsMemory, addresses⟩
 
 end Wruh.IFormPbt

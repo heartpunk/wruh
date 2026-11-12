@@ -1,10 +1,12 @@
 import Wruh.IFormPbt.ExtractedTarget
 import Ayxg.QfAbv.ExecutableFP
 import Observer
+import ModelFootprint
 
 namespace Wruh.IFormPbt
 
 open Ayxg.QfAbv
+open Lean Ayxg.QfAbv.JsonCodec
 
 local instance : FPInterpretation := FPInterpretation.executableChoice
 
@@ -29,6 +31,17 @@ def inputValue (input : ModelInput) (d : Decl) : Except String (Denote d.sort) :
 def inputEnv (input : ModelInput) : (Γ : Ctx) → Except String (Env Γ)
   | [] => pure .nil
   | d :: ds => do pure (.cons (← inputValue input d) (← inputEnv input ds))
+
+/-- Decode the addresses of modeled byte loads and stores using AYXG's DAG reader. -/
+def memoryAddressExprs (artifact : Json) (model : ExtractedTarget)
+    (footprint : ModelFootprint) : Except String (Array (Expr model.Γ (.bv 64))) := do
+  let dag ← field artifact "expression_dag"
+  let addressDag := Json.mkObj [
+    ("encoding", ← field dag "encoding"),
+    ("nodes", ← field dag "nodes"),
+    ("roots", toJson footprint.memoryAddresses)]
+  let roots ← parseRootsDag model.Γ addressDag
+  roots.toArray.mapM (asSort (.bv 64))
 
 /-- Evaluate all enabled Wruh outcomes with AYXG's evaluator. -/
 def enabledOutcomes (model : ExtractedTarget) (input : Env model.Γ) :

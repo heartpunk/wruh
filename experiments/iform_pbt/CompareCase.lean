@@ -5,6 +5,8 @@ namespace Wruh.IFormPbt
 
 open Ayxg.QfAbv MovObserver.NativeObserver
 
+local instance : FPInterpretation := FPInterpretation.executableChoice
+
 /-- Combine generated GPRs, flags, and memory with explicitly supplied values
     for any other modeled input needed by the instruction. -/
 def GeneratedCase.modelInput (c : GeneratedCase)
@@ -37,13 +39,17 @@ inductive CaseResult where
 def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     (otherScalar : String → Option Nat) (otherMemory : Nat → UInt8)
     (loader capture : ByteArray) (workPath : System.FilePath)
-    (definedFlags : UInt64) : IO CaseResult := do
+    (definedFlags : UInt64) (memoryAddresses : Array (Expr model.Γ (.bv 64))) : IO CaseResult := do
   let env ← match inputEnv (c.modelInput otherScalar otherMemory) model.Γ with
     | .ok env => pure env
     | .error reason => return .incomplete reason
   let outcomes := enabledOutcomes model env
   if outcomes.size != 1 then
     return .incomplete s!"expected one enabled model outcome, got {outcomes.size}"
+  for addressExpr in memoryAddresses do
+    let address := (Eval.evalBv env addressExpr).toNat
+    if address < c.memoryAddress.toNat || address - c.memoryAddress.toNat ≥ c.memoryBytes.size then
+      return .incomplete s!"modeled memory access {address} is outside the generated image"
   let native ← observeInstruction loader capture workPath c.observerRequest
   if native.fault.isSome then return .incomplete "native instruction faulted"
   let some (_, post) := outcomes[0]? | return .incomplete "missing model outcome"
