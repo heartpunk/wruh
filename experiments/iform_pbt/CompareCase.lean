@@ -47,6 +47,12 @@ def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
   let native ← observeInstruction loader capture workPath c.observerRequest
   if native.fault.isSome then return .incomplete "native instruction faulted"
   let some (_, post) := outcomes[0]? | return .incomplete "missing model outcome"
+  let modelPc ← match readBv post "rip" with
+    | .ok pc => pure pc
+    | .error reason => return .incomplete reason
+  let nativePc := 0x400170 + c.occurrence.bytes.size
+  if modelPc != nativePc then
+    return .incomplete s!"model target {modelPc} is not fallthrough {nativePc}"
   match compareObserved post native definedFlags with
   | .error reason => return .incomplete reason
   | .ok differences =>

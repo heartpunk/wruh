@@ -79,6 +79,12 @@ def compareObserved {Γ : Ctx} (post : Env Γ)
       let nativeValue := (native.terminalFlags.toNat / 2^bit) % 2
       if modelValue != nativeValue then
         differences := differences.push s!"{name}: model={modelValue}, native={nativeValue}"
+  for (name, bit) in #[("d", 10), ("ac", 18), ("id", 21)] do
+    let modelValue ← readBv post name
+    let flag := (native.terminalFlags.toNat / 2^bit) % 2
+    let nativeValue := if name == "d" then (if flag == 1 then 2^64-1 else 1) else flag
+    if modelValue != nativeValue then
+      differences := differences.push s!"{name}: model={modelValue}, native={nativeValue}"
   for region in native.memory do
     for i in [:region.bytes.size] do
       let address := region.address.toNat + i
