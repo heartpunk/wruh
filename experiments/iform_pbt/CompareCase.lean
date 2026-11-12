@@ -39,10 +39,22 @@ inductive CaseResult where
 def GeneratedCase.compare (c : GeneratedCase) (model : ExtractedTarget)
     (otherScalar : String → Option Nat) (otherMemory : Nat → UInt8)
     (loader capture : ByteArray) (workPath : System.FilePath)
-    (definedFlags : UInt64) (memoryAddresses : Array (Expr model.Γ (.bv 64))) : IO CaseResult := do
+    (definedFlags : UInt64) (guardInputs : Array String)
+    (memoryAddresses : Array (Expr model.Γ (.bv 64))) : IO CaseResult := do
+  if guardInputs.any isVectorField || guardInputs.contains "mem" then
+    return .incomplete "model guard depends on vector state or memory"
+  let guardEnv ← match inputEnv (c.modelInput (fun _ => some 0) otherMemory) model.Γ with
+    | .ok env => pure env
+    | .error reason => return .incomplete reason
+  let enabled := model.edges.filter (fun edge => Eval.evalBool guardEnv edge.guard)
+  if enabled.size != 1 then
+    return .incomplete s!"expected one enabled model outcome, got {enabled.size}"
+  let some edge := enabled[0]? | return .incomplete "missing enabled model outcome"
+  if edge.targetKind == "error" then
+    return .incomplete "model predicts a fault"
   let native ← observeInstruction loader capture workPath c.observerRequest
   if let some fault := native.fault then
-    return .incomplete s!"native fault signal={fault.signal} code={fault.code} address={reprStr fault.address}"
+    return .mismatch #[s!"unexpected native fault signal={fault.signal} code={fault.code} address={reprStr fault.address}"]
   let layout ← vectorLayout
   let mut vectorValues : Array (String × Nat) := #[]
   for declaration in model.Γ do

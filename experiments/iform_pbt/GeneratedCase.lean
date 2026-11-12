@@ -27,6 +27,27 @@ structure GeneratedCase where
   sseRounding : UInt64
   deriving Inhabited
 
+structure SimpleAddress where
+  base : Nat
+  displacement : UInt64
+  width : Nat
+  deriving Inhabited
+
+theorem generatedOffsetInImage (n width : Nat) (h : width ≤ 1024) :
+    (n % (1025 - width) / 64 * 64) + width ≤ 1024 := by
+  have positive : 0 < 1025 - width := by omega
+  have bound := Nat.mod_lt n positive
+  have aligned := Nat.div_mul_le_self (n % (1025 - width)) 64
+  omega
+
+def boundedOffset (n width : Nat) (h : width ≤ 1024) :
+    { offset : Nat // offset + width ≤ 1024 } :=
+  ⟨n % (1025 - width) / 64 * 64, generatedOffsetInImage n width h⟩
+
+theorem generatedBaseEffectiveAddress (target displacement : UInt64) :
+    (target - displacement) + displacement = target :=
+  UInt64.sub_add_cancel target displacement
+
 private def hexDigit (c : Char) : Except String Nat :=
   if '0' ≤ c && c ≤ '9' then pure (c.toNat - '0'.toNat)
   else if 'a' ≤ c && c ≤ 'f' then pure (10 + c.toNat - 'a'.toNat)
@@ -104,8 +125,16 @@ private def chooseFlags : Generator NativeGen UInt64 := ⟨do
       flags := flags ||| (UInt64.ofNat 1 <<< UInt64.ofNat positions[i]!)
   pure flags⟩
 
-def generatedState (occurrence : Occurrence) : Generator NativeGen GeneratedCase := ⟨do
-  let gprs ← chooseGprs.generate
+def generatedState (occurrence : Occurrence) (address : Option SimpleAddress := none) : Generator NativeGen GeneratedCase := ⟨do
+  let mut gprs ← chooseGprs.generate
+  if let some a := address then
+    let raw ← DataSource.chooseNat 0 1024
+    if h : a.width ≤ 1024 then
+      let offset := boundedOffset raw a.width h
+      let target := UInt64.ofNat (0x100000000 + offset.val)
+      gprs := gprs.set! a.base (target - a.displacement)
+    else
+      throw <| IO.userError "memory access exceeds the generated image"
   let flags ← chooseFlags.generate
   let memoryBytes ← chooseMemory.generate
   let vectorSeed ← (Generator.bytes 2112 2112).generate
@@ -120,11 +149,11 @@ def generatedState (occurrence : Occurrence) : Generator NativeGen GeneratedCase
     sseRounding := UInt64.ofNat sseRounding
   }⟩
 
-def generatedCase (catalogue : Array Occurrence) : Generator NativeGen GeneratedCase := ⟨do
+def generatedOccurrence (catalogue : Array Occurrence) : Generator NativeGen Occurrence := ⟨do
   if catalogue.isEmpty then throw <| IO.userError "cannot sample an empty instruction catalogue"
   let index ← DataSource.chooseNat 0 (catalogue.size - 1)
   let some occurrence := catalogue[index]? | throw <| IO.userError "catalogue occurrence index out of range"
-  (generatedState occurrence).generate⟩
+  pure occurrence⟩
 
 /-- Supply the generated instruction and concrete initial state to the native observer. -/
 def GeneratedCase.observerRequest (c : GeneratedCase) : MovObserver.NativeObserver.Request :=

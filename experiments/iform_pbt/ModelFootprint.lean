@@ -8,6 +8,7 @@ open Lean Ayxg.QfAbv.JsonCodec
 
 structure ModelFootprint where
   inputs : Array String
+  guardInputs : Array String
   unobservedWrites : Array String
   readsMemory : Bool
   memoryAddresses : Array Nat
@@ -68,10 +69,12 @@ def modelFootprint (artifact : Json) (functionId : String) (address : Nat) :
   let edges := edges.filter (fun edge => (natField edge "source").toOption == some address)
   if edges.isEmpty then throw "fixture instruction has no Wruh model edges"
   let mut rootsToVisit : Array Nat := #[]
+  let mut guardRoots : Array Nat := #[]
   let mut unobservedWrites : Array String := #[]
   for edge in edges do
     let summary ← field edge "summary"
     let (guard, _) ← nodeAt nodes roots (← field summary "guard")
+    guardRoots := guardRoots.push guard
     rootsToVisit := rootsToVisit.push guard
     let assignments ← (← field summary "simultaneous_update").getArr?
     if assignments.size != names.size then throw "model update does not match declarations"
@@ -100,6 +103,16 @@ def modelFootprint (artifact : Json) (functionId : String) (address : Nat) :
   for index in vars do
     let some name := names[index]? | throw "model variable index out of bounds"
     if !inputs.contains name then inputs := inputs.push name
-  pure ⟨inputs, unobservedWrites, readsMemory, addresses⟩
+  let mut guardVars := #[]
+  let mut guardSeen := #[]
+  for root in guardRoots do
+    let (s, v, _, _) ← visit nodes root guardSeen guardVars #[] false
+    guardSeen := s
+    guardVars := v
+  let mut guardInputs := #[]
+  for index in guardVars do
+    let some name := names[index]? | throw "model guard variable index out of bounds"
+    if !guardInputs.contains name then guardInputs := guardInputs.push name
+  pure ⟨inputs, guardInputs, unobservedWrites, readsMemory, addresses⟩
 
 end Wruh.IFormPbt
