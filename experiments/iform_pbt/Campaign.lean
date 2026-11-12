@@ -8,7 +8,8 @@ open Lean Hegel Wruh.IFormPbt
 structure Totals where
   matchedCount : Nat := 0
   mismatchCount : Nat := 0
-  incomplete : Nat := 0
+  incompleteOccurrences : Nat := 0
+  incompleteStates : Nat := 0
   errors : Nat := 0
   deriving Repr
 
@@ -73,12 +74,18 @@ def main (args : List String) : IO UInt32 := do
   IO.FS.createDirAll workDir
   let engine ← FFI.Library.load hegelLibrary
   let totals ← IO.mkRef ({} : Totals)
-  let selected := sampleOccurrences catalogue occurrenceBudget (UInt64.ofNat seed)
+  let candidates := sampleOccurrences catalogue catalogue.size (UInt64.ofNat seed)
   let seenStates ← IO.mkRef (#[] : Array StateIdentity)
   let failed ← IO.mkRef false
-  IO.println s!"selected_occurrences={selected.size} requested_occurrences={occurrenceBudget} seed={seed}"
-  for occurrenceIndex in [:selected.size] do
-    let occurrence := selected[occurrenceIndex]!
+  let testedOccurrences ← IO.mkRef 0
+  let completedOccurrences ← IO.mkRef 0
+  let candidatesExamined ← IO.mkRef 0
+  let stateShortfall ← IO.mkRef 0
+  IO.println s!"candidate_occurrences={candidates.size} requested_occurrences={occurrenceBudget} seed={seed}"
+  for occurrenceIndex in [:candidates.size] do
+    if (← completedOccurrences.get) ≥ occurrenceBudget then break
+    candidatesExamined.modify (· + 1)
+    let occurrence := candidates[occurrenceIndex]!
     let occurrenceKey := s!"{occurrence.targetId}:{occurrence.binarySha256}:{occurrence.functionId}:{occurrence.address}:{occurrence.occurrenceId}"
     let hex := instructionHex occurrence.bytes
     IO.println s!"OCCURRENCE index={occurrenceIndex} id={occurrenceKey} iform={occurrence.iform} bytes={hex}"
@@ -86,11 +93,11 @@ def main (args : List String) : IO UInt32 := do
       let (fallthrough, definedFlags, addressSupported, address) ← metadata icedPython metadataScript occurrence.bytes
       if !fallthrough then
         IO.println s!"INCOMPLETE {hex}: instruction does not fall through"
-        totals.modify fun t => {t with incomplete := t.incomplete + sampleBudget}
+        totals.modify fun t => {t with incompleteOccurrences := t.incompleteOccurrences + 1}
         continue
       if !addressSupported then
         IO.println s!"INCOMPLETE {hex}: unsupported memory address shape"
-        totals.modify fun t => {t with incomplete := t.incomplete + sampleBudget}
+        totals.modify fun t => {t with incompleteOccurrences := t.incompleteOccurrences + 1}
         continue
       let first : GeneratedCase := ⟨occurrence, #[], 0, 0, ByteArray.empty, ByteArray.empty, 0⟩
       let artifactPath := System.FilePath.mk (workDir ++ "/model.json")
@@ -103,18 +110,19 @@ def main (args : List String) : IO UInt32 := do
         | .error error =>
           if error == "model contains scoped bindings that need dependency analysis" then
             IO.println s!"INCOMPLETE {hex}: {error}"
-            totals.modify fun t => {t with incomplete := t.incomplete + sampleBudget}
+            totals.modify fun t => {t with incompleteOccurrences := t.incompleteOccurrences + 1}
             continue
           else throw <| IO.userError error
       let unknown := footprint.inputs.filter (fun name => !generatedInput name)
       if !unknown.isEmpty || !footprint.unobservedWrites.isEmpty then
         IO.println s!"INCOMPLETE {hex}: model inputs={unknown}, unobserved writes={footprint.unobservedWrites}"
-        totals.modify fun t => {t with incomplete := t.incomplete + sampleBudget}
+        totals.modify fun t => {t with incompleteOccurrences := t.incompleteOccurrences + 1}
         continue
       let addresses ← match memoryAddressExprs json model footprint with
         | .ok addresses => pure addresses
         | .error error => throw <| IO.userError error
       let accepted ← IO.mkRef 0
+      let comparisons ← IO.mkRef 0
       let failureSerial ← IO.mkRef 0
       let failedStates ← IO.mkRef (#[] : Array StateIdentity)
       let settings : Hegel.Settings := {
@@ -145,6 +153,7 @@ def main (args : List String) : IO UInt32 := do
             else
               seenStates.modify (·.push id)
               accepted.modify (· + 1)
+              comparisons.modify (· + 1)
               IO.println s!"MATCH {hex} {occurrence.iform} sample={i} rax={c.gprs[0]!} flags={c.flags} vector0={c.vectorSeed[0]!}"
               totals.modify fun t => {t with matchedCount := t.matchedCount + 1}
             return true
@@ -156,6 +165,7 @@ def main (args : List String) : IO UInt32 := do
               failedStates.modify (·.push id)
               seenStates.modify (·.push id)
               accepted.modify (· + 1)
+              comparisons.modify (· + 1)
               let serial ← failureSerial.get
               failureSerial.modify (· + 1)
               saveFailure workDir seed occurrenceIndex i serial c (reprStr differences)
@@ -167,9 +177,8 @@ def main (args : List String) : IO UInt32 := do
               IO.println s!"FAILURE_REPLAY_INCOMPLETE {hex}: {reason}"
             else
               seenStates.modify (·.push id)
-              accepted.modify (· + 1)
               IO.println s!"INCOMPLETE {hex}: {reason}"
-              totals.modify fun t => {t with incomplete := t.incomplete + 1}
+              totals.modify fun t => {t with incompleteStates := t.incompleteStates + 1}
             return true
         catch error =>
           testCase.note s!"error for {hex}: {error}"
@@ -178,7 +187,6 @@ def main (args : List String) : IO UInt32 := do
           else
             failedStates.modify (·.push id)
             seenStates.modify (·.push id)
-            accepted.modify (· + 1)
             let serial ← failureSerial.get
             failureSerial.modify (· + 1)
             saveFailure workDir seed occurrenceIndex i serial c (toString error)
@@ -188,16 +196,25 @@ def main (args : List String) : IO UInt32 := do
       if result.status != .passed then failed.set true
       for report in result.reproductions do
         unless report.isEmpty do IO.println report
+      if (← comparisons.get) > 0 then testedOccurrences.modify (· + 1)
+      if (← comparisons.get) ≥ sampleBudget then completedOccurrences.modify (· + 1)
       let shortfall := sampleBudget - (← accepted.get)
       if shortfall > 0 then
-        IO.println s!"INCOMPLETE {hex}: {shortfall} distinct states not generated within budget"
-        totals.modify fun t => {t with incomplete := t.incomplete + shortfall}
+        IO.println s!"STATE_SHORTFALL {hex}: {shortfall} comparisons not reached within generation budget"
+        stateShortfall.modify (· + shortfall)
     catch error =>
       IO.println s!"ERROR {hex}: {error}"
       totals.modify fun t => {t with errors := t.errors + 1}
       failed.set true
   let counts ← totals.get
   let uniqueStates := (← seenStates.get).size
-  IO.println s!"selected_occurrences={selected.size} distinct_states={uniqueStates} matches={counts.matchedCount} mismatches={counts.mismatchCount} incomplete={counts.incomplete} errors={counts.errors}"
-  if (← failed.get) || counts.mismatchCount != 0 || counts.errors != 0 || counts.matchedCount == 0 then return 1
+  let tested ← testedOccurrences.get
+  let completed ← completedOccurrences.get
+  let examined ← candidatesExamined.get
+  let missing := occurrenceBudget - completed
+  let missingStates ← stateShortfall.get
+  let comparisons := counts.matchedCount + counts.mismatchCount
+  let comparisonShortfall := occurrenceBudget * sampleBudget - comparisons
+  IO.println s!"requested_occurrences={occurrenceBudget} candidates_examined={examined} tested_occurrences={tested} completed_occurrences={completed} occurrence_shortfall={missing} distinct_states={uniqueStates} comparisons={comparisons} comparison_shortfall={comparisonShortfall} matches={counts.matchedCount} mismatches={counts.mismatchCount} incomplete_occurrences={counts.incompleteOccurrences} incomplete_states={counts.incompleteStates} state_shortfall={missingStates} errors={counts.errors}"
+  if (← failed.get) || counts.mismatchCount != 0 || counts.errors != 0 || missing != 0 then return 1
   return 0
