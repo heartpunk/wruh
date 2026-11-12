@@ -592,6 +592,20 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
                 for address in sorted(set(jump_tables) & walked_indirect_sites)
             ]
 
+        # Whole-block VEX can fold an indirect jump to a constant after an
+        # earlier assignment. Coverage describes isolated instruction targets,
+        # independently of the sites used to validate pinned jump tables.
+        coverage_sites = set(walked_indirect_sites)
+        for block in blocks:
+            for instruction in block["instructions"]:
+                decoded = list(pinned.project.arch.capstone.disasm(
+                    bytes.fromhex(instruction["bytes"]), instruction["address"]
+                ))
+                if (len(decoded) == 1 and decoded[0].group(capstone.CS_GRP_JUMP)
+                        and decoded[0].operands
+                        and decoded[0].operands[0].type != capstone.x86.X86_OP_IMM):
+                    coverage_sites.add(instruction["address"])
+
         output_roots[root_name] = {
             "address": entry,
             "blocks": blocks,
@@ -600,8 +614,8 @@ def build_static_cfg(pinned: PinnedBinary) -> dict[str, Any]:
             "symbol": root["symbol"],
             "extraction_coverage": {
                 "scope": "intraprocedural-jumps-only",
-                "status": "partial-indirect" if walked_indirect_sites else "direct-cfg",
-                "unresolved_indirect_sites": sorted(walked_indirect_sites),
+                "status": "partial-indirect" if coverage_sites else "direct-cfg",
+                "unresolved_indirect_sites": sorted(coverage_sites),
                 "discovery": "loaded-table-seeds-do-not-bound-symbolic-targets",
             },
             **({key: root[key] for key in ("image_sha256", "object_path") if key in root}),

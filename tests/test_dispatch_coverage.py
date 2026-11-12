@@ -9,6 +9,7 @@ preload_libstdcxx()
 import json
 import struct
 import tempfile
+import unittest
 from dataclasses import replace
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from ayxg.z3 import declaration_variables, expr_to_z3
 
 from extractor.binary_cfg import build_static_cfg
 from extractor.binary_inventory import (
+    InventoryError,
     exact_symbol_inventory_policy,
     inventory,
     load_pinned_binary,
@@ -280,6 +282,36 @@ def check_discovery_boundaries():
                 assert len(root['blocks']) == 1
             checked.append(case)
     assert checked == list(cases)
+
+
+def test_constant_folded_indirect_jump_coverage_roundtrip():
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / 'dispatch.elf'
+        code, _, _, _ = write_fixture(path)
+        image = bytearray(path.read_bytes())
+        # movabs rax, local target; jmp rax; ret.
+        body = b'\x48\xb8' + struct.pack('<Q', ENTRY + 12) + b'\xff\xe0\xc3'
+        image[0x1000:0x1000 + len(code)] = body + b'\x90' * (len(code) - len(body))
+        path.write_bytes(image)
+        for open_transfers in (False, True):
+            policy = exact_symbol_inventory_policy(('dispatch',), open_transfers=open_transfers, discover_direct_targets=False)
+            manifest = inventory(path, policy)
+            manifest_path = path.with_suffix('.json')
+            manifest_path.write_text(json.dumps(manifest))
+            pinned = load_pinned_binary(path, manifest_path, policy)
+            block = pinned.project.factory.block(ENTRY)
+            assert block.vex.next.con.value == ENTRY + 12
+            if not open_transfers:
+                with unittest.TestCase().assertRaisesRegex(InventoryError, "has no decodable relative-table prelude"):
+                    build_static_cfg(pinned)
+                continue
+            cfg = build_static_cfg(pinned)
+            assert cfg['roots']['dispatch']['extraction_coverage']['unresolved_indirect_sites'] == [ENTRY + 10]
+            function = extract_fresh_function(pinned, cfg, 'dispatch')
+            jump, = [edge for edge in function.local_edges if edge.source == ENTRY + 10]
+            assert jump.summary.target.kind == 'symbolic'
+            restored = FreshFunction.from_data(json.loads(function.canonical_json()))
+            assert restored.canonical_json() == function.canonical_json()
 
 
 def main():
