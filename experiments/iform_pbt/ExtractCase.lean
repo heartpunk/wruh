@@ -8,6 +8,9 @@ private def hexByte (b : UInt8) : String := Id.run do
   let n := b.toNat
   return String.ofList [digits[n / 16]!, digits[n % 16]!]
 
+def instructionHex (bytes : ByteArray) : String :=
+  String.join (bytes.data.toList.map hexByte)
+
 private def checkedProcess (cmd : String) (args : Array String) : IO Unit := do
   let result ← IO.Process.output { cmd, args }
   if result.exitCode != 0 then
@@ -16,8 +19,8 @@ private def checkedProcess (cmd : String) (args : Array String) : IO Unit := do
 /-- Extract the sampled bytes through the regular Wruh CLI and read its model. -/
 def GeneratedCase.extractModel (c : GeneratedCase) (stubBuilder wruh : String)
     (elfPath artifactPath : System.FilePath) (functionId : String) : IO ExtractedTarget := do
-  let bytes := String.join (c.occurrence.bytes.data.toList.map hexByte)
-  checkedProcess stubBuilder #[bytes, elfPath.toString]
+  let bytes := instructionHex c.occurrence.bytes
+  checkedProcess "bash" #[stubBuilder, bytes, elfPath.toString]
   checkedProcess wruh #["--artifact", elfPath.toString, "--root", functionId,
     "--root-only", "--output", artifactPath.toString]
   let json ← match Lean.Json.parse (← IO.FS.readFile artifactPath) with

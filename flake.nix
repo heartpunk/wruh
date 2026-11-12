@@ -107,6 +107,9 @@
       packages = censusPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
+            icedPython = if system == "x86_64-linux" then
+              import ./experiments/iform_pbt/iced-python.nix { inherit pkgs; }
+              else null;
             buildbuddyRbe = pkgs.mkShell {
               packages = [
                 ifrl.packages.${system}.angr-python
@@ -144,6 +147,7 @@
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
           WRUH_HEGEL_LIBRARY = pkgs.lib.optionalString (system == "x86_64-linux")
             "${censusPackages.x86_64-linux.hegelRuntime}/lib/libhegel_c.so";
+          WRUH_ICED_PYTHON = if icedPython == null then "" else "${icedPython}/bin/python3";
           shellHook = ''
             # Use IFRL's shared Python environment after inherited hooks run.
             export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
