@@ -24,7 +24,7 @@ registers = [iced.Register.RAX, iced.Register.RCX, iced.Register.RDX,
              iced.Register.R15]
 address = None
 supported = not memory
-if len(memory) == 1:
+if len(memory) == 1 and not (instruction.has_rep_prefix or instruction.has_repne_prefix):
     access = memory[0]
     width = iced.MemorySizeExt.size(access.memory_size)
     displacement = access.displacement
