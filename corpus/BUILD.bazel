@@ -1,4 +1,14 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
 exports_files(["templates.c", "provenance.json"] + glob(["real/*"]))
 
-exports_files(["native/harness.c"])
+exports_files(["BUILD.bazel", "native/harness.c", "native/step_runner.c"])
 exports_files(["native/sandbox.py"])
+
+cc_binary(
+    name = "native_step_runner",
+    visibility = ["//extractor:__pkg__"],
+    srcs = ["native/step_runner.c"],
+    copts = ["-std=c11", "-Wall", "-Wextra", "-Werror"],
+    target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+)
