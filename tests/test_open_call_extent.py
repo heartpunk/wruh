@@ -9,6 +9,7 @@ preload_libstdcxx()
 
 import hashlib
 import json
+import os
 import struct
 import subprocess
 import sys
@@ -329,7 +330,13 @@ def main() -> None:
         for candidate in CLI_ROOTS[1:]:
             command.extend(("--candidate-root", candidate))
         command.extend(("--output", str(output)))
-        subprocess.run(command, check=True)
+        # The Bazel launcher supplies import roots through sys.path; retain
+        # those declared roots when starting a raw interpreter for the CLI.
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = os.pathsep.join(
+            str(Path(path).absolute()) for path in sys.path if path
+        )
+        subprocess.run(command, check=True, env=environment)
         bundle = loads(output.read_text(encoding="utf-8"))
         project = load_object_set(artifact)
         for symbol_name, _, code in FIXTURES:
