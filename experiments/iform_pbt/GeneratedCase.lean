@@ -27,6 +27,47 @@ structure GeneratedCase where
   sseRounding : UInt64
   deriving Inhabited
 
+structure StateIdentity where
+  gprs : Array UInt64
+  flags : UInt64
+  memoryAddress : UInt64
+  memoryBytes : ByteArray
+  vectorSeed : ByteArray
+  sseRounding : UInt64
+  deriving BEq
+
+def GeneratedCase.stateIdentity (c : GeneratedCase) : StateIdentity :=
+  ⟨c.gprs, c.flags, c.memoryAddress, c.memoryBytes, c.vectorSeed, c.sseRounding⟩
+
+-- SplitMix64 supplies reproducible shuffle choices independently of Hegel's
+-- deliberate boundary-value exploration. Rejection avoids modulo bias.
+private def nextRandom (state : UInt64) : UInt64 × UInt64 := Id.run do
+  let state := state + 0x9e3779b97f4a7c15
+  let mut z := state
+  z := (z ^^^ (z >>> 30)) * 0xbf58476d1ce4e5b9
+  z := (z ^^^ (z >>> 27)) * 0x94d049bb133111eb
+  return (state, z ^^^ (z >>> 31))
+
+def sampleOccurrences (catalogue : Array Occurrence) (budget : Nat)
+    (seed : UInt64) : Array Occurrence := Id.run do
+  let mut result := catalogue
+  let mut state := seed
+  for i in [:min budget result.size] do
+    let bound := UInt64.ofNat (result.size - i)
+    let threshold := (0 - bound) % bound
+    let mut draw : UInt64 := 0
+    let mut ready := false
+    while !ready do
+      let (next, value) := nextRandom state
+      state := next
+      draw := value
+      ready := draw ≥ threshold
+    let j := i + (draw % bound).toNat
+    let first := result[i]!
+    result := result.set! i result[j]!
+    result := result.set! j first
+  return result.extract 0 (min budget result.size)
+
 structure SimpleAddress where
   base : Nat
   displacement : UInt64
