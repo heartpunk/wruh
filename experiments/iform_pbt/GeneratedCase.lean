@@ -190,12 +190,6 @@ def generatedState (occurrence : Occurrence) (address : Option SimpleAddress := 
     sseRounding := UInt64.ofNat sseRounding
   }⟩
 
-def generatedOccurrence (catalogue : Array Occurrence) : Generator NativeGen Occurrence := ⟨do
-  if catalogue.isEmpty then throw <| IO.userError "cannot sample an empty instruction catalogue"
-  let index ← DataSource.chooseNat 0 (catalogue.size - 1)
-  let some occurrence := catalogue[index]? | throw <| IO.userError "catalogue occurrence index out of range"
-  pure occurrence⟩
-
 /-- Supply the generated instruction and concrete initial state to the native observer. -/
 def GeneratedCase.observerRequest (c : GeneratedCase) : MovObserver.NativeObserver.Request :=
   { instruction := c.occurrence.bytes
