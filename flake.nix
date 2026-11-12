@@ -74,10 +74,10 @@
             buildConfiguration = "Nixpkgs Node.js executable, dontStrip=true";
           };
           censusQemu = censusTarget {
-            packageName = "qemu";
-            package = pkgs.qemu;
+            packageName = "qemu-host-cpu-only";
+            package = pkgs.qemu.override { hostCpuOnly = true; gtkSupport = false; };
             binaryPattern = "*/bin/qemu-system-x86_64";
-            buildConfiguration = "Nixpkgs QEMU x86_64 system emulator executable, dontStrip=true";
+            buildConfiguration = "Nixpkgs QEMU x86_64 system emulator, hostCpuOnly=true, gtkSupport=false, dontStrip=true";
           };
           censusBun = censusTarget {
             packageName = "bun";
