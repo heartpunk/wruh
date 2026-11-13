@@ -128,27 +128,29 @@ class Ud2TerminalTests(unittest.TestCase):
                 else:
                     self.assertEqual(calls, [])
 
-    def test_static_cfg_inventory_rejects_overlapping_blocks(self):
-        with self.assertRaisesRegex(InventoryError, "overlapping static block"):
-            _validate_block_partition(
-                root_name="sample",
-                entry=0x1000,
-                extent_end=0x1005,
-                blocks=[
-                    {
-                        "address": 0x1000,
-                        "size": 4,
-                        "instructions": [{"address": 0x1000, "size": 4}],
-                        "successors": [],
-                    },
-                    {
-                        "address": 0x1002,
-                        "size": 3,
-                        "instructions": [{"address": 0x1002, "size": 3}],
-                        "successors": [],
-                    },
-                ],
-            )
+    def test_static_cfg_inventory_accepts_overlapping_instruction_streams(self):
+        _validate_block_partition(
+            root_name="sample",
+            entry=0x1000,
+            extent_end=0x1005,
+            blocks=[
+                {
+                    "address": 0x1000,
+                    "size": 4,
+                    "instructions": [
+                        {"address": 0x1000, "size": 1},
+                        {"address": 0x1001, "size": 3},
+                    ],
+                    "successors": [0x1002],
+                },
+                {
+                    "address": 0x1002,
+                    "size": 3,
+                    "instructions": [{"address": 0x1002, "size": 3}],
+                    "successors": [0x1000],
+                },
+            ],
+        )
 
     def test_ordinary_decode_failures_and_zero_length_imarks_are_rejected(self):
         ud2 = {"mnemonic": "ud2", "bytes": "0f0b", "size": 2,
