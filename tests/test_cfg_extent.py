@@ -1,8 +1,8 @@
 """Exercise recovered CFG scope using short AMD64 instruction fixtures."""
 
 import io
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 
 import angr
 
