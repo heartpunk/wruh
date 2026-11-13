@@ -1,6 +1,7 @@
 """PAUSE is a sequential fallthrough, not a general Yield rewrite."""
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from extractor import runtime
 from extractor.binary_cfg import _is_amd64_pause_yield, _walk_function
@@ -23,6 +24,24 @@ class PauseYieldTest(unittest.TestCase):
         for args in cases:
             with self.subTest(args=args):
                 self.assertFalse(_is_amd64_pause_yield(*args))
+
+    def test_unknown_yield_remains_rejected_by_cfg(self):
+        address = 0x400000
+        project = runtime.angr.load_shellcode(b"\x90\xc3", arch="amd64", load_address=address)
+        original_block = project.factory.block
+
+        def yield_non_pause(*args, **kwargs):
+            block = original_block(*args, **kwargs)
+            block.vex.jumpkind = "Ijk_Yield"
+            return block
+
+        pinned = PinnedBinary(Path("<synthetic-yield>"), {"open_transfers": True}, project)
+        with patch.object(project.factory, "block", side_effect=yield_non_pause):
+            with self.assertRaisesRegex(InventoryError, "unsupported jumpkind.*Ijk_Yield"):
+                _walk_function(
+                    pinned, root_name="unknown",
+                    root={"address": address, "size": 2}, jump_tables={},
+                )
 
     def test_pause_at_boundary_respects_open_transfer_policy(self):
         address = 0x400000
