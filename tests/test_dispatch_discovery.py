@@ -1,5 +1,6 @@
 """Real instruction models recover dispatch across copies and unrelated work."""
 
+import json
 import hashlib
 import struct
 import unittest
@@ -101,6 +102,60 @@ class DispatchDiscoveryTests(unittest.TestCase):
                 jump = instructions[-1]["address"]
                 edge, = [e for e in fresh.local_edges if e.source == jump]
                 self.assertEqual(edge.summary.target.kind, "symbolic")
+
+    def relative(self, *, bounded=True, unsigned=False, modified=False, positive=False):
+        code = b"\x48\x8d\x15" + struct.pack("<i", TABLE - (BASE + 7))
+        code += b"\x48\x89\xf0"  # mov rax, rsi
+        if bounded:
+            code += b"\x83\xe0\x01"
+        if modified:
+            value = FIRST - TABLE if modified == "compatible" else 0
+            code += (b"\xc7\x07" if modified == "ambiguous" else b"\xc7\x02")
+            code += struct.pack("<i", value)
+        code += b"\x8b\x04\x82" if unsigned else b"\x48\x63\x04\x82"
+        code += b"\x48\x01\xd0\xff\xe0"
+        raw = bytearray(b"\x90" * 0x110)
+        raw[:len(code)] = code
+        raw[0x100:0x108] = struct.pack("<ii", FIRST - TABLE, 8 if positive else SECOND - TABLE)
+        project = angr.load_shellcode(bytes(raw), arch="amd64", load_address=BASE)
+        instructions = [{"address": item.address} for item in project.arch.capstone.disasm(code, BASE)]
+        return PinnedBinary(Path(self.temporary.name) / "relative.bin", {}, project), instructions
+
+    def test_relative_signed_offsets_and_budgets(self):
+        pinned, instructions = self.relative()
+        self.assertEqual(recover_block_dispatch(pinned, instructions), [FIRST, SECOND])
+        self.assertEqual(recover_block_dispatch(pinned, instructions, max_entries=1), [])
+        pinned, instructions = self.relative(positive=True)
+        self.assertEqual(recover_block_dispatch(pinned, instructions), [FIRST, TABLE + 8])
+        pinned, instructions = self.relative(bounded=False)
+        self.assertEqual(recover_block_dispatch(pinned, instructions), [])
+
+    def test_relative_unsigned_load_remains_open(self):
+        pinned, instructions = self.relative(unsigned=True)
+        self.assertEqual(recover_block_dispatch(pinned, instructions), [])
+
+    def test_relative_store_feasibility(self):
+        for modification, expected in (
+            (True, [SECOND]),  # The overwritten first entry is incompatible.
+            ("compatible", [FIRST, SECOND]),
+            ("ambiguous", [FIRST, SECOND]),  # Nonaliasing witnesses exist.
+        ):
+            with self.subTest(modification=modification):
+                pinned, instructions = self.relative(modified=modification)
+                self.assertEqual(recover_block_dispatch(pinned, instructions), expected)
+
+    def test_qemu_actual_relative_table(self):
+        fixture_path = Path(__file__).parent / "fixtures/qemu-11.1.2-relative-dispatch/fixture.json"
+        data = json.loads(fixture_path.read_text())
+        code = bytes.fromhex(data["code_hex"])
+        table = bytes.fromhex(data["table_hex"])
+        raw = bytearray(data["table"] - data["entry"] + len(table))
+        raw[:len(code)] = code
+        raw[-len(table):] = table
+        project = angr.load_shellcode(bytes(raw), arch="amd64", load_address=data["entry"])
+        instructions = [{"address": item.address} for item in project.arch.capstone.disasm(code, data["entry"])]
+        pinned = PinnedBinary(fixture_path, {}, project)
+        self.assertEqual(recover_block_dispatch(pinned, instructions), sorted(data["targets"]))
 
     def test_clobbered_table_base_is_not_reused(self):
         pinned, instructions = self.pinned(clobbered=True)
