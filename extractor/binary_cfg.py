@@ -169,6 +169,23 @@ def _assign_discovered_call_blocks(
         )
 
 
+def _is_amd64_pause_yield(
+    arch_name: str, jumpkind: str, instructions: list[dict[str, Any]],
+    block_end: int, target: int | None,
+) -> bool:
+    """Recognize only VEX's normal fallthrough after the x86 PAUSE hint."""
+    if arch_name != "AMD64" or jumpkind != "Ijk_Yield" or not instructions:
+        return False
+    last = instructions[-1]
+    return (
+        last["mnemonic"] == "pause"
+        and last["bytes"] == "f390"
+        and last["size"] == 2
+        and last["address"] + 2 == block_end
+        and target == block_end
+    )
+
+
 def _recover_relative_jump_tables(
     pinned: PinnedBinary,
     *,
@@ -562,6 +579,19 @@ def _walk_function(
             elif not pinned.manifest.get("open_transfers"):
                 raise InventoryError(
                     f"{root_name}: call fallthrough leaves the function"
+                )
+        elif _is_amd64_pause_yield(
+            pinned.project.arch.name, jumpkind, instructions,
+            block_address + decoded_size, _constant_target(block.vex.next),
+        ):
+            # PAUSE is an architectural spin-wait hint: VEX yields, but the
+            # sequential instruction-state transition resumes at fallthrough.
+            fallthrough = block_address + decoded_size
+            if _region_end(regions, fallthrough) is not None:
+                successors.add(fallthrough)
+            elif not pinned.manifest.get("open_transfers"):
+                raise InventoryError(
+                    f"{root_name}: PAUSE fallthrough leaves the function"
                 )
         elif jumpkind == "Ijk_Boring":
             target = _constant_target(block.vex.next)
