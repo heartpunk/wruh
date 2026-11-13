@@ -3,14 +3,13 @@
 import unittest
 
 from extractor import runtime
-
-angr = runtime.angr
-claripy = runtime.claripy
-
 from extractor.amd64_state import (
     Amd64AdapterError,
     _concretize_unique_register_read_offset,
 )
+
+angr = runtime.angr
+claripy = runtime.claripy
 
 
 class SymbolicRegisterOffsetTests(unittest.TestCase):
@@ -32,10 +31,16 @@ class SymbolicRegisterOffsetTests(unittest.TestCase):
                 state.inspect.reg_read_offset = offset
                 constraints = tuple(state.solver.constraints)
                 _concretize_unique_register_read_offset(state)
-                self.assertEqual(state.inspect.reg_read_offset, 0x9A8 + ((selector - 1) & 7))
+                self.assertEqual(
+                    state.inspect.reg_read_offset, 0x9A8 + ((selector - 1) & 7)
+                )
                 self.assertEqual(tuple(state.solver.constraints), constraints)
                 for upper in (0, 8, 0xFFFFFFF8):
-                    self.assertTrue(state.solver.satisfiable(extra_constraints=(ftop == (upper | selector),)))
+                    self.assertTrue(
+                        state.solver.satisfiable(
+                            extra_constraints=(ftop == (upper | selector),)
+                        )
+                    )
 
     def test_ambiguous_offset_is_rejected_without_adding_a_constraint(self):
         state = self.state()
