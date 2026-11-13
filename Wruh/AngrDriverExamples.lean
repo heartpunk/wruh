@@ -26,3 +26,7 @@ example :
   decide
 
 end Wruh.AngrDriverExamples
+
+example : parseFaultKind "Ijk_SigILL" (some "invalid_opcode") =
+    .ok (some .invalidOpcode) := by
+  rfl

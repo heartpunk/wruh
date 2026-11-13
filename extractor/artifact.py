@@ -18,6 +18,7 @@ _FAULT_KIND_PAIRS = {
     ("Ijk_SigFPE_IntDiv", "integer_division"),
     ("Ijk_SigTRAP", "signal_trap"),
     ("Ijk_SigTRAP", "general_protection"),
+    ("Ijk_SigILL", "invalid_opcode"),
 }
 
 
