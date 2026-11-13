@@ -226,6 +226,13 @@ class InstructionOutcomesTest(unittest.TestCase):
                             [(v["rip"] == PC, PC + 5, {"rax": 0x12345678})],
                             domain=v["rbx"] == 0)
 
+    def test_pause_preserves_state_and_continues_to_the_next_instruction(self):
+        # PAUSE; NOP; RET.  Test the serialized production extraction, not
+        # just VEX's direct representation of PAUSE.
+        function, edges, v, ctx = self.extract("f39090c3", [0, 2, 3])
+        self.check_relation(function, edges, v, ctx,
+                            [(v["rip"] == PC, PC + 2, {})])
+
     def test_eax_write_zero_extends_and_preserves_other_state(self):
         function, edges, v, ctx = self.extract("b878563412c3", [0, 5])
         self.check_relation(function, edges, v, ctx,
