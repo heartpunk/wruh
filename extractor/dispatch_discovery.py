@@ -45,18 +45,51 @@ def recover_block_dispatch(
     context = z3.Context()
     variables = declaration_variables(declarations, context)
     expression = z3.simplify(expr_to_z3(target.value, variables, context))
-    # The existing instruction model represents a little-endian word load as
-    # a concat of eight byte selects. Match that semantic expression, rather
-    # than any register allocation or sequence of machine instructions.
-    if not z3.is_app_of(expression, z3.Z3_OP_CONCAT) or expression.num_args() != 8:
+    # Collect the loaded bytes without descending into their addresses (which
+    # may themselves depend on an input-memory index). Recognize the target
+    # algebraically, so Z3's expansion of SignExt into concat/extract is harmless.
+    reads_by_id = {}
+    def collect(node):
+        if z3.is_select(node):
+            reads_by_id[node.get_id()] = node
+            return
+        for child in node.children():
+            collect(child)
+    collect(expression)
+    reads = list(reads_by_id.values())
+    width = len(reads)
+    if width not in (4, 8) or any(
+        not read.arg(0).eq(variables["mem"]) for read in reads
+    ):
         return []
-    reads = list(reversed(expression.children()))
-    if any(not z3.is_select(read) or not read.arg(0).eq(variables["mem"])
-           for read in reads):
+    # Find the low byte by proving that every other byte is at a consecutive
+    # address. Do not depend on expression traversal order.
+    for first in reads:
+        ordered = []
+        for offset in range(width):
+            matches = [read for read in reads if z3.is_true(z3.simplify(
+                read.arg(1) == first.arg(1) + offset))]
+            if len(matches) != 1:
+                break
+            ordered.append(matches[0])
+        if len(ordered) == width:
+            reads = ordered
+            break
+    else:
         return []
     address = reads[0].arg(1)
-    if any(not z3.is_true(z3.simplify(read.arg(1) == address + offset))
-           for offset, read in enumerate(reads)):
+    word = z3.FreshConst(z3.BitVecSort(width * 8, ctx=context), "dispatch_word")
+    computed = z3.simplify(z3.substitute(expression, *[
+        (read, z3.Extract(8 * index + 7, 8 * index, word))
+        for index, read in enumerate(reads)
+    ]))
+    base = z3.simplify(z3.substitute(computed, (word, z3.BitVecVal(0, width * 8, ctx=context))))
+    if not z3.is_bv_value(base):
+        return []
+    expected = word if width == 8 else base + z3.SignExt(32, word)
+    # Absolute pointers retain their existing shape; relative entries require
+    # a concrete additive base and signed 32-bit displacement.
+    if not z3.is_true(z3.simplify(computed == expected)):
         return []
 
     solver = z3.Solver(ctx=context)
@@ -67,7 +100,7 @@ def recover_block_dispatch(
     # that, even when an index happens to be small.
     solver.push()
     solver.add(z3.Or(z3.ULT(address, obj.min_addr),
-                     z3.UGT(address, obj.max_addr - 7)))
+                     z3.UGT(address, obj.max_addr - (width - 1))))
     within_object = solver.check() == z3.unsat
     solver.pop()
     if not within_object:
@@ -89,12 +122,13 @@ def recover_block_dispatch(
             return []
     targets = set()
     for value in addresses:
-        if not (obj.contains_addr(value) and obj.contains_addr(value + 7)):
+        if not (obj.contains_addr(value) and obj.contains_addr(value + width - 1)):
             continue
         try:
-            raw = pinned.project.loader.memory.load(value, 8)
+            raw = pinned.project.loader.memory.load(value, width)
         except KeyError:
             continue
-        if len(raw) == 8:
-            targets.add(int.from_bytes(raw, "little"))
+        if len(raw) == width:
+            loaded = int.from_bytes(raw, "little", signed=width == 4)
+            targets.add((loaded + (base.as_long() if width == 4 else 0)) % (1 << 64))
     return sorted(targets)
