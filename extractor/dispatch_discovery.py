@@ -15,7 +15,7 @@ def recover_block_dispatch(
     """Compose existing instruction summaries; inspect a bounded pointer load.
 
     No predecessor search or cross-block iteration is performed. Unknown bases,
-    modified table memory, and computations outside the budget remain open.
+    infeasible loaded-image values, and computations outside the budget remain open.
     """
     import z3
     from ayxg.expr import TypedExpr
@@ -58,9 +58,17 @@ def recover_block_dispatch(
     collect(expression)
     reads = list(reads_by_id.values())
     width = len(reads)
-    if width not in (4, 8) or any(
-        not read.arg(0).eq(variables["mem"]) for read in reads
-    ):
+    if width not in (4, 8):
+        return []
+    memory = reads[0].arg(0)
+    if any(not read.arg(0).eq(memory) for read in reads):
+        return []
+    if width == 8 and not memory.eq(variables["mem"]):
+        return []  # Preserve the absolute-pointer recovery contract.
+    original = memory
+    while z3.is_store(original):
+        original = original.arg(0)
+    if not original.eq(variables["mem"]):
         return []
     # Find the low byte by proving that every other byte is at a consecutive
     # address. Do not depend on expression traversal order.
@@ -130,5 +138,18 @@ def recover_block_dispatch(
             continue
         if len(raw) == width:
             loaded = int.from_bytes(raw, "little", signed=width == 4)
-            targets.add((loaded + (base.as_long() if width == 4 else 0)) % (1 << 64))
+            candidate = (loaded + (base.as_long() if width == 4 else 0)) % (1 << 64)
+            if width == 4:
+                # Prologue stores may alias the table: do not erase them or
+                # assume a disjoint stack. Require a witness of this exact
+                # target under the original loaded-image bytes. This query is
+                # local to discovery; no assumptions escape into the artifact.
+                witness = z3.Solver(ctx=context)
+                witness.set(timeout=100)
+                witness.add(address == value, expression == candidate)
+                witness.add(*[variables["mem"][value + offset] == byte
+                              for offset, byte in enumerate(raw)])
+                if witness.check() != z3.sat:
+                    continue
+            targets.add(candidate)
     return sorted(targets)

@@ -109,7 +109,9 @@ class DispatchDiscoveryTests(unittest.TestCase):
         if bounded:
             code += b"\x83\xe0\x01"
         if modified:
-            code += b"\xc7\x02\x00\x00\x00\x00"  # overwrite entry
+            value = FIRST - TABLE if modified == "compatible" else 0
+            code += (b"\xc7\x07" if modified == "ambiguous" else b"\xc7\x02")
+            code += struct.pack("<i", value)
         code += b"\x8b\x04\x82" if unsigned else b"\x48\x63\x04\x82"
         code += b"\x48\x01\xd0\xff\xe0"
         raw = bytearray(b"\x90" * 0x110)
@@ -128,11 +130,19 @@ class DispatchDiscoveryTests(unittest.TestCase):
         pinned, instructions = self.relative(bounded=False)
         self.assertEqual(recover_block_dispatch(pinned, instructions), [])
 
-    def test_relative_unsigned_and_modified_tables_remain_open(self):
-        for options in ({"unsigned": True}, {"modified": True}):
-            with self.subTest(options=options):
-                pinned, instructions = self.relative(**options)
-                self.assertEqual(recover_block_dispatch(pinned, instructions), [])
+    def test_relative_unsigned_load_remains_open(self):
+        pinned, instructions = self.relative(unsigned=True)
+        self.assertEqual(recover_block_dispatch(pinned, instructions), [])
+
+    def test_relative_store_feasibility(self):
+        for modification, expected in (
+            (True, [SECOND]),  # The overwritten first entry is incompatible.
+            ("compatible", [FIRST, SECOND]),
+            ("ambiguous", [FIRST, SECOND]),  # Nonaliasing witnesses exist.
+        ):
+            with self.subTest(modification=modification):
+                pinned, instructions = self.relative(modified=modification)
+                self.assertEqual(recover_block_dispatch(pinned, instructions), expected)
 
     def test_qemu_actual_relative_table(self):
         fixture_path = Path(__file__).parent / "fixtures/qemu-11.1.2-relative-dispatch/fixture.json"
