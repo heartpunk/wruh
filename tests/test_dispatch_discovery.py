@@ -103,7 +103,7 @@ class DispatchDiscoveryTests(unittest.TestCase):
                 edge, = [e for e in fresh.local_edges if e.source == jump]
                 self.assertEqual(edge.summary.target.kind, "symbolic")
 
-    def relative(self, *, bounded=True, unsigned=False, modified=False):
+    def relative(self, *, bounded=True, unsigned=False, modified=False, positive=False):
         code = b"\x48\x8d\x15" + struct.pack("<i", TABLE - (BASE + 7))
         code += b"\x48\x89\xf0"  # mov rax, rsi
         if bounded:
@@ -114,7 +114,7 @@ class DispatchDiscoveryTests(unittest.TestCase):
         code += b"\x48\x01\xd0\xff\xe0"
         raw = bytearray(b"\x90" * 0x110)
         raw[:len(code)] = code
-        raw[0x100:0x108] = struct.pack("<ii", FIRST - TABLE, SECOND - TABLE)
+        raw[0x100:0x108] = struct.pack("<ii", FIRST - TABLE, 8 if positive else SECOND - TABLE)
         project = angr.load_shellcode(bytes(raw), arch="amd64", load_address=BASE)
         instructions = [{"address": item.address} for item in project.arch.capstone.disasm(code, BASE)]
         return PinnedBinary(Path(self.temporary.name) / "relative.bin", {}, project), instructions
@@ -123,6 +123,8 @@ class DispatchDiscoveryTests(unittest.TestCase):
         pinned, instructions = self.relative()
         self.assertEqual(recover_block_dispatch(pinned, instructions), [FIRST, SECOND])
         self.assertEqual(recover_block_dispatch(pinned, instructions, max_entries=1), [])
+        pinned, instructions = self.relative(positive=True)
+        self.assertEqual(recover_block_dispatch(pinned, instructions), [FIRST, TABLE + 8])
         pinned, instructions = self.relative(bounded=False)
         self.assertEqual(recover_block_dispatch(pinned, instructions), [])
 
