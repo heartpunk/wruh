@@ -480,6 +480,25 @@ class _SelectorSplitRequired(Exception):
         super().__init__(name)
 
 
+def _concretize_unique_register_read_offset(state: Any) -> None:
+    """Normalize only register-file offsets fixed by current state constraints.
+
+    VEX may calculate an x87 slot using a symbolic FTOP value whose low bits
+    have already been split. Its expression can remain syntactically symbolic
+    even when every satisfying state picks the same register-file byte.
+    """
+    if not state.globals.get("_wruh_capture_selectors", False):
+        return
+    offset = state.inspect.reg_read_offset
+    if hasattr(offset, "op") and offset.op != "BVV":
+        values = state.solver.eval_upto(offset, 2)
+        if len(values) != 1:
+            raise Amd64AdapterError(
+                "symbolic register-file offset cannot identify selector domain"
+            )
+        state.inspect.reg_read_offset = values[0]
+
+
 def _selector_read_hook(state: Any) -> None:
     if not state.globals.get("_wruh_capture_selectors", False):
         return
@@ -551,6 +570,9 @@ def fresh_instruction_state(
                               endness=project.arch.register_endness)
     state.globals["_wruh_selector_assignments"] = assignments
     state.globals["_wruh_capture_selectors"] = True
+    state.inspect.b(
+        "reg_read", when=_angr.BP_BEFORE, action=_concretize_unique_register_read_offset
+    )
     state.inspect.b("reg_read", when=_angr.BP_AFTER, action=_selector_read_hook)
 
     flag_bvs = _seed_flag_bvs()
