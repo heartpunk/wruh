@@ -210,7 +210,7 @@ def _local_edges(
             if outcome.target_value is not None
             else outcome.target
         )
-        is_fault = outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP"}
+        is_fault = outcome.jumpkind in {"Ijk_SigFPE_IntDiv", "Ijk_SigTRAP", "Ijk_SigILL"}
         if is_fault:
             target = "error"
         fault_kind = outcome.fault_kind
@@ -218,6 +218,7 @@ def _local_edges(
             fault_kind = (
                 "integer_division"
                 if outcome.jumpkind == "Ijk_SigFPE_IntDiv"
+                else "invalid_opcode" if outcome.jumpkind == "Ijk_SigILL"
                 else "signal_trap"
             )
         result.append(

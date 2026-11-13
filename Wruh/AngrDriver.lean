@@ -12,12 +12,14 @@ inductive FaultKind where
   | integerDivision
   | signalTrap
   | generalProtection
+  | invalidOpcode
   deriving DecidableEq, Repr
 
 def faultKindName : FaultKind → String
   | .integerDivision => "integer_division"
   | .signalTrap => "signal_trap"
   | .generalProtection => "general_protection"
+  | .invalidOpcode => "invalid_opcode"
 
 def parseFaultKind (jumpkind : String) (faultKind? : Option String) :
     Except String (Option FaultKind) := do
@@ -32,6 +34,10 @@ def parseFaultKind (jumpkind : String) (faultKind? : Option String) :
       pure (some .generalProtection)
   | "Ijk_SigTRAP", none =>
       throw "missing fault_kind for Ijk_SigTRAP"
+  | "Ijk_SigILL", some "invalid_opcode" =>
+      pure (some .invalidOpcode)
+  | "Ijk_SigILL", none =>
+      throw "missing fault_kind for Ijk_SigILL"
   | _, none =>
       pure none
   | _, some _ =>
