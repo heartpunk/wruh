@@ -100,6 +100,23 @@ def recover_block_dispatch(
     if not z3.is_true(z3.simplify(computed == expected)):
         return []
 
+    # Enumerate an overapproximation of the address's input reads. Their
+    # values are unconstrained already; fresh bytes avoid making the solver
+    # analyze prologue Store chains merely to establish a masked index bound.
+    # The original address and memory remain intact in the witness query.
+    inputs = {}
+    def collect_inputs(node):
+        if z3.is_select(node):
+            inputs[node.get_id()] = node
+            return
+        for child in node.children():
+            collect_inputs(child)
+    collect_inputs(address)
+    enumeration_address = z3.simplify(z3.substitute(address, *[
+        (read, z3.FreshConst(read.sort(), "dispatch_index"))
+        for read in inputs.values()
+    ]))
+
     solver = z3.Solver(ctx=context)
     solver.set(timeout=100)
     obj = pinned.project.loader.find_object_containing(instructions[0]["address"])
@@ -107,8 +124,8 @@ def recover_block_dispatch(
     # wholly within this loaded object; a free base register cannot establish
     # that, even when an index happens to be small.
     solver.push()
-    solver.add(z3.Or(z3.ULT(address, obj.min_addr),
-                     z3.UGT(address, obj.max_addr - (width - 1))))
+    solver.add(z3.Or(z3.ULT(enumeration_address, obj.min_addr),
+                     z3.UGT(enumeration_address, obj.max_addr - (width - 1))))
     within_object = solver.check() == z3.unsat
     solver.pop()
     if not within_object:
@@ -122,8 +139,8 @@ def recover_block_dispatch(
             break
         if result != z3.sat:
             return []
-        value = solver.model().eval(address, model_completion=True).as_long()
-        solver.add(address != value)
+        value = solver.model().eval(enumeration_address, model_completion=True).as_long()
+        solver.add(enumeration_address != value)
         addresses.append(value)
     else:
         if solver.check() != z3.unsat:
