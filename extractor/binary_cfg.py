@@ -20,6 +20,47 @@ from extractor.cfg_blocks import (
 )
 
 
+def _code_regions(root: dict[str, Any]) -> tuple[tuple[int, int], ...]:
+    """Return allowed half-open code ranges, preserving recovered gaps."""
+    entry = root["address"]
+    end = entry + root["size"]
+    raw = root.get("code_ranges")
+    if raw is None:
+        return ((entry, end),)
+    if not isinstance(raw, list) or not raw:
+        raise InventoryError("recovered code ranges must be nonempty")
+    regions: list[tuple[int, int]] = []
+    for pair in raw:
+        if (not isinstance(pair, (list, tuple)) or len(pair) != 2
+                or any(type(value) is not int for value in pair)):
+            raise InventoryError("invalid recovered code range")
+        start, stop = pair
+        if not (entry <= start < stop <= end):
+            raise InventoryError("recovered code range leaves root extent")
+        regions.append((start, stop))
+    merged: list[tuple[int, int]] = []
+    for start, stop in sorted(regions):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(stop, merged[-1][1]))
+        else:
+            merged.append((start, stop))
+    if merged[0][0] != entry:
+        raise InventoryError("recovered code ranges omit entry")
+    return tuple(merged)
+
+
+def _region_end(regions: tuple[tuple[int, int], ...], address: int) -> int | None:
+    return next((end for start, end in regions if start <= address < end), None)
+
+
+def _linear_code_instructions(pinned: PinnedBinary, root: dict[str, Any]) -> list[Any]:
+    instructions = []
+    for start, end in _code_regions(root):
+        code = pinned.project.loader.memory.load(start, end - start)
+        instructions.extend(pinned.project.arch.capstone.disasm(code, start))
+    return instructions
+
+
 def _instruction_records(
     pinned: PinnedBinary, block_address: int, block_size: int
 ) -> list[dict[str, Any]]:
@@ -277,9 +318,9 @@ def _recover_open_jump_tables(
     """
     if pinned.project.arch.name != "AMD64":
         return {}
-    entry, size = root["address"], root["size"]
-    instructions = list(pinned.project.arch.capstone.disasm(
-        pinned.project.loader.memory.load(entry, size), entry))
+    entry = root["address"]
+    regions = _code_regions(root)
+    instructions = _linear_code_instructions(pinned, root)
     boundaries = {item.address for item in instructions}
     obj = pinned.project.loader.find_object_containing(entry)
     objects: dict[int, set[int]] = {}
@@ -304,6 +345,15 @@ def _recover_open_jump_tables(
             continue
         table_size = next(iter(sizes))
         following = instructions[index + 1:index + 4]
+        # Do not recognize an idiom across separate recovered code regions.
+        cursor = lea.address + lea.size
+        contiguous = []
+        for item in following:
+            if item.address != cursor:
+                break
+            contiguous.append(item)
+            cursor += item.size
+        following = contiguous
         if not following:
             continue
         jump = following[0]
@@ -352,7 +402,7 @@ def _recover_open_jump_tables(
             raw = table_bytes[offset:offset + width]
             value = int.from_bytes(raw, "little", signed=relative)
             target = (table + value) & ((1 << 64) - 1) if relative else value
-            if entry <= target < entry + size and target in boundaries:
+            if _region_end(regions, target) is not None and target in boundaries:
                 targets.add(target)
         result[jump.address] = sorted(targets)
     return result
@@ -369,6 +419,7 @@ def _walk_function(
 
     entry = root["address"]
     extent_end = entry + root["size"]
+    regions = _code_regions(root)
     queue = [entry]
     seen: set[int] = set()
     blocks: list[dict[str, Any]] = []
@@ -376,10 +427,7 @@ def _walk_function(
     walked_indirect_sites: set[int] = set()
     discovered_stop_points: set[int] = set()
 
-    code = pinned.project.loader.memory.load(entry, root["size"])
-    linear_instructions = list(
-        pinned.project.arch.capstone.disasm(code, entry)
-    )
+    linear_instructions = _linear_code_instructions(pinned, root)
     stop_points = {
         target
         for targets in jump_tables.values()
@@ -389,7 +437,7 @@ def _walk_function(
     for instruction in linear_instructions:
         fallthrough = instruction.address + instruction.size
         if instruction.mnemonic.startswith("call"):
-            if entry <= fallthrough < extent_end:
+            if _region_end(regions, fallthrough) is not None:
                 stop_points.add(fallthrough)
             continue
         if not instruction.mnemonic.startswith("j"):
@@ -398,12 +446,12 @@ def _walk_function(
             len(instruction.operands) == 1
             and instruction.operands[0].type
             == capstone.x86.X86_OP_IMM
-            and entry <= instruction.operands[0].imm < extent_end
+            and _region_end(regions, instruction.operands[0].imm) is not None
         ):
             stop_points.add(instruction.operands[0].imm)
         if (
             not instruction.mnemonic.startswith("jmp")
-            and entry <= fallthrough < extent_end
+            and _region_end(regions, fallthrough) is not None
         ):
             stop_points.add(fallthrough)
 
@@ -412,24 +460,31 @@ def _walk_function(
         if block_address in seen:
             continue
         seen.add(block_address)
+        region_end = _region_end(regions, block_address)
+        if region_end is None:
+            raise InventoryError(f"{root_name}: block starts outside recovered code")
         block = pinned.project.factory.block(
             block_address,
+            size=region_end - block_address,
             extra_stop_points=stop_points,
         )
-        if block.size <= 0 or block_address + block.size > extent_end:
+        # ``Block.size`` is the requested buffer size when passed explicitly;
+        # the IRSB records how many bytes VEX actually decoded before a branch.
+        decoded_size = block.vex.size
+        if decoded_size <= 0 or block_address + decoded_size > region_end:
             raise InventoryError(
                 f"{root_name}: block at {block_address:#x} leaves its extent"
             )
         instructions = _instruction_records(
-            pinned, block_address, block.size
+            pinned, block_address, decoded_size
         )
         imarks = tuple(
-            statement.addr
+            (statement.addr, statement.len)
             for statement in block.vex.statements
             if isinstance(statement, pyvex.stmt.IMark)
         )
         decoded_addresses = tuple(
-            instruction["address"] for instruction in instructions
+            (instruction["address"], instruction["size"]) for instruction in instructions
         )
         if imarks != decoded_addresses:
             raise InventoryError(
@@ -449,7 +504,7 @@ def _walk_function(
                     f"{root_name}: symbolic conditional target at "
                     f"{block_address:#x}"
                 )
-            if entry <= target < extent_end:
+            if _region_end(regions, target) is not None:
                 successors.add(target)
             elif not pinned.manifest.get("open_transfers"):
                 raise InventoryError(f"{root_name}: conditional edge leaves function")
@@ -501,8 +556,8 @@ def _walk_function(
                 )
             else:
                 calls_by_address[call_record["address"]] = call_record
-            fallthrough = block_address + block.size
-            if entry <= fallthrough < extent_end:
+            fallthrough = block_address + decoded_size
+            if _region_end(regions, fallthrough) is not None:
                 successors.add(fallthrough)
             elif not pinned.manifest.get("open_transfers"):
                 raise InventoryError(
@@ -511,7 +566,7 @@ def _walk_function(
         elif jumpkind == "Ijk_Boring":
             target = _constant_target(block.vex.next)
             if target is not None:
-                if not (entry <= target < extent_end):
+                if _region_end(regions, target) is None:
                     if not pinned.manifest.get("open_transfers"):
                         raise InventoryError(f"{root_name}: non-call edge leaves function")
                 else:
@@ -525,7 +580,7 @@ def _walk_function(
                     boundaries = {item.address for item in linear_instructions}
                     local_targets = {
                         address for address in discovered
-                        if entry <= address < extent_end and address in boundaries
+                        if _region_end(regions, address) is not None and address in boundaries
                     }
                     if local_targets:
                         jump_tables[site] = sorted(set(jump_tables.get(site, ())) | local_targets)
@@ -549,7 +604,7 @@ def _walk_function(
         elif is_ud2_no_decode_terminal(
             jumpkind,
             instructions,
-            block_end=block_address + block.size,
+            block_end=block_address + decoded_size,
             has_zero_length_imark=any(
                 isinstance(statement, pyvex.stmt.IMark) and statement.len == 0
                 for statement in block.vex.statements
@@ -567,7 +622,7 @@ def _walk_function(
         record = {
             "address": block_address,
             "instructions": instructions,
-            "size": block.size,
+            "size": decoded_size,
             "successors": sorted(successors),
         }
         blocks.append(record)

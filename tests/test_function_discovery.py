@@ -236,6 +236,7 @@ class ActualCfgFastDiscoveryTests(unittest.TestCase):
             self.assertEqual(candidate["identity_basis"], "cfgfast")
             digest = hashlib.sha256(binary.read_bytes()).hexdigest()
             manifest = _candidate_manifest(project, digest, binary, digest, candidate)
+            self.assertEqual(manifest["roots"][candidate["id"]]["code_ranges"], [[hidden, hidden + 6]])
             pinned = PinnedBinary(binary, manifest, project)
             cfg = build_static_cfg(pinned)
             fresh = extract_fresh_function(pinned, cfg, candidate["id"])
