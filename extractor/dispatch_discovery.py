@@ -101,7 +101,7 @@ def recover_block_dispatch(
         return []
 
     # Enumerate an overapproximation of the address's input reads. Their
-    # values are unconstrained already; fresh bytes avoid making the solver
+    # values are treated as unconstrained here; fresh bytes avoid making the solver
     # analyze prologue Store chains merely to establish a masked index bound.
     # The original address and memory remain intact in the witness query.
     inputs = {}
@@ -112,7 +112,7 @@ def recover_block_dispatch(
         for child in node.children():
             collect_inputs(child)
     collect_inputs(address)
-    enumeration_address = z3.simplify(z3.substitute(address, *[
+    enumeration_address = address if width == 8 else z3.simplify(z3.substitute(address, *[
         (read, z3.FreshConst(read.sort(), "dispatch_index"))
         for read in inputs.values()
     ]))
