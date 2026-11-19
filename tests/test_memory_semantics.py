@@ -8,11 +8,13 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 from extractor.native_runtime import preload_libstdcxx
 
 preload_libstdcxx()
 import z3
+from ayxg.codec import loads
 from ayxg.z3 import declaration_variables, expr_from_z3, expr_to_z3
 from extractor import runtime
 from extractor.amd64_state import (
@@ -24,10 +26,13 @@ from extractor.amd64_state import (
     canonical_register,
     claripy_to_z3,
     fresh_instruction_state,
+    step_instruction_outcomes,
 )
 from extractor.binary_cfg import build_static_cfg
 from extractor.binary_inventory import PinnedBinary
 from extractor.fresh import FreshFunction, extract_fresh_function
+from extractor.fresh import artifact_declarations
+from extractor.lean_angr_worker import _step
 
 PC = 0x400000
 # Independent architectural storage roster, not obtained from emitted declarations.
@@ -233,6 +238,126 @@ class MemorySemantics(unittest.TestCase):
 
                 checked.append(size)
         self.assertEqual(checked, [1, 2, 4, 8], "all store widths checked")
+
+    def test_conditional_cmpxchg_stores(self):
+        # Compare both paths over an arbitrary memory array, including bytes
+        # outside the destination. The inputs are real x86 instruction bytes.
+        for code, size in (
+            ("f0410fb109", 4),
+            ("f00fc70f", 8),
+        ):
+            with self.subTest(code=code):
+                _, summary, variables, ctx = self.extract(code)
+                guard = expr_to_z3(summary.guard, variables, ctx)
+                memory = variables["mem"]
+                address = variables["r9"] if size == 4 else variables["rdi"]
+                old = z3.Concat(
+                    *(z3.Select(memory, address + i) for i in reversed(range(size)))
+                )
+                if size == 4:
+                    expected = z3.Extract(31, 0, variables["rax"])
+                    desired = z3.Extract(31, 0, variables["rcx"])
+                else:
+                    expected = z3.Concat(
+                        z3.Extract(31, 0, variables["rdx"]),
+                        z3.Extract(31, 0, variables["rax"]),
+                    )
+                    desired = z3.Concat(
+                        z3.Extract(31, 0, variables["rcx"]),
+                        z3.Extract(31, 0, variables["rbx"]),
+                    )
+                post = expr_to_z3(
+                    next(a.value for a in summary.simultaneous_update if a.name == "mem"),
+                    variables,
+                    ctx,
+                )
+                stored = memory
+                for i in range(size):
+                    stored = z3.Store(
+                        stored, address + i, z3.Extract(8 * i + 7, 8 * i, desired)
+                    )
+                for label, branch, expected_memory in (
+                    ("success", old == expected, stored),
+                    ("failure", old != expected, memory),
+                ):
+                    self.assertEqual(self.result(z3.And(guard, branch)), z3.sat)
+                    self.prove(
+                        z3.Implies(z3.And(guard, branch), post == expected_memory),
+                        f"{code} memory after {label}",
+                    )
+
+    def test_conditional_write_metadata(self):
+        code = bytes.fromhex("f0410fb109")
+        project = runtime.angr.load_shellcode(code, arch="amd64", load_address=PC)
+        family = step_instruction_outcomes(project, PC)
+        self.assertEqual(len(family.outcomes), 1)
+        writes = family.outcomes[0].writes
+        self.assertEqual(len(writes), 1)
+        self.assertIsNotNone(writes[0].condition)
+        memory = canonical_memory()
+        address = canonical_register("r9")
+        old = z3.Concat(*(z3.Select(memory, address + i) for i in (3, 2, 1, 0)))
+        expected = z3.Extract(31, 0, canonical_register("rax"))
+        self.prove(writes[0].condition == (old == expected), "write condition")
+
+    def test_concrete_write_conditions(self):
+        project = runtime.angr.load_shellcode(b"\x90", arch="amd64", load_address=PC)
+        address = runtime.claripy.BVV(0x1000, 64)
+        memory = canonical_memory()
+        destination = z3.BitVecVal(0x1000, 64, CTX)
+        for condition, enabled in (
+            (True, True),
+            (False, False),
+            (runtime.claripy.BoolV(True), True),
+            (runtime.claripy.BoolV(False), False),
+        ):
+            with self.subTest(condition=condition):
+                state = fresh_instruction_state(project, PC)
+                state.memory.store(
+                    address, runtime.claripy.BVV(7, 8), size=1, condition=condition
+                )
+                post = _resolve_memory_reads(
+                    state.globals["_ghot_memory_expr"],
+                    state.globals["_ghot_memory_reads"],
+                )
+                expected = z3.Store(memory, destination, z3.BitVecVal(7, 8, CTX)) if enabled else memory
+                self.prove(post == expected, "concrete condition")
+
+    def test_lean_worker_preserves_conditional_write(self):
+        project = runtime.angr.load_shellcode(
+            bytes.fromhex("f0410fb109"), arch="amd64", load_address=PC
+        )
+        response = _step(SimpleNamespace(project=project), PC)
+        dag = response["expression_dag"]
+        roots = loads(json.dumps({
+            "schema": "ayxg-artifact-dag-v1",
+            "expression_dag": dag,
+            "payload": [{"$expr": i} for i in range(len(dag["roots"]))],
+        }))
+        declarations = artifact_declarations(project.arch)
+        ctx = z3.Context()
+        variables = declaration_variables(declarations, ctx)
+        self.assertEqual(len(response["outcomes"]), 1)
+        outcome = response["outcomes"][0]
+        guard = z3.And(
+            expr_to_z3(roots[response["source_guard"]], variables, ctx),
+            expr_to_z3(roots[outcome["guard"]], variables, ctx),
+        )
+        mem_index = next(i for i, d in enumerate(declarations) if d.name == "mem")
+        post = expr_to_z3(roots[outcome["updates"][mem_index]], variables, ctx)
+        memory, address = variables["mem"], variables["r9"]
+        old = z3.Concat(*(z3.Select(memory, address + i) for i in (3, 2, 1, 0)))
+        expected = z3.Extract(31, 0, variables["rax"])
+        desired = z3.Extract(31, 0, variables["rcx"])
+        stored = memory
+        for i in range(4):
+            stored = z3.Store(stored, address + i, z3.Extract(8 * i + 7, 8 * i, desired))
+        for label, branch, result in (
+            ("success", old == expected, stored),
+            ("failure", old != expected, memory),
+        ):
+            self.assertEqual(self.result(z3.And(guard, branch)), z3.sat)
+            self.prove(z3.Implies(z3.And(guard, branch), post == result), label)
 
     def test_corruptions_are_rejected(self):
         f, s, v, c = self.extract("488b07")
