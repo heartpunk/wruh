@@ -109,6 +109,7 @@ class MemoryWrite:
     address: z3.BitVecRef
     value: z3.BitVecRef
     size: int
+    condition: z3.BoolRef | None = None
 
 
 @dataclass(frozen=True)
@@ -479,6 +480,7 @@ def _memory_read_hook(state: Any) -> None:
 def _memory_write_hook(state: Any) -> None:
     address = state.inspect.mem_write_address
     value = state.inspect.mem_write_expr
+    condition = state.inspect.mem_write_condition
     if address is None or value is None:
         raise Amd64AdapterError("memory write is missing address or value")
     size = _access_size(state.inspect.mem_write_length, "memory write")
@@ -486,8 +488,14 @@ def _memory_write_hook(state: Any) -> None:
     value_z3 = claripy_to_z3(value)
     current = state.globals["_ghot_memory_expr"]
     updated = store_le(current, address_z3, value_z3, size)
+    if isinstance(condition, bool):
+        condition_z3 = z3.BoolVal(condition, ctx=LTS_EXTRACTION_CONTEXT)
+    else:
+        condition_z3 = claripy_to_z3(condition) if condition is not None else None
+    if condition_z3 is not None:
+        updated = z3.If(condition_z3, updated, current)
     writes = list(state.globals.get("_ghot_memory_writes", ()))
-    writes.append(MemoryWrite(address_z3, value_z3, size))
+    writes.append(MemoryWrite(address_z3, value_z3, size, condition_z3))
     state.globals["_ghot_memory_expr"] = updated
     state.globals["_ghot_memory_writes"] = tuple(writes)
 
@@ -773,6 +781,8 @@ def _resolved_writes(post: Any) -> tuple[MemoryWrite, ...]:
             _resolve_memory_reads(write.address, reads),
             _resolve_memory_reads(write.value, reads),
             write.size,
+            _resolve_memory_reads(write.condition, reads)
+            if write.condition is not None else None,
         )
         for write in post.globals.get("_ghot_memory_writes", ())
     )
