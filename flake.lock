@@ -13,17 +13,51 @@
         ]
       },
       "locked": {
-        "lastModified": 1794449929,
-        "narHash": "sha256-2Q+JhsTajk0/6huOs+uV1NVhdRHrLXd2k43Fw8bEadM=",
+        "lastModified": 1795304597,
+        "narHash": "sha256-9fdrd+rixb+ISmxJ+icdydgvD4T6AZ8yX1OVa3WS5hg=",
         "owner": "heartpunk",
         "repo": "ayxg",
-        "rev": "ac79cf22a6812507d4f9b5da893238e6815e9dca",
+        "rev": "132f91ddf981f89f98498c939f8c63f97ea6026e",
         "type": "github"
       },
       "original": {
         "owner": "heartpunk",
         "ref": "main",
         "repo": "ayxg",
+        "type": "github"
+      }
+    },
+    "cosmic-ray-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794332296,
+        "narHash": "sha256-nzs+U6iskgSX//2SogGkoObwYc4UTuKboUb95K7YAAc=",
+        "owner": "sixty-north",
+        "repo": "cosmic-ray",
+        "rev": "6c490ce16443d0c6c11edd6e6d36c34b153c8607",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sixty-north",
+        "ref": "master",
+        "repo": "cosmic-ray",
+        "type": "github"
+      }
+    },
+    "exit-codes-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1607330262,
+        "narHash": "sha256-5W9HOCWIisorcnbCpM7Y7g0wFE2ViBfrzwAyeHRUmfo=",
+        "owner": "sixty-north",
+        "repo": "exit-codes",
+        "rev": "efc1ba7a1ac11330f752b4ca8e4997141ec05626",
+        "type": "github"
+      },
+      "original": {
+        "owner": "sixty-north",
+        "ref": "master",
+        "repo": "exit-codes",
         "type": "github"
       }
     },
@@ -64,16 +98,18 @@
     },
     "ifrl": {
       "inputs": {
+        "cosmic-ray-src": "cosmic-ray-src",
+        "exit-codes-src": "exit-codes-src",
         "lean4-nix": "lean4-nix",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1793683693,
-        "narHash": "sha256-KP3+1oJeZVNUMANoQuANre5hbJzO2YEOO895nMMbfGg=",
+        "lastModified": 1795304423,
+        "narHash": "sha256-/2x3echJXZREZoZnDdWURqSFp54EPi3THu59KvTTXeM=",
         "owner": "heartpunk",
         "repo": "ifrl",
-        "rev": "8ddb63bc8b44132de596bee709d0dbf3ced7a8bd",
+        "rev": "3bd3b0ac934a7b7caf249fd6adce9424cfe4175e",
         "type": "github"
       },
       "original": {
@@ -117,8 +153,8 @@
       },
       "original": {
         "owner": "NixOS",
+        "ref": "master",
         "repo": "nixpkgs",
-        "rev": "e79d204daf01f8a877f7b2ce7324874ce9c84676",
         "type": "github"
       }
     },
@@ -155,17 +191,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1785216007,
-        "narHash": "sha256-KrGilCiFVxEQOaBD3TODhklZzE7uICQvqsBWgycIABA=",
+        "lastModified": 1794995857,
+        "narHash": "sha256-XWidHsxcg0iQuGea4URxcPV3rY+dB595L3Xs2xFrsPo=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "8ec8a5a41f8d8244e672829c9cd705416139d3f0",
+        "rev": "6b05b928a40211beecaaa294e6f719aa2145a2a8",
         "type": "github"
       },
       "original": {
         "owner": "oxalica",
+        "ref": "master",
         "repo": "rust-overlay",
-        "rev": "8ec8a5a41f8d8244e672829c9cd705416139d3f0",
         "type": "github"
       }
     }
