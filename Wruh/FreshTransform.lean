@@ -8,7 +8,7 @@ open Ayxg.QfAbv Wruh.Observation
 
 /-- A guarded transformer and the primitive's unchanged outcome metadata. -/
 structure Transformer (Γ : Ctx) (Metadata : Type) where
-  step : QFAbvStep Γ Γ
+  step : QFAbvStep Γ
   metadata : Metadata
 
 /-- Dense diff: retain the complete post substitution. Existing expressions and

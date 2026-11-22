@@ -8,12 +8,12 @@ variable [FPInterpretation]
 
 private def registers : Ctx := [⟨"x", .bv 8⟩, ⟨"y", .bv 8⟩]
 
-private def swap : QFAbvStep registers registers :=
+private def swap : QFAbvStep registers :=
   ⟨.boolLit true, .cons (.var (.there .here)) (.cons (.var .here) .nil)⟩
 
 private structure NamedEdge (Γ : Ctx) where
   id : Nat
-  step : QFAbvStep Γ Γ
+  step : QFAbvStep Γ
 
 private def namedEdgeSemantics {Γ : Ctx} :
     SymbolicEdgeSemantics Unit Γ (NamedEdge Γ) where

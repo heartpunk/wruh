@@ -14,13 +14,13 @@ source-indexed reference STS. The symbolic output keeps the source edge label
 and the complete composed QF_ABV step together. -/
 structure Adapter (Program Edge : Type) (Γ : Ctx) where
   reference : Program → SymbolicTransitionSystem Unit Γ Edge
-  symex : Program → QFAbvStep Γ Γ → List (TaggedSuccessor Edge Γ)
+  symex : Program → QFAbvAdapter Γ Γ → List (TaggedSuccessor Edge Γ)
 
 /-- Exact labelled symex law. For each particular label and complete target
 configuration, a returned successor with that label denotes exactly the
 reference transition. -/
 structure SymexLaws (A : Adapter P E Γ) : Prop where
-  soundComplete : ∀ (p : P) (input : QFAbvStep Γ Γ)
+  soundComplete : ∀ (p : P) (input : QFAbvAdapter Γ Γ)
       (source : Config Unit Γ) (edge : E) (target : Config Unit Γ),
     (∃ successor ∈ A.symex p input,
       successor.edge = edge ∧
@@ -35,14 +35,14 @@ configurations; the structural control component is `Unit`. -/
 def extract (A : Adapter P E Γ) (p : P) :
     SymbolicTransitionSystem Unit Γ (TaggedSuccessor E Γ) :=
   SymbolicTransitionSystem.ofSymbolicSuccessors
-    (A.symex p (QFAbvStep.identity Γ))
+    (A.symex p (QFAbvAdapter.identity Γ))
 
 /-- The extracted LTS transition is exactly membership of the retained
 successor and denotation of its complete step. -/
 theorem extract_transition_iff (A : Adapter P E Γ) (p : P)
     (source target : Config Unit Γ) (successor : TaggedSuccessor E Γ) :
     (extract A p).toLTS.Tr source successor target ↔
-      successor ∈ A.symex p (QFAbvStep.identity Γ) ∧
+      successor ∈ A.symex p (QFAbvAdapter.identity Γ) ∧
         successor.step.denotes source.env target.env := by
   cases source with
   | mk sourceControl sourceEnv =>
@@ -53,7 +53,7 @@ theorem extract_transition_iff (A : Adapter P E Γ) (p : P)
       simp [extract, SymbolicTransitionSystem.ofSymbolicSuccessors,
         SymbolicTransitionSystem.toLTS, SymbolicEdgeSemantics.denotes,
         SymbolicEdgeSemantics.nextConfig, SymbolicLabel.denotes,
-        QFAbvStep.denotes]
+        QFAbvAdapter.denotes]
 
 /-- Every extracted transition preserves its exact source label in the
 reference semantics. -/
@@ -62,10 +62,10 @@ theorem extract_transition_sound (A : Adapter P E Γ) (laws : SymexLaws A)
     (transition : (extract A p).toLTS.Tr source successor target) :
     (A.reference p).toLTS.Tr source successor.edge target := by
   have extracted := (extract_transition_iff A p source target successor).1 transition
-  have law := (laws.soundComplete p (QFAbvStep.identity Γ) source
+  have law := (laws.soundComplete p (QFAbvAdapter.identity Γ) source
       successor.edge target).1
     ⟨successor, extracted.1, rfl, extracted.2⟩
-  simpa [QFAbvStep.identity, StateUpdate.eval_identity] using law.2
+  simpa [QFAbvAdapter.identity, StateUpdate.eval_identity] using law.2
 
 /-- Every reference transition is extracted with the identical edge label and
 complete endpoint configurations. -/
@@ -74,9 +74,9 @@ theorem extract_transition_complete (A : Adapter P E Γ)
     (edge : E) (transition : (A.reference p).toLTS.Tr source edge target) :
     ∃ successor, (extract A p).toLTS.Tr source successor target ∧
       successor.edge = edge := by
-  have law := (laws.soundComplete p (QFAbvStep.identity Γ) source edge target).2
-    ⟨by simp [QFAbvStep.identity, Eval.evalBool, Eval.eval], by
-      simpa [QFAbvStep.identity, StateUpdate.eval_identity] using transition⟩
+  have law := (laws.soundComplete p (QFAbvAdapter.identity Γ) source edge target).2
+    ⟨by simp [QFAbvAdapter.identity, Eval.evalBool, Eval.eval], by
+      simpa [QFAbvAdapter.identity, StateUpdate.eval_identity] using transition⟩
   rcases law with ⟨successor, member, edgeEq, denotes⟩
   exact ⟨successor,
     (extract_transition_iff A p source target successor).2 ⟨member, denotes⟩,
