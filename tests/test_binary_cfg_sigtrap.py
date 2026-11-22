@@ -21,10 +21,10 @@ from extractor.fresh import (
 
 
 class SigtrapAdapterTest(unittest.TestCase):
-    # Nixpkgs Apache 2.4.69 from flake.lock; inspect the installed binary without
+    # Nixpkgs Apache 2.4.71 from flake.lock; inspect the installed binary without
     # copying its glibc CRT startup bytes into this repository.
     APACHE_HTTPD_SHA256 = (
-        "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9"
+        "36399fd28157325004304f84f77a5f777250fb7fc26afdc025b75c2fea07e700"
     )
 
     def test_decoded_evidence_accepts_elf_entry_symbol_owner(self):
@@ -138,7 +138,7 @@ class SigtrapAdapterTest(unittest.TestCase):
         self.assertEqual(
             hashlib.sha256(binary.read_bytes()).hexdigest(),
             self.APACHE_HTTPD_SHA256,
-            "WRUH_APACHE_HTTPD must be the pinned Nixpkgs Apache 2.4.69 binary",
+            "WRUH_APACHE_HTTPD must be the pinned Nixpkgs Apache 2.4.71 binary",
         )
         project = runtime.angr.Project(binary, auto_load_libs=False)
         start_symbol = project.loader.main_object.get_symbol("_start")
