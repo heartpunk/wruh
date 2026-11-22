@@ -312,6 +312,12 @@ def _candidate_manifest(
         "image_sha256": object_digest,
         "object_path": str(object_path),
     }
+    if candidate.get("identity_basis") == "cfgfast":
+        image_base = int(image.mapped_base)
+        root["code_ranges"] = [
+            [image_base + int(start), image_base + int(start) + int(size)]
+            for start, size in candidate["block_ranges"]
+        ]
     return {
         "arch": project.arch.name,
         "bits": project.arch.bits,
