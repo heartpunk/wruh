@@ -1,0 +1,52 @@
+{
+  "@context": "../sources-context.jsonld",
+  "@id": "sources.jsonld",
+  "@type": "SourceFileSet",
+  "target_id": "lua",
+  "binary_sha256": "16bf574842a00c95367de74b9c086cd5fa3695c6c5b1e741a03c892e29e6bd94",
+  "source_run": "https://github.com/heartpunk/wruh/actions/runs/42073510694/attempts/1",
+  "extraction_revision": "https://github.com/heartpunk/wruh/commit/3757e9281b36fb914c24a731811c16eb4896e596",
+  "files": [
+    {
+      "@id": "census.jsonld",
+      "@type": "SourceFile",
+      "sha256": "5031e9cce10cf4def12b61cf697f3dcb0c155238492727b6070d2f9e3d4351b6",
+      "size_bytes": 3395918,
+      "media_type": "application/ld+json",
+      "purpose": "Original census provenance graph."
+    },
+    {
+      "@id": "entries.jsonl",
+      "@type": "SourceFile",
+      "sha256": "45caf7dc47c9df9c802e4c916fd9e013cdf1da502f65e1b3e86a3a2d3b60aca2",
+      "size_bytes": 373160,
+      "media_type": "application/x-ndjson",
+      "purpose": "Original per-candidate disposition ledger."
+    },
+    {
+      "@id": "function-artifacts.tar.gz",
+      "@type": "SourceFile",
+      "sha256": "feaf71032a13b365ba1d47f0b8a9fdc64d3d06409a074ef06e804dca80bf6e50",
+      "size_bytes": 7404542,
+      "media_type": "application/gzip",
+      "purpose": "Original archive of successful FreshFunction JSON artifacts; contents are retained as source evidence."
+    },
+    {
+      "@id": "progress.json",
+      "@type": "SourceFile",
+      "sha256": "f0f8ec35f279656f7cbd1a64904e4ad803183e949e4ab07fbb84ed0176f83617",
+      "size_bytes": 623,
+      "media_type": "application/json",
+      "purpose": "Original census progress checkpoint."
+    },
+    {
+      "@id": "summary.json",
+      "@type": "SourceFile",
+      "sha256": "b43999b597e46883300eb50cd1f4b64eb3c8e321ea51c346552a3a83ad5b7700",
+      "size_bytes": 890,
+      "media_type": "application/json",
+      "purpose": "Original census outcome counts and report and archive digests."
+    }
+  ],
+  "@id": "sources.jsonld"
+}

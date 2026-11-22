@@ -1,0 +1,12 @@
+exports_files([
+    "catalogue.jsonl",
+    "catalogue-info.jsonld",
+    "context.jsonld",
+    "sources-context.jsonld",
+    "vocabulary.ttl",
+])
+filegroup(
+    name = "source_descriptors",
+    srcs = glob(["*/sources.jsonld", "*/summary.json", "*/progress.json", "*/entries.jsonl", "*/census.jsonld", "*/function-artifacts.tar.gz"]),
+    visibility = ["//tests:__pkg__"],
+)

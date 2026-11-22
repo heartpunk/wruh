@@ -1,0 +1,28 @@
+{
+  "artifactArchive": "function-artifacts.tar.gz",
+  "artifactArchiveSha256": "feaf71032a13b365ba1d47f0b8a9fdc64d3d06409a074ef06e804dca80bf6e50",
+  "attempted": 721,
+  "binarySha256": "16bf574842a00c95367de74b9c086cd5fa3695c6c5b1e741a03c892e29e6bd94",
+  "dispositions": {
+    "extracted": 507,
+    "failed": 214
+  },
+  "endedAt": "2026-11-05T17:35:25Z",
+  "failureCategories": {
+    "cfg:InventoryError": 210,
+    "extraction:Amd64AdapterError": 2,
+    "extraction:UnsupportedTheoryError": 2
+  },
+  "interrupted": false,
+  "inventoryCandidates": 721,
+  "reportSha256": "5031e9cce10cf4def12b61cf697f3dcb0c155238492727b6070d2f9e3d4351b6",
+  "sampling": {
+    "requestedPercentage": null,
+    "samplingPolicy": "full-census-v1",
+    "seed": null,
+    "selectedCount": 721
+  },
+  "schema": "wruh-binary-function-census-summary-v1",
+  "startedAt": "2026-11-05T17:24:02Z",
+  "targetId": "lua"
+}

@@ -1,0 +1,23 @@
+{
+  "binarySha256": "62fbc811a40e3ad0c0fc4bde563d4cac4383cde27133420f19896e1edf00d62e",
+  "completed": 670,
+  "dispositions": {
+    "extracted": 182,
+    "failed": 488
+  },
+  "failureCategories": {
+    "cfg:InventoryError": 486,
+    "extraction:UnsupportedIROpError": 2
+  },
+  "interrupted": false,
+  "inventoryCandidates": 670,
+  "sampling": {
+    "requestedPercentage": null,
+    "samplingPolicy": "full-census-v1",
+    "seed": null,
+    "selectedCount": 670
+  },
+  "schema": "wruh-binary-function-census-progress-v1",
+  "targetId": "bun",
+  "updatedAt": "2026-11-05T17:41:05Z"
+}
