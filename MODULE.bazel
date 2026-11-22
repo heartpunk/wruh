@@ -6,7 +6,7 @@ bazel_dep(name = "ifrl", version = "0.1.0")
 git_override(
     module_name = "ifrl",
     remote = "https://github.com/heartpunk/ifrl.git",
-    commit = "8b2ebf5e623cd024c5afb818dcf9159b6c20d0c7",
+    commit = "828fb149432916f8830e6e2b45d06691ae16ceea",
 )
 
 
