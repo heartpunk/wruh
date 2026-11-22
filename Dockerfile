@@ -1,6 +1,8 @@
+FROM nixos/nix:2.35.6 AS nix
+
 FROM ubuntu:25.10 AS tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      bash ca-certificates curl git nix-bin xz-utils \
+      bash ca-certificates curl git xz-utils \
     && rm -rf /var/lib/apt/lists/* \
     && userdel ubuntu \
     && useradd --uid 1000 --create-home --shell /bin/bash wruh \
@@ -11,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV USER=wruh HOME=/home/wruh NIX_REMOTE=local
 COPY nix/cache.conf /etc/nix/wruh-cache.conf
 RUN printf '%s\n' 'include /etc/nix/wruh-cache.conf' >> /etc/nix/nix.conf
+COPY --chown=1000:1000 --from=nix /nix /nix
+ENV PATH="/nix/var/nix/profiles/default/bin:$PATH" NIX_SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 USER wruh
 WORKDIR /workspace
 RUN nix-store --init
