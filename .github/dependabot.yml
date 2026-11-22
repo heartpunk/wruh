@@ -19,11 +19,6 @@ updates:
     patterns: ["*"]
     multi-ecosystem-group: "suite-dependencies"
 
-  - package-ecosystem: "pip"
-    directory: "/extractor"
-    patterns: ["*"]
-    multi-ecosystem-group: "suite-dependencies"
-
   - package-ecosystem: "docker"
     directory: "/"
     patterns: ["*"]
