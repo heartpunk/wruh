@@ -12,19 +12,45 @@ concurrency:
   group: binary-census-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  BUILDBUDDY_RBE_CONTAINER_IMAGE: ghcr.io/heartpunk/wruh-dev@sha256:5b8f558060bfa1859776413c1ef090b9133d7616d2a2746f1fe67dd8bc2e08f4
-
 jobs:
+  buildbuddy_rbe_image:
+    name: Prepare BuildBuddy remote execution image
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and publish the pinned Nix runtime image
+        id: publish
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/heartpunk/wruh-dev:rbe-${GITHUB_SHA}"
+          docker build --network=host --target buildbuddy-rbe --tag "$image" .
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker push "$image"
+          image_digest="$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')"
+          printf 'image=%s\n' "$image_digest" >> "$GITHUB_OUTPUT"
+
   census:
     name: Six binary function censuses
+    needs: buildbuddy_rbe_image
+    if: ${{ !cancelled() && (needs.buildbuddy_rbe_image.result == 'success' || needs.buildbuddy_rbe_image.result == 'skipped') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31
         with:
           github_access_token: ${{ github.token }}
           extra_nix_config: |
@@ -37,6 +63,7 @@ jobs:
       - name: Build Nix inputs and run all six censuses through Bazel
         env:
           BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+          BUILDBUDDY_RBE_CONTAINER_IMAGE: ${{ needs.buildbuddy_rbe_image.outputs.image }}
           BUILDBUDDY_REQUIRE_REMOTE: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
           CACHIX_PUSH_ENABLED: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
@@ -52,7 +79,7 @@ jobs:
           WRUH_CI_WORKFLOW: ${{ github.workflow }}
           WRUH_CI_JOB: ${{ github.job }}
         run: bash tools/run_census_ci.sh
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: binary-census-reports

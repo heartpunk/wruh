@@ -30,6 +30,9 @@ build:buildbuddy_ci --remote_executor=grpcs://remote.buildbuddy.io
 build:buildbuddy_ci --remote_instance_name=ufda
 build:buildbuddy_ci --remote_local_fallback=false
 build:buildbuddy_ci --spawn_strategy=remote
+# Start Python targets with the shell stub; the remote image does not expose
+# python3 on PATH, but supplies the declared Nix runtime interpreter.
+build:buildbuddy_ci --@rules_python//python/config_settings:bootstrap_impl=script
 test:buildbuddy_ci --strategy=TestRunner=remote
 build:buildbuddy_ci --remote_timeout=10m
 build:buildbuddy_ci --remote_download_outputs=all
