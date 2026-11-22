@@ -20,6 +20,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check AYXG dependency locks agree
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open('flake.lock') as f:
+              flake_rev = json.load(f)['nodes']['ayxg']['locked']['rev']
+          with open('lake-manifest.json') as f:
+              lake_rev = next(p['rev'] for p in json.load(f)['packages'] if p['name'] == 'ayxg')
+          if flake_rev != lake_rev:
+              raise SystemExit('AYXG revisions differ between flake.lock and lake-manifest.json')
+          PY
       - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31
         with:
           github_access_token: ${{ github.token }}
