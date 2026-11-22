@@ -138,7 +138,8 @@ def freshSuccessors (Γ : Ctx) (program : List (Site Γ)) :
   program.flatMap fun site =>
     site.outcomes.map fun outcome =>
       let transformer := Wruh.FreshTransform.transform site.sourceGuard outcome
-      { edge := (site, transformer.metadata), step := transformer.step }
+      { edge := (site, transformer.metadata),
+        step := ⟨transformer.step.guard, transformer.step.update⟩ }
 
 private abbrev RootWriter (Γ : Ctx) := StateM (Array (TypedExpr Γ))
 
@@ -193,7 +194,7 @@ def functionJson {Γ : Ctx} (declarations architecture : Json)
   for successor in tagged do
     let (site, metadata) := successor.edge
     let transformer : Wruh.FreshTransform.Transformer Γ (Metadata Γ) :=
-      ⟨successor.step, metadata⟩
+      ⟨⟨successor.step.guard, successor.step.update⟩, metadata⟩
     edges := edges.push (← edgeJson site.address transformer)
   pure <| Json.mkObj [
     ("schema", toJson "ghot-fresh-function-v1"),
