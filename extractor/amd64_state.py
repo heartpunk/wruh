@@ -55,6 +55,33 @@ _claripy = runtime.claripy
 _angr_ccall = importlib.import_module("angr.engines.vex.claripy.ccall")
 
 
+def _psadbw_64(left: Any, right: Any) -> Any:
+    """VEX amd64g_calculate_mmx_psadbw: eight unsigned byte distances."""
+    if left.size() != 64 or right.size() != 64:
+        raise Amd64AdapterError("PSADBW helper requires two 64-bit operands")
+    total = _claripy.BVV(0, 16)
+    for index in range(8):
+        a = _claripy.Extract(index * 8 + 7, index * 8, left)
+        b = _claripy.Extract(index * 8 + 7, index * 8, right)
+        difference = _claripy.If(_claripy.UGE(a, b), a - b, b - a)
+        total = total + _claripy.ZeroExt(8, difference)
+    return _claripy.ZeroExt(48, total)
+
+
+class _WruhVexEngine(_angr.engines.UberEngine):
+    """Extend the per-extraction VEX engine without modifying angr globally."""
+
+    def _perform_vex_expr_CCall(self, func_name, ty, args, func=None):
+        if func_name == "amd64g_calculate_mmx_psadbw" and func is None:
+            if len(args) != 2 or ty != "Ity_I64":
+                raise Amd64AdapterError("unexpected PSADBW helper signature")
+            # UberEngine's TrackActionsMixin supplies (expression, dependency)
+            # pairs and expects the same result/dependency shape back.
+            operands, dependencies = zip(*args)
+            return _psadbw_64(operands[0], operands[1]), frozenset().union(*dependencies)
+        return super()._perform_vex_expr_CCall(func_name, ty, args, func=func)
+
+
 _AMD64_OP_COPY: int = _angr_ccall.data["AMD64"]["OpTypes"][
     "G_CC_OP_COPY"
 ]
@@ -768,6 +795,7 @@ def step_instruction_outcomes(
     block = project.factory.block(source, num_inst=1)
     if block.vex.instructions != 1 or len(block.capstone.insns) != 1:
         raise Amd64AdapterError(f"expected one decoded instruction at {source:#x}")
+    engine = _WruhVexEngine(project)
     pending: list[dict[str, int]] = [{}]
     successors = []
     while pending:
@@ -778,7 +806,7 @@ def step_instruction_outcomes(
         logger.addHandler(capture)
         try:
             try:
-                selected_successors = project.factory.successors(state, num_inst=1).all_successors
+                selected_successors = project.factory.successors(state, num_inst=1, engine=engine).all_successors
             except _SelectorSplitRequired as split:
                 pending[0:0] = [dict(assignments, **{split.name: value})
                                 for value in _SELECTOR_DOMAINS[split.name]]
