@@ -65,6 +65,8 @@ class BinaryCensusWorkflowProvenanceTests(unittest.TestCase):
             re.findall(r'\("([a-z0-9]+)"\s*,', target_definitions.group(1))
         )
         self.assertEqual(declared_targets, TARGETS)
+        self.assertIn('args.extend(["--inventory-mode", "cfgfast"])', bazel_targets)
+        self.assertNotIn('if target_id == "bun"', bazel_targets)
         self.assertIn(
             'load(":binary_census_targets.bzl", "binary_census_remote_tests")',
             bazel_build,
