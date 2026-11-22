@@ -1,5 +1,3 @@
-FROM nixos/nix:2.35.6 AS nix
-
 FROM ubuntu:25.10 AS tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash ca-certificates curl git xz-utils \
@@ -13,9 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV USER=wruh HOME=/home/wruh NIX_REMOTE=local
 COPY nix/cache.conf /etc/nix/wruh-cache.conf
 RUN printf '%s\n' 'include /etc/nix/wruh-cache.conf' >> /etc/nix/nix.conf
-COPY --chown=1000:1000 --from=nix /nix /nix
-ENV PATH="/nix/var/nix/profiles/default/bin:$PATH" NIX_SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 USER wruh
+RUN curl -fsSL https://releases.nixos.org/nix/nix-2.35.6/install -o /tmp/nix-install \
+    && echo "6f7bf206efb54cd4941fb274930dbc74fdfc16fcb06757ef261c8d7d69cfd60e  /tmp/nix-install" | sha256sum -c - \
+    && sh /tmp/nix-install --no-daemon --yes --no-modify-profile \
+    && rm /tmp/nix-install
+ENV PATH="/home/wruh/.nix-profile/bin:$PATH" NIX_SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 WORKDIR /workspace
 RUN nix-store --init
 CMD ["bash"]
