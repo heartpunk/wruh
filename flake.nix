@@ -84,15 +84,21 @@
     in {
       packages = censusPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
-        let pkgs = nixpkgs.legacyPackages.${system};
+        let pkgs = import nixpkgs {
+              inherit system;
+              overlays = [ ifrl.overlays.angr ifrl.overlays.cosmic-ray (import ./nix/vex-cmpxchg-overlay.nix) ];
+            };
+            angrPython = pkgs.python312.withPackages (ps: [
+              ps.angr ps.cosmic-ray ps.coverage ps.hypothesis ps.ipython ps.pytest ps.z3-solver
+            ]);
             buildbuddyRbe = pkgs.mkShell {
               packages = [
-                ifrl.packages.${system}.angr-python
+                angrPython
                 pkgs.stdenv.cc.cc.lib
               ];
               GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString (system == "x86_64-linux") "${pkgs.stdenv.cc.cc.lib}";
               shellHook = ''
-                export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
+                export PATH="${angrPython}/bin:$PATH"
                 export PYTHONNOUSERSITE=1
                 export PYTHONSAFEPATH=1
               '';
@@ -101,20 +107,20 @@
         default = pkgs.mkShell {
           inputsFrom = [ ifrl.devShells.${system}.default ayxg.devShells.${system}.default ];
           packages = [
-            ifrl.packages.${system}.angr-python
+            angrPython
             pkgs.git
             pkgs.jdk21_headless
             (if pkgs.stdenv.isLinux then pkgs.bazel_9 else pkgs.bazelisk)
           ];
-          IFRL_ANGR_ENVIRONMENT = "${ifrl.packages.${system}.angr-python}";
-          GHOT_NIX_ANGR_ROOT = "${ifrl.packages.${system}.angr-python}";
+          IFRL_ANGR_ENVIRONMENT = "${angrPython}";
+          GHOT_NIX_ANGR_ROOT = "${angrPython}";
           WRUH_AYXG_SOURCE = "${ayxg.outPath}";
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
           shellHook = ''
             # Use IFRL's shared Python environment after inherited hooks run.
-            export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
+            export PATH="${angrPython}/bin:$PATH"
             export PYTHONPATH="$PWD:${ayxg.outPath}/python''${PYTHONPATH:+:$PYTHONPATH}"
           '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             # Keep the runtime available without shadowing the shared Lean toolchain.
