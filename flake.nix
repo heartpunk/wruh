@@ -84,6 +84,7 @@
       packages = censusPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
+            pbtPython = if pkgs.stdenv.hostPlatform.isLinux then import ./tools/iform_catalogue/python.nix { inherit pkgs; } else null;
             buildbuddyRbe = pkgs.mkShell {
               packages = [
                 ifrl.packages.${system}.angr-python
@@ -108,13 +109,14 @@
           IFRL_ANGR_ENVIRONMENT = "${ifrl.packages.${system}.angr-python}";
           GHOT_NIX_ANGR_ROOT = "${ifrl.packages.${system}.angr-python}";
           WRUH_AYXG_SOURCE = "${ayxg.outPath}";
+          WRUH_PBT_PYTHON = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux "${pbtPython}";
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
           shellHook = ''
             # Use IFRL's shared Python environment after inherited hooks run.
             export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
-            export PYTHONPATH="$PWD:${ayxg.outPath}/python''${PYTHONPATH:+:$PYTHONPATH}"
+            export PYTHONPATH="$PWD:${ayxg.outPath}/python${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ":${pbtPython}/${pkgs.python312.sitePackages}"}''${PYTHONPATH:+:$PYTHONPATH}"
           '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             # Keep the runtime available without shadowing the shared Lean toolchain.
             export PATH="$PATH:/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin"

@@ -1,0 +1,24 @@
+{
+  "binarySha256": "16bf574842a00c95367de74b9c086cd5fa3695c6c5b1e741a03c892e29e6bd94",
+  "completed": 721,
+  "dispositions": {
+    "extracted": 507,
+    "failed": 214
+  },
+  "failureCategories": {
+    "cfg:InventoryError": 210,
+    "extraction:Amd64AdapterError": 2,
+    "extraction:UnsupportedTheoryError": 2
+  },
+  "interrupted": false,
+  "inventoryCandidates": 721,
+  "sampling": {
+    "requestedPercentage": null,
+    "samplingPolicy": "full-census-v1",
+    "seed": null,
+    "selectedCount": 721
+  },
+  "schema": "wruh-binary-function-census-progress-v1",
+  "targetId": "lua",
+  "updatedAt": "2026-11-05T17:35:25Z"
+}

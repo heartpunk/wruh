@@ -1,0 +1,50 @@
+{
+  "@context": {
+    "iform": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#xedIform",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "iced_code": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#icedCode",
+      "@type": "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    },
+    "bytes": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#instructionBytes",
+      "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+    },
+    "bitness": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#decodeBitness",
+      "@type": "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    },
+    "operand_width": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#xedOperandWidth",
+      "@type": "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    },
+    "occurrences": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#occurrence",
+      "@container": "@set"
+    },
+    "target_id": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#targetId",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "binary_sha256": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#binarySha256",
+      "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+    },
+    "function_id": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#functionId",
+      "@type": "http://www.w3.org/2001/XMLSchema#string"
+    },
+    "address": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#canonicalAddress",
+      "@type": "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    },
+    "occurrence_id": {
+      "@id": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#staticOccurrenceId",
+      "@type": "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    },
+    "EncodingRecord": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#EncodingRecord",
+    "SourceOccurrence": "https://github.com/heartpunk/wruh/blob/main/data/iform-catalogue/vocabulary.ttl#SourceOccurrence"
+  }
+}
