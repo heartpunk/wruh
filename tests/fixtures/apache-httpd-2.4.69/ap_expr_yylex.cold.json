@@ -1,0 +1,17 @@
+{
+  "schema": "wruh-apache-terminal-fixture-v1",
+  "upstream": "Apache HTTP Server",
+  "version": "2.4.69",
+  "license": "Apache-2.0; release LICENSE and NOTICE are beside this fixture",
+  "fixture_modifications": "none; exact symbol-range bytes copied unchanged from the pinned Nixpkgs binary",
+  "nixpkgs_revision": "02c087f3fe673c9e317f206a627cb6b910336dbe",
+  "binary_sha256": "7a850a2d913a2bcbc4a87b809b5362bc0a23a005e5590137abf42e997d7ca2d9",
+  "symbol": "ap_expr_yylex.cold",
+  "source_path": "server/util_expr_scan.c (generated scanner; source input server/util_expr_scan.l)",
+  "source_mapping": "addr2line maps 0x3e636 to server/util_expr_scan.c:1721; nm reports local FUNC at 0x3e636, size 0x0a",
+  "address": 254518,
+  "size": 10,
+  "fixture_file": "ap_expr_yylex.cold.bin",
+  "fixture_sha256": "b8c302ac1d5e44133fde3e60877c9aa80e391e8d6643d872cf1a3a2fd5ccb647",
+  "terminal": "ud2 (#UD invalid-opcode exception)"
+}
