@@ -3,10 +3,9 @@ open Lake DSL
 
 package wruh
 
--- The integration uses an explicit isolated AYXG checkout. Its qualified Nix
--- environment supplies the matching Lean toolchain and pinned FloatLib source.
+-- Keep the Lake edge on the same immutable AYXG revision as flake.nix/flake.lock.
 require ayxg from git
-  "https://github.com/heartpunk/ayxg.git" @ "main"
+  "https://github.com/heartpunk/ayxg.git" @ "4ca2cf940f9ecb3bcb5a021fe8dfb2d9b80c2ede"
 
 lean_lib Wruh where
   globs := #[`Wruh.*]
