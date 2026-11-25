@@ -5,7 +5,7 @@ package wruh
 
 -- Keep the Lake edge on the same immutable AYXG revision as flake.nix/flake.lock.
 require ayxg from git
-  "https://github.com/heartpunk/ayxg.git" @ "43a701de2dcd7515faa1f0180c1d59ae3420a2b5"
+  "https://github.com/heartpunk/ayxg.git" @ "3fee3ef8d1e056be85d97756acf9aceb1a634c49"
 
 lean_lib Wruh where
   globs := #[`Wruh.*]

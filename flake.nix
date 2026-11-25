@@ -4,7 +4,7 @@
   inputs = {
     ifrl.url = "github:heartpunk/ifrl/5cfc9560617ba75e5088e5cb67cecbbab20ad1ee";
     ayxg = {
-      url = "github:heartpunk/ayxg/43a701de2dcd7515faa1f0180c1d59ae3420a2b5";
+      url = "github:heartpunk/ayxg/3fee3ef8d1e056be85d97756acf9aceb1a634c49";
       inputs.ifrl.follows = "ifrl";
     };
     nixpkgs.follows = "ifrl/nixpkgs";
