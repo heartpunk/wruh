@@ -41,7 +41,8 @@ jobs:
         with:
           name: wruh
           extraPullNames: ifrl,ayxg
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # The development shell now references private Equanimity source.
+          skipPush: true
       - name: Require Cachix write token for repository builds
         if: >-
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -76,6 +77,14 @@ jobs:
             exit 1
           fi
           printf 'WRUH_APACHE_HTTPD=%s\n' "$apache_binary" >> "$GITHUB_ENV"
+
+      - name: Cache the public Apache fixture
+        if: >-
+          github.event_name == 'push' ||
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: cachix push wruh "${WRUH_APACHE_HTTPD%/bin/httpd}"
 
       - name: Run Python tests in the pinned development shell
         run: |
