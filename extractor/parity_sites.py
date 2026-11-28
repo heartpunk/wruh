@@ -12,13 +12,15 @@ def match_sites(before, after):
         base_indices = {digest: {base: index for index, base in enumerate(sorted(values))}
                         for digest, values in bases.items()}
         address_to_key = {}
+        seen_keys = set()
         for origin in origins:
             digest, base = origin['image_sha256'], origin['mapped_base']
             key = ((digest, origin['object_offset'], origin['decode_mode']), base_indices[digest][base])
             address = origin['canonical_address']
-            if address in address_to_key or key in address_to_key.values():
+            if address in address_to_key or key in seen_keys:
                 raise ValueError(f'ambiguous site identity {key!r}')
             address_to_key[address] = key
+            seen_keys.add(key)
         edges = {}
         for edge in model['local_edges']:
             if edge['source'] not in address_to_key:
@@ -27,7 +29,7 @@ def match_sites(before, after):
             if key in edges:
                 raise ValueError(f'duplicate edge identity {key!r}')
             edges[key] = edge
-        return set(address_to_key.values()), edges
+        return seen_keys, edges
     old_sites, old_edges = collect(before)
     new_sites, new_edges = collect(after)
     shared = old_sites & new_sites

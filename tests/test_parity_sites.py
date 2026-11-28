@@ -21,6 +21,11 @@ class SiteParityTests(unittest.TestCase):
         self.assertEqual(result['only_candidate_edges'], [((('a' * 64, 1, 'long64'), 0), 1)])
         self.assertEqual([item[0] for item in result['shared_edges']], [((('a' * 64, 1, 'long64'), 0), 0)])
 
+    def test_rejects_duplicate_site_identity(self):
+        duplicate = model([1, 1], [(1, 0, 0)])
+        with self.assertRaisesRegex(ValueError, 'ambiguous site identity'):
+            match_sites(duplicate, duplicate)
+
     def test_rejects_ambiguous_edge_identity(self):
         duplicate = model([1], [(1, 0, 0), (1, 0, 1)])
         with self.assertRaisesRegex(ValueError, 'duplicate'):
