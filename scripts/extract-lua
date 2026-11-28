@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Run from the WRUH root inside the pinned Nix development shell on Linux.
+set -euo pipefail
+# The Linux sandbox must be able to follow the local repository symlink.
+scratch=$(mktemp -d "$PWD/.wruh-lua-catalog.XXXXXX")
+trap 'rm -rf "$scratch"' EXIT
+
+lua=$(nix build --no-link --no-write-lock-file --print-out-paths .#stockLua)/lua.elf
+scripts/bazelw build //extractor:lua_settings "$@"
+python3 -m extractor.shard_selector \
+  --artifact "$lua" --settings bazel-bin/extractor/lua-settings.json \
+  --catalog "$scratch/catalog"
+scripts/bazelw build --override_repository="wruh_lua_catalog=$scratch/catalog" //lua:bundle

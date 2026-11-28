@@ -1,4 +1,5 @@
-load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load(":shards.bzl", "extraction_settings", "integer_setting")
 
 package(default_visibility = ["//visibility:private"])
 
@@ -26,3 +27,37 @@ py_test(
 
 
 exports_files(["BUILD.bazel"], visibility = ["//visibility:public"])
+
+py_binary(
+    name = "fresh_extract",
+    srcs = ["extract_cli.py"],
+    main = "extract_cli.py",
+    data = ["@nix_native_deps//:libstdcxx"],
+    visibility = ["//lua:__pkg__"],
+    deps = [":test_runtime"],
+)
+
+py_binary(
+    name = "merge_fresh",
+    srcs = ["shard_bundle.py"],
+    main = "shard_bundle.py",
+    visibility = ["//lua:__pkg__"],
+    deps = ["@wruh_ayxg//:ayxg"],
+)
+
+integer_setting(
+    name = "lua_window_bytes",
+    build_setting_default = 256,
+)
+
+integer_setting(
+    name = "lua_scope_bytes",
+    build_setting_default = 1024,
+)
+
+extraction_settings(
+    name = "lua_settings",
+    scope_bytes = ":lua_scope_bytes",
+    window_bytes = ":lua_window_bytes",
+    out = "lua-settings.json",
+)

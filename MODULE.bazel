@@ -48,3 +48,6 @@ ayxg_python_repository(name = "wruh_ayxg")
 equanimity_repository = use_repo_rule("//tools:nix_native_deps.bzl", "equanimity_repository")
 equanimity_repository(name = "wruh_equanimity")
 
+
+catalog_repository = use_repo_rule("//extractor:shards.bzl", "catalog_repository")
+catalog_repository(name = "wruh_lua_catalog")
