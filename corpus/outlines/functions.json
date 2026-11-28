@@ -1,53 +1,5 @@
 [
 {
-  "text": "def _fork_worker(function_id: str) -> FreshFunction:\n    if _FORK_PINNED is None or _FORK_CFG is None:\n        raise FreshExtractionError(\"fresh worker started without inherited context\")\n    return extract_fresh_function(_FORK_PINNED, _FORK_CFG, function_id)",
-  "range": {
-    "byteOffset": {
-      "start": 437,
-      "end": 696
-    },
-    "start": {
-      "line": 17,
-      "column": 0
-    },
-    "end": {
-      "line": 20,
-      "column": 71
-    }
-  },
-  "file": "extractor/fresh_parallel.py",
-  "lines": "def _fork_worker(function_id: str) -> FreshFunction:\n    if _FORK_PINNED is None or _FORK_CFG is None:\n        raise FreshExtractionError(\"fresh worker started without inherited context\")\n    return extract_fresh_function(_FORK_PINNED, _FORK_CFG, function_id)",
-  "charCount": {
-    "leading": 0,
-    "trailing": 0
-  },
-  "language": "Python"
-},
-{
-  "text": "def extract_fresh_functions(\n    pinned: PinnedBinary,\n    cfg: dict[str, Any],\n    function_ids: tuple[str, ...] | None = None,\n    *,\n    max_workers: int | None = None,\n) -> tuple[FreshFunction, ...]:\n    \"\"\"Extract one function per fork-worker and merge by canonical root order.\"\"\"\n\n    roots = cfg.get(\"roots\")\n    if not isinstance(roots, dict) or not roots:\n        raise FreshExtractionError(\"CFG has no rooted functions\")\n    canonical = tuple(\n        sorted(roots, key=lambda name: (roots[name][\"address\"], name))\n    )\n    selected = canonical if function_ids is None else function_ids\n    if len(set(selected)) != len(selected) or set(selected) - set(canonical):\n        raise FreshExtractionError(\"parallel function selection is invalid\")\n    selected = tuple(name for name in canonical if name in set(selected))\n    if not selected:\n        raise FreshExtractionError(\"parallel function selection is empty\")\n\n    workers = max_workers or min(len(selected), os.cpu_count() or 1)\n    if type(workers) is not int or not 1 <= workers <= len(selected):\n        raise FreshExtractionError(\"parallel worker count is invalid\")\n    if workers == 1:\n        return tuple(\n            extract_fresh_function(pinned, cfg, function_id)\n            for function_id in selected\n        )\n\n    global _FORK_PINNED, _FORK_CFG\n    _FORK_PINNED = pinned\n    _FORK_CFG = cfg\n    try:\n        context = multiprocessing.get_context(\"fork\")\n        with ProcessPoolExecutor(\n            max_workers=workers,\n            mp_context=context,\n        ) as executor:\n            results = tuple(executor.map(_fork_worker, selected))\n    finally:\n        _FORK_PINNED = None\n        _FORK_CFG = None\n    if tuple(result.function_id for result in results) != selected:\n        raise FreshExtractionError(\"parallel result order is not deterministic\")\n    return results",
-  "range": {
-    "byteOffset": {
-      "start": 699,
-      "end": 2553
-    },
-    "start": {
-      "line": 23,
-      "column": 0
-    },
-    "end": {
-      "line": 69,
-      "column": 18
-    }
-  },
-  "file": "extractor/fresh_parallel.py",
-  "lines": "def extract_fresh_functions(\n    pinned: PinnedBinary,\n    cfg: dict[str, Any],\n    function_ids: tuple[str, ...] | None = None,\n    *,\n    max_workers: int | None = None,\n) -> tuple[FreshFunction, ...]:\n    \"\"\"Extract one function per fork-worker and merge by canonical root order.\"\"\"\n\n    roots = cfg.get(\"roots\")\n    if not isinstance(roots, dict) or not roots:\n        raise FreshExtractionError(\"CFG has no rooted functions\")\n    canonical = tuple(\n        sorted(roots, key=lambda name: (roots[name][\"address\"], name))\n    )\n    selected = canonical if function_ids is None else function_ids\n    if len(set(selected)) != len(selected) or set(selected) - set(canonical):\n        raise FreshExtractionError(\"parallel function selection is invalid\")\n    selected = tuple(name for name in canonical if name in set(selected))\n    if not selected:\n        raise FreshExtractionError(\"parallel function selection is empty\")\n\n    workers = max_workers or min(len(selected), os.cpu_count() or 1)\n    if type(workers) is not int or not 1 <= workers <= len(selected):\n        raise FreshExtractionError(\"parallel worker count is invalid\")\n    if workers == 1:\n        return tuple(\n            extract_fresh_function(pinned, cfg, function_id)\n            for function_id in selected\n        )\n\n    global _FORK_PINNED, _FORK_CFG\n    _FORK_PINNED = pinned\n    _FORK_CFG = cfg\n    try:\n        context = multiprocessing.get_context(\"fork\")\n        with ProcessPoolExecutor(\n            max_workers=workers,\n            mp_context=context,\n        ) as executor:\n            results = tuple(executor.map(_fork_worker, selected))\n    finally:\n        _FORK_PINNED = None\n        _FORK_CFG = None\n    if tuple(result.function_id for result in results) != selected:\n        raise FreshExtractionError(\"parallel result order is not deterministic\")\n    return results",
-  "charCount": {
-    "leading": 0,
-    "trailing": 0
-  },
-  "language": "Python"
-},
-{
   "text": "def _provider(path: Path) -> Any:\n    spec = importlib.util.spec_from_file_location(\"wruh_abi_provider\", path)\n    if spec is None or spec.loader is None:\n        raise ValueError(f\"cannot load ABI provider from {path}\")\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    provider = getattr(module, \"PROVIDER\", None)\n    if provider is None:\n        raise ValueError(\"ABI provider module must export PROVIDER\")\n    return provider",
   "range": {
     "byteOffset": {
