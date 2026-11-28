@@ -3,19 +3,14 @@ from __future__ import annotations
 
 
 def match_sites(before, after):
-    """Match by object digest, relative offset, mode and mapping instance."""
+    """Match structural identities only within the same mapped instance."""
     def collect(model):
         origins = [item['origin'] for item in model['occurrences']]
-        bases = {}
-        for origin in origins:
-            bases.setdefault(origin['image_sha256'], set()).add(origin['mapped_base'])
-        base_indices = {digest: {base: index for index, base in enumerate(sorted(values))}
-                        for digest, values in bases.items()}
         address_to_key = {}
         seen_keys = set()
         for origin in origins:
             digest, base = origin['image_sha256'], origin['mapped_base']
-            key = ((digest, origin['object_offset'], origin['decode_mode']), base_indices[digest][base])
+            key = ((digest, origin['object_offset'], origin['decode_mode']), base)
             address = origin['canonical_address']
             if address in address_to_key or key in seen_keys:
                 raise ValueError(f'ambiguous site identity {key!r}')

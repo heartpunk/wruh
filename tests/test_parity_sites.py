@@ -41,14 +41,31 @@ class SiteParityTests(unittest.TestCase):
         self.assertEqual(len(result['occurrences']), 1)
         self.assertEqual(len(result['local_edges']), 1)
 
-    def test_remapped_sites_match_by_backing_object(self):
+    def test_remapped_site_preserves_structural_identity_separately(self):
         old = model([1], [(1, 0, 5)], base=0x1000)
         new = model([1], [(1, 0, 99)], base=0x9000)
         result = match_sites(old, new)
-        self.assertEqual(len(result['shared_edges']), 1)
-        self.assertEqual(result['only_baseline_sites'], [])
+        self.assertEqual(result['shared_edges'], [])
+        self.assertEqual(result['only_baseline_sites'][0][0],
+                         result['only_candidate_sites'][0][0])
         distinct = model([1], [(1, 0, 99)], base=0x9000, digest='b' * 64)
-        self.assertEqual(match_sites(old, distinct)['shared_edges'], [])
+        distinct_result = match_sites(old, distinct)
+        self.assertNotEqual(distinct_result['only_baseline_sites'][0][0],
+                            distinct_result['only_candidate_sites'][0][0])
+
+    def test_asymmetric_coverage_matches_correct_mapping_instance(self):
+        first = model([1], [(1, 0, 11)], base=0x1000)
+        second = model([1], [(1, 0, 22)], base=0x3000)
+        old = {'occurrences': first['occurrences'] + second['occurrences'],
+               'local_edges': first['local_edges'] + second['local_edges']}
+        new = model([1], [(1, 0, 99)], base=0x3000)
+        result = match_sites(old, new)
+        self.assertEqual(result['only_baseline_sites'], [(('a' * 64, 1, 'long64'), 0x1000)])
+        self.assertEqual(result['only_candidate_sites'], [])
+        self.assertEqual(len(result['shared_edges']), 1)
+        _, baseline_edge, candidate_edge = result['shared_edges'][0]
+        self.assertEqual(baseline_edge['source'], 0x3001)
+        self.assertEqual(candidate_edge['source'], 0x3001)
 
     def test_baseline_origin_identity_uses_backing_object_mapping(self):
         from extractor.parity_sites import attach_mapping_identity
