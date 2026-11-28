@@ -106,3 +106,27 @@ def shuffled_chunks(result: Inventory, chunk_size: int, seed: int) -> tuple[tupl
     chunks = [result.decoded[i:i + chunk_size] for i in range(0, len(result.decoded), chunk_size)]
     random.Random(seed).shuffle(chunks)
     return tuple(chunks)
+
+
+def inventory_project(project: Any, data_intervals: Iterable[Interval] = ()) -> Inventory:
+    """Inventory every executable segment in the explicitly loaded object set.
+
+    The loader may also supply synthetic objects without a backing file. They
+    are not part of the supplied object set and do not represent input bytes.
+    """
+    from pathlib import Path
+
+    if project.arch.name != "AMD64" or project.arch.bits != 64:
+        raise ValueError("only AMD64 long mode is supported")
+    spans = []
+    for obj in project.loader.all_objects:
+        path = getattr(obj, "binary", None)
+        if not path or not Path(path).is_file():
+            continue
+        for segment in obj.segments:
+            if segment.is_executable and segment.memsize:
+                spans.append(Span(segment.min_addr,
+                                  bytes(project.loader.memory.load(segment.min_addr, segment.memsize))))
+    if not spans:
+        raise ValueError("no executable segments in the loaded object set")
+    return inventory(spans, data_intervals, project.arch.capstone)
