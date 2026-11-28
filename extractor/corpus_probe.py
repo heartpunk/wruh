@@ -1,14 +1,25 @@
 """Static-only zeroth-pass compiler, VEX feature collector, and fresh extractor."""
 from __future__ import annotations
-import argparse, base64, hashlib, json, os, shutil, subprocess, tempfile, time
+
+import argparse
+import base64
+import hashlib
+import json
+import shutil
+import subprocess
+import tempfile
+import time
 from pathlib import Path
+
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
-from extractor import runtime as _runtime
-import angr
+from extractor.native_runtime import preload_libstdcxx
+
+preload_libstdcxx()
+from extractor.fresh import extract_linear, linear_site_records
 from extractor.instruction_inventory import inventory_project
 from extractor.loaded_image import load_object_set
-from extractor.fresh import extract_linear, linear_site_records
 
 CANONICAL = ['var','bool_lit','bv_lit','bool_not','bool_and','bool_or','ite','bv_add','bv_sub','bv_mul','bv_udiv','bv_urem','bv_and','bv_or','bv_xor','bv_shl','bv_lshr','bv_ashr','bv_ult','bv_ule','bv_slt','bv_sle','eq','bv_not','zero_extend','sign_extend','extract','concat','const_array','select','store']
 CONTROL = {'jump:Ijk_Call','jump:Ijk_Ret'}
@@ -29,7 +40,7 @@ def features(project, decoded):
                 if hasattr(expr, 'op'): found.add('vex:' + expr.op)
                 if expr.tag == 'Iex_Load':
                     found.add('load:' + str(expr.result_size(ir.tyenv)) + ':' + expr.end)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 -- retain failed site diagnostics
             failures.append({'address': instruction.address, 'error': str(error)})
     return sorted(found), failures
 
@@ -118,7 +129,7 @@ def extract(args):
               'occurrences':len(fresh.occurrences),'local_edges':len(fresh.local_edges),'canonical_ops':ops,'expression_objects':nodes,
               'inventory':{'decoded':len(decoded.decoded),'unresolved':len(decoded.unresolved),'unexamined':len(decoded.unexamined)},
               'fresh_model':fresh.to_data(),'seconds':time.monotonic()-started}
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 -- report the failed extraction
             import traceback
             return {'root':'image','optimization':scan['optimization'],'status':'FAIL','stage':'inventory/extraction',
                     'error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'seconds':time.monotonic()-started}

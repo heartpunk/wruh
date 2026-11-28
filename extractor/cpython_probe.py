@@ -1,18 +1,22 @@
 """Static instruction extraction from the exact extraction CPython."""
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
 import argparse
 import hashlib
 import json
 import tempfile
 from pathlib import Path
-from ayxg.codec import dumps
-from extractor.loaded_image import loaded_image_data
-from extractor.linear_pipeline import prepare
-from extractor.fresh import extract_linear
 from types import SimpleNamespace
+
+from ayxg.codec import dumps
+
+from extractor.fresh import extract_linear
+from extractor.linear_pipeline import prepare
+from extractor.loaded_image import loaded_image_data
 
 
 def main() -> None:

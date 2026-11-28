@@ -4,9 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 
+from extractor.fresh import linear_site_records
 from extractor.instruction_inventory import Interval, inventory_project
 from extractor.loaded_image import load_object_set
-from extractor.fresh import linear_site_records
 
 
 def prepare(args):

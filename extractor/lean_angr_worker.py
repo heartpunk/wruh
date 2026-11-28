@@ -16,8 +16,8 @@ from ayxg.z3 import expr_from_z3, typed_conversion_cache
 
 from extractor.amd64_state import step_instruction_outcomes
 from extractor.architecture import architecture_layout
-from extractor.fresh import artifact_declarations
 from extractor.extraction_args import add_arguments
+from extractor.fresh import artifact_declarations
 from extractor.linear_pipeline import prepare
 from extractor.loaded_image import loaded_image_data
 

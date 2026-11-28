@@ -19,8 +19,8 @@ from cle.backends.relocation import Relocation
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
 
-from extractor.instruction_inventory import inventory_project
 from extractor.fresh import extract_linear, linear_site_records
+from extractor.instruction_inventory import inventory_project
 from extractor.loaded_image import (
     load_object_set,
     loaded_image_data,

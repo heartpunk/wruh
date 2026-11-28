@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from extractor.runtime_trace import start_runtime_trace
+
 start_runtime_trace()
 
 import argparse
 from pathlib import Path
+
 from extractor.extraction_args import add_arguments
 
 
@@ -18,6 +20,7 @@ def main() -> int:
     from extractor.native_runtime import preload_libstdcxx
     preload_libstdcxx()
     from ayxg.codec import dumps
+
     from extractor.fresh import extract_linear
     from extractor.linear_pipeline import prepare
     from extractor.loaded_image import loaded_image_data

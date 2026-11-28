@@ -6,9 +6,11 @@ x86 instruction boundary.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import random
-from typing import Any, Iterable
+from collections.abc import Iterable
+from dataclasses import dataclass
+from itertools import pairwise
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -68,11 +70,11 @@ def inventory(spans: Iterable[Span], data_intervals: Iterable[Interval], decoder
         raise ValueError("span precedes backing-object mapped base")
     if any(span.address < 0 or not span.data for span in spans):
         raise ValueError("spans must be nonempty and have nonnegative addresses")
-    if any(a.end > b.address for a, b in zip(spans, spans[1:])):
+    if any(a.end > b.address for a, b in pairwise(spans)):
         raise ValueError("selected spans overlap")
     if any(item.start < 0 or item.start >= item.end for item in exclusions):
         raise ValueError("invalid data interval")
-    if any(a.end > b.start for a, b in zip(exclusions, exclusions[1:])):
+    if any(a.end > b.start for a, b in pairwise(exclusions)):
         raise ValueError("data intervals overlap")
 
     decoded: list[Instruction] = []

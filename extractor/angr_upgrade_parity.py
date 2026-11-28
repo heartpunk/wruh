@@ -1,16 +1,19 @@
 """Compare extracted relations on shared instruction sites."""
 from __future__ import annotations
+
 import argparse
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 
 from extractor.native_runtime import preload_libstdcxx
+
 preload_libstdcxx()
 import z3
 from ayxg.codec import loads
 from ayxg.expr import Declaration, TypedExpr
 from ayxg.z3 import declaration_variables, expr_to_z3
+
 from extractor.parity_sites import attach_mapping_identity, combine_models, match_sites
 
 
