@@ -39,7 +39,7 @@ class InstructionInventoryTest(unittest.TestCase):
             path.write_bytes(b"image")
             segment = SimpleNamespace(is_executable=True, memsize=3, min_addr=0x2000)
             other = SimpleNamespace(is_executable=False, memsize=1, min_addr=0x3000)
-            image = SimpleNamespace(binary=str(path), segments=[segment, other])
+            image = SimpleNamespace(binary=str(path), mapped_base=0x2000, segments=[segment, other])
             memory = SimpleNamespace(load=lambda address, size: b"\x01\x02\x03")
             project = SimpleNamespace(arch=SimpleNamespace(name="AMD64", bits=64, capstone=Decoder()),
                                       loader=SimpleNamespace(all_objects=[image], memory=memory))
@@ -61,3 +61,15 @@ class InstructionInventoryTest(unittest.TestCase):
         for seed in range(10):
             actual = {(item.address, item.data) for chunk in shuffled_chunks(result, 1, seed) for item in chunk}
             self.assertEqual(actual, expected)
+
+    def test_site_identity_survives_remapping_and_distinguishes_objects(self):
+        def decode(base, digest):
+            return inventory([Span(base + 0x20, b"\x90\xc3", digest, base)], [], Decoder())
+        first = decode(0x1000, "a" * 64)
+        remapped = decode(0x9000, "a" * 64)
+        other = decode(0x1000, "b" * 64)
+        self.assertEqual([i.site_key for i in first.decoded], [i.site_key for i in remapped.decoded])
+        self.assertNotEqual(first.decoded[0].site_key, other.decoded[0].site_key)
+        self.assertNotEqual(first.decoded[0].address, remapped.decoded[0].address)
+        self.assertEqual([[i.site_key for i in c] for c in shuffled_chunks(first, 1, 12)],
+                         [[i.site_key for i in c] for c in shuffled_chunks(remapped, 1, 12)])

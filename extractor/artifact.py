@@ -286,12 +286,21 @@ class DecodedInstructionEvidence:
     decode_mode: str
     instruction_identity: str
     function_owners: tuple[str, ...]
+    object_offset: int | None = None
+    mapped_base: int | None = None
 
     kind = "decoded_instruction"
 
     def __post_init__(self) -> None:
         _sha256(self.image_sha256, "decoded.image_sha256")
         _u64(self.canonical_address, "decoded.canonical_address")
+        if (self.object_offset is None) != (self.mapped_base is None):
+            raise ArtifactError("decoded object offset and mapped base must occur together")
+        if self.object_offset is not None:
+            _u64(self.object_offset, "decoded.object_offset")
+            _u64(self.mapped_base, "decoded.mapped_base")
+            if self.object_offset + self.mapped_base != self.canonical_address:
+                raise ArtifactError("decoded object mapping does not match address")
         if not _HEX_BYTES_RE.fullmatch(self.instruction_bytes):
             raise ArtifactError(
                 "decoded.instruction_bytes must be nonempty lowercase hex bytes"
@@ -319,6 +328,8 @@ class DecodedInstructionEvidence:
             "decode_mode": self.decode_mode,
             "instruction_identity": self.instruction_identity,
             "function_owners": list(self.function_owners),
+            **({"object_offset": self.object_offset, "mapped_base": self.mapped_base}
+               if self.object_offset is not None else {}),
         }
 
     @classmethod
@@ -335,7 +346,7 @@ class DecodedInstructionEvidence:
                 "decode_mode",
                 "instruction_identity",
                 "function_owners",
-            },
+            } | ({"object_offset", "mapped_base"} if "object_offset" in obj or "mapped_base" in obj else set()),
             "decoded origin",
         )
         if obj["kind"] != cls.kind:
@@ -361,6 +372,8 @@ class DecodedInstructionEvidence:
                     obj["function_owners"], "decoded.function_owners"
                 )
             ),
+            object_offset=obj.get("object_offset"),
+            mapped_base=obj.get("mapped_base"),
         )
 
 

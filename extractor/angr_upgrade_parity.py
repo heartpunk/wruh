@@ -11,7 +11,7 @@ import z3
 from ayxg.codec import loads
 from ayxg.expr import Declaration, TypedExpr
 from ayxg.z3 import declaration_variables, expr_to_z3
-from extractor.parity_sites import combine_models, match_sites
+from extractor.parity_sites import attach_mapping_identity, combine_models, match_sites
 
 
 def read_bundle(path: Path):
@@ -19,6 +19,7 @@ def read_bundle(path: Path):
     data = json.loads(raw)
     if data.get('schema') == 'ayxg-artifact-dag-v1':
         data = loads(raw)
+    data = attach_mapping_identity(data)
     return data, combine_models([data['extraction']] if 'extraction' in data else data['functions'])
 
 
@@ -43,6 +44,8 @@ def main() -> int:
 
     checks = []
     for key, before, after in matched['shared_edges']:
+        if before['source'] != after['source']:
+            raise ValueError('transition comparison requires identical mappings; address normalization is not implemented')
         if before.get('jumpkind') != after.get('jumpkind') or before.get('fault_kind') != after.get('fault_kind'):
             raise ValueError(f'outcome metadata differs at {key!r}')
         left, right = before['summary'], after['summary']

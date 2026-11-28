@@ -318,6 +318,11 @@ def linear_site_records(project: Any, inventory: Any, *, chunk_size: int, seed: 
                 digest = image_digest
             else:
                 raise FreshExtractionError(f"no object for site {instruction.address:#x}")
+            mapped_base = instruction.mapped_base
+            if mapped_base is None:
+                mapped_base = getattr(obj, "mapped_base", None) if obj is not None else None
+            if mapped_base is None:
+                raise FreshExtractionError(f"no mapping base for site {instruction.address:#x}")
             occurrence = Occurrence(
                 StaticOccurrenceId(instruction.address),
                 DecodedInstructionEvidence(
@@ -325,7 +330,8 @@ def linear_site_records(project: Any, inventory: Any, *, chunk_size: int, seed: 
                     instruction_bytes=instruction.data.hex(), architecture="AMD64",
                     decode_mode="long64",
                     instruction_identity=f"{instruction.mnemonic} {instruction.operands}".strip(),
-                    function_owners=(),
+                    function_owners=(), object_offset=instruction.address - mapped_base,
+                    mapped_base=mapped_base,
                 ),
             )
             records.append((instruction.address, occurrence))

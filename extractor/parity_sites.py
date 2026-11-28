@@ -3,16 +3,31 @@ from __future__ import annotations
 
 
 def match_sites(before, after):
-    """Return address and outcome differences separately from shared edges."""
+    """Match by object digest, relative offset, mode and mapping instance."""
     def collect(model):
-        sites = {item['origin']['canonical_address'] for item in model['occurrences']}
+        origins = [item['origin'] for item in model['occurrences']]
+        bases = {}
+        for origin in origins:
+            bases.setdefault(origin['image_sha256'], set()).add(origin['mapped_base'])
+        base_indices = {digest: {base: index for index, base in enumerate(sorted(values))}
+                        for digest, values in bases.items()}
+        address_to_key = {}
+        for origin in origins:
+            digest, base = origin['image_sha256'], origin['mapped_base']
+            key = ((digest, origin['object_offset'], origin['decode_mode']), base_indices[digest][base])
+            address = origin['canonical_address']
+            if address in address_to_key or key in address_to_key.values():
+                raise ValueError(f'ambiguous site identity {key!r}')
+            address_to_key[address] = key
         edges = {}
         for edge in model['local_edges']:
-            key = (edge['source'], edge['edge_id']['outcome_id'])
+            if edge['source'] not in address_to_key:
+                raise ValueError('edge source has no instruction evidence')
+            key = (address_to_key[edge['source']], edge['edge_id']['outcome_id'])
             if key in edges:
                 raise ValueError(f'duplicate edge identity {key!r}')
             edges[key] = edge
-        return sites, edges
+        return set(address_to_key.values()), edges
     old_sites, old_edges = collect(before)
     new_sites, new_edges = collect(after)
     shared = old_sites & new_sites
@@ -58,3 +73,24 @@ def combine_models(functions):
                 edges[key] = edge
     return {'declarations': declarations, 'occurrences': list(occurrences.values()),
             'local_edges': list(edges.values())}
+
+
+def attach_mapping_identity(bundle):
+    """Annotate observations using the explicit loaded-object snapshot."""
+    objects = bundle.get('loaded_image', {}).get('objects', [])
+    models = [bundle['extraction']] if 'extraction' in bundle else bundle['functions']
+    for model in models:
+        for occurrence in model['occurrences']:
+            origin = occurrence['origin']
+            if 'object_offset' in origin and 'mapped_base' in origin:
+                continue
+            address = origin['canonical_address']
+            matches = [obj for obj in objects if obj['sha256'] == origin['image_sha256']
+                       and any(segment['address'] <= address < segment['address'] + segment['size']
+                               for segment in obj['segments'])]
+            if len(matches) != 1:
+                raise ValueError(f'cannot resolve one backing object for {address:#x}')
+            base = matches[0]['mapped_base']
+            origin['mapped_base'] = base
+            origin['object_offset'] = address - base
+    return bundle
