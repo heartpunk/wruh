@@ -94,6 +94,22 @@ def skipped_elf_relocations(obj: Any) -> list[dict[str, Any]]:
     return result
 
 
+
+def function_symbols(obj: Any) -> list[dict[str, Any]]:
+    """Describe defined function symbols as nonexclusive object-relative annotations."""
+    grouped: dict[tuple[int, int], set[str]] = {}
+    for symbol in getattr(obj, "symbols", ()):
+        name = getattr(symbol, "name", "")
+        size = getattr(symbol, "size", None)
+        if (not name or getattr(symbol, "is_import", False)
+                or getattr(getattr(symbol, "type", None), "name", "") != "TYPE_FUNCTION"
+                or type(size) is not int or size < 0):
+            continue
+        offset = int(symbol.rebased_addr) - int(obj.mapped_base)
+        grouped.setdefault((offset, size), set()).add(name)
+    return [{"offset": offset, "size": size, "names": sorted(names)}
+            for (offset, size), names in sorted(grouped.items())]
+
 def loaded_image_data(project: angr.Project) -> dict[str, Any]:
     """Snapshot is an initialization artifact, never instruction semantics."""
     objects = []
@@ -126,6 +142,7 @@ def loaded_image_data(project: angr.Project) -> dict[str, Any]:
                 'target': resolved.rebased_addr if resolved else None})
         objects.append({'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'mapped_base': obj.mapped_base, 'linked_base': obj.linked_base,
+            'function_symbols': function_symbols(obj),
             'segments': segments, 'relocations': relocations,
             'undefined_bytes': undefined_bytes, 'skipped_relocations': skipped})
     return {'schema': 'wruh-loaded-image-v1', 'objects': objects,
