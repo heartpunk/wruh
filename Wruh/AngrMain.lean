@@ -1,6 +1,6 @@
 import Wruh.AngrDriver
 
-/-! Lean owns the extraction loop; Python is a persistent angr worker. -/
+/-! Lean owns the extraction loop; Python is a persistent Equanimity worker. -/
 namespace Wruh.AngrMain
 
 open Lean Ayxg.QfAbv Ayxg.QfAbv.JsonCodec Wruh.AngrDriver
@@ -11,7 +11,7 @@ private def checked {α : Type} : Except String α → IO α
 
 private def readJson (output : IO.FS.Handle) : IO Json := do
   let line ← output.getLine
-  if line.isEmpty then throw (IO.userError "angr worker closed its output")
+  if line.isEmpty then throw (IO.userError "Equanimity worker closed its output")
   checked (Json.parse line)
 
 private def stringField (object : Json) (name : String) : IO String :=
@@ -68,7 +68,7 @@ private def run (args : List String) : IO Unit := do
       | none => pure "python3"
   let child ← IO.Process.spawn {
     cmd := python
-    args := #["-m", "extractor.lean_angr_worker"] ++ workerArgs
+    args := #["-m", "extractor.lean_equanimity_worker"] ++ workerArgs
     stdin := .piped
     stdout := .piped
     stderr := .inherit
@@ -76,7 +76,7 @@ private def run (args : List String) : IO Unit := do
   }
   let inventory ← readJson child.stdout
   if (← stringField inventory "kind") != "inventory" then
-    throw (IO.userError "angr worker did not return an inventory")
+    throw (IO.userError "Equanimity worker did not return an inventory")
   let declarations ← checked (field inventory "declarations")
   let Γ ← checked (do
     let records ← declarations.getArr?
@@ -87,7 +87,7 @@ private def run (args : List String) : IO Unit := do
   child.stdin.putStrLn ((Json.mkObj [("op", toJson "quit")]).compress)
   child.stdin.flush
   let status ← child.wait
-  if status != 0 then throw (IO.userError s!"angr worker exited with status {status}")
+  if status != 0 then throw (IO.userError s!"Equanimity worker exited with status {status}")
   let document ← checked (bundleJson inventory extraction roots)
   IO.FS.writeFile (System.FilePath.mk outputPath) (document.compress ++ "\n")
 

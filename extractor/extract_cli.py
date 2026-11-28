@@ -23,12 +23,11 @@ def main() -> int:
 
     from extractor.fresh import extract_linear
     from extractor.linear_pipeline import prepare
-    from extractor.loaded_image import loaded_image_data
-    project, records, inventory, image_sha256 = prepare(args)
+    session, records, inventory, image_sha256 = prepare(args)
     result = {
         "schema": "wruh-fresh-bundle-v2", "image_sha256": image_sha256,
-        "inventory": inventory, "extraction": extract_linear(project, records).to_data(),
-        "loaded_image": loaded_image_data(project),
+        "loaded_image": session.image.loaded_image,
+        "inventory": inventory, "extraction": extract_linear(session, records).to_data(),
     }
     args.output.write_text(dumps(result, indent=2, sort_keys=True) + "\n")
     return 0

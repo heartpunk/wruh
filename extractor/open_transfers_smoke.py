@@ -24,8 +24,8 @@ from ayxg.z3 import declaration_variables, expr_to_z3
 
 from extractor.artifact import Target
 from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
-from extractor.instruction_inventory import Interval, inventory_project
-from extractor.loaded_image import load_object_set
+from extractor.instruction_inventory import Interval
+from extractor.backend import Session
 
 BASE = 0x400000
 TEXT_OFFSET = 0x1000
@@ -240,11 +240,12 @@ def main(argv=None):
     with tempfile.TemporaryDirectory() as temp:
         artifact = Path(temp) / 'open-transfers.elf'
         write_fixture(artifact)
-        project = load_object_set(artifact)
-        assert not project.loader.find_object_containing(EXTERNAL)
-        decoded = inventory_project(project, [Interval(BASE, BASE + TEXT_OFFSET)])
-        records = linear_site_records(project, decoded, chunk_size=16, seed=17)
-        function = extract_linear(project, records)
+        session = Session.load(artifact)
+        assert all(not (segment["address"] <= EXTERNAL < segment["address"] + segment["size"])
+                   for obj in session.image.loaded_image["objects"] for segment in obj["segments"])
+        decoded = session.inventory([Interval(BASE, BASE + TEXT_OFFSET)])
+        records = linear_site_records(decoded, chunk_size=16, seed=17)
+        function = extract_linear(session, records)
         results = {}
         rejection_controls = None
         for name, offset, code, is_call, symbolic in FIXTURES:

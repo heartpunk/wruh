@@ -3,35 +3,34 @@ import json
 import unittest
 from pathlib import Path
 
-import angr
+import tempfile
 
-from extractor.amd64_state import step_instruction_outcomes
+from ayxg.expr import TypedExpr
+
+from extractor.elf_fixture import PC, code_session
 from extractor.amd64_terminals import (
     is_ud2_instruction,
     is_ud2_no_decode_terminal,
 )
 from extractor.artifact import LocalEdge, StaticOccurrenceId
-from extractor.fresh import _local_edges, artifact_declarations
+from extractor.fresh import _local_edges
 
 
 class Ud2TerminalTests(unittest.TestCase):
     def test_instruction_adapter_emits_one_unchanged_state_ud2_fault(self):
-        address = 0x400000
-        project = angr.load_shellcode(
-            b"\x0f\x0b", arch="amd64", load_address=address
-        )
-
-        family = step_instruction_outcomes(project, address)
-
-        self.assertEqual(family.source, address)
+        address = PC
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), b"\x0f\x0b")
+        family = session.step(address)
+        self.assertEqual(family.address, address)
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigILL")
         self.assertEqual(outcome.target_value, address)
-        self.assertEqual(outcome.updates, {})
+        self.assertEqual(dict(outcome.updates), {d.name: TypedExpr.var(d.name, d.sort)
+                                                 for d in session.image.declarations})
         self.assertEqual(outcome.writes, ())
         edge = _local_edges(
-            artifact_declarations(project.arch),
+            session.image.declarations,
             StaticOccurrenceId(0),
             family,
         )[0]

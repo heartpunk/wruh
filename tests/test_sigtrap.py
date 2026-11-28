@@ -1,19 +1,22 @@
 import hashlib
 import os
 import unittest
+import tempfile
+
+import archinfo
 from pathlib import Path
 
-from extractor import runtime
-from extractor.amd64_state import AMD64_LAYOUT, step_instruction_outcomes
+from extractor.backend import Session
+from extractor.elf_fixture import PC, code_session
+from ayxg.expr import TypedExpr
 from extractor.artifact import (
     LocalEdge,
     StaticOccurrenceId,
 )
-from extractor.lean_angr_worker import _step
+from extractor.lean_equanimity_worker import _step
 from extractor.instruction_inventory import Span, inventory
 from extractor.fresh import (
     _local_edges,
-    artifact_declarations,
     extract_linear,
     linear_site_records,
 )
@@ -27,27 +30,25 @@ class SigtrapAdapterTest(unittest.TestCase):
     )
 
     def test_hlt_sigtrap_is_terminal_fault_outcome(self):
-        project = runtime.angr.load_shellcode(
-            b"\xf4", arch="amd64", load_address=0x400000
-        )
-
-        family = step_instruction_outcomes(project, 0x400000)
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), b"\xf4")
+        family = session.step(PC)
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
         self.assertEqual(outcome.fault_kind, "general_protection")
-        emitted = _step(project, 0x400000)["outcomes"][0]
+        emitted = _step(session, PC)["outcomes"][0]
         self.assertEqual(emitted["jumpkind"], "Ijk_SigTRAP")
         self.assertEqual(emitted["fault_kind"], "general_protection")
-        self.assertEqual(outcome.target_value, 0x400000)
-        self.assertEqual(set(outcome.updates), {AMD64_LAYOUT.ip_view})
+        self.assertEqual(outcome.target_value, PC)
+        self.assertTrue(all(outcome.updates[d.name] == TypedExpr.var(d.name, d.sort)
+                            for d in session.image.declarations if d.name != "rip"))
         self.assertEqual(
-            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400000
+            outcome.updates["rip"].value, PC
         )
         self.assertEqual(outcome.writes, ())
 
         edges = _local_edges(
-            artifact_declarations(project.arch),
+            session.image.declarations,
             StaticOccurrenceId(0),
             family,
         )
@@ -60,24 +61,21 @@ class SigtrapAdapterTest(unittest.TestCase):
         self.assertEqual(restored.fault_kind, "general_protection")
 
     def test_int3_sigtrap_keeps_post_instruction_rip(self):
-        project = runtime.angr.load_shellcode(
-            b"\xcc", arch="amd64", load_address=0x400000
-        )
-
-        family = step_instruction_outcomes(project, 0x400000)
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), b"\xcc")
+        family = session.step(PC)
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
         self.assertEqual(outcome.fault_kind, "signal_trap")
-        emitted = _step(project, 0x400000)["outcomes"][0]
+        emitted = _step(session, PC)["outcomes"][0]
         self.assertEqual(emitted["jumpkind"], "Ijk_SigTRAP")
         self.assertEqual(emitted["fault_kind"], "signal_trap")
-        self.assertEqual(outcome.target_value, 0x400001)
+        self.assertEqual(outcome.target_value, PC + 1)
         self.assertEqual(
-            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400001
+            outcome.updates["rip"].value, PC + 1
         )
         edges = _local_edges(
-            artifact_declarations(project.arch),
+            session.image.declarations,
             StaticOccurrenceId(0),
             family,
         )
@@ -100,45 +98,29 @@ class SigtrapAdapterTest(unittest.TestCase):
             self.APACHE_HTTPD_SHA256,
             "WRUH_APACHE_HTTPD must be the pinned Nixpkgs Apache 2.4.71 binary",
         )
-        project = runtime.angr.Project(binary, auto_load_libs=False)
-        start_symbol = project.loader.main_object.get_symbol("_start")
-        self.assertIsNotNone(start_symbol)
-
-        start_code = project.loader.memory.load(
-            start_symbol.rebased_addr, start_symbol.size
-        )
-        start_instructions = list(
-            project.arch.capstone.disasm(start_code, start_symbol.rebased_addr)
-        )
-        self.assertTrue(start_instructions)
-        self.assertEqual(start_instructions[0].address, start_symbol.rebased_addr)
-        self.assertEqual(
-            start_instructions[-1].address + start_instructions[-1].size,
-            start_symbol.rebased_addr + start_symbol.size,
-        )
-        hlt_instructions = [
-            instruction
-            for instruction in start_instructions
-            if instruction.mnemonic == "hlt"
-        ]
-        self.assertEqual(len(hlt_instructions), 1)
-        hlt_address = hlt_instructions[0].address
-
-        family = step_instruction_outcomes(project, hlt_address)
+        session = Session.load(binary)
+        obj = session.image.loaded_image["objects"][0]
+        start = next(s for s in obj["function_symbols"] if "_start" in s["names"])
+        address = obj["mapped_base"] + start["offset"]
+        segment = next(s for s in obj["segments"] if s["address"] <= address < s["address"] + s["size"])
+        offset = address - segment["address"]
+        start_code = bytes.fromhex(segment["bytes"])[offset:offset + start["size"]]
+        decoded = inventory([Span(address, start_code, obj["sha256"], obj["mapped_base"])],
+                            [], archinfo.ArchAMD64().capstone)
+        self.assertFalse(decoded.unexamined or decoded.unresolved)
+        hlt_address, = [i.address for i in decoded.decoded if i.mnemonic == "hlt"]
+        family = session.step(hlt_address)
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
         self.assertEqual(outcome.fault_kind, "general_protection")
         self.assertEqual(outcome.target_value, hlt_address)
         self.assertEqual(
-            outcome.updates[AMD64_LAYOUT.ip_view].as_long(), hlt_address
+            outcome.updates["rip"].value, hlt_address
         )
 
-        image_sha256 = hashlib.sha256(binary.read_bytes()).hexdigest()
-        decoded = inventory([Span(start_symbol.rebased_addr, start_code, image_sha256,
-                                  project.loader.main_object.mapped_base)], [], project.arch.capstone)
-        records = linear_site_records(project, decoded, chunk_size=64, seed=0)
-        fresh = extract_linear(project, records)
+        records = linear_site_records(decoded, chunk_size=64, seed=0)
+        fresh = extract_linear(session, records)
         hlt_edges = [
             edge for edge in fresh.local_edges if edge.source == hlt_address
         ]
@@ -149,7 +131,7 @@ class SigtrapAdapterTest(unittest.TestCase):
         ip_update = next(
             assignment
             for assignment in hlt_edges[0].summary.simultaneous_update
-            if assignment.name == AMD64_LAYOUT.ip_view
+            if assignment.name == "rip"
         )
         self.assertEqual(
             ip_update.value.to_data(),

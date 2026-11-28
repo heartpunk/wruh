@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import tempfile
 import unittest
 from dataclasses import replace
-from pathlib import Path
-from types import SimpleNamespace
 
 from extractor.native_runtime import preload_libstdcxx
 
@@ -16,24 +13,10 @@ preload_libstdcxx()
 import z3
 from ayxg.codec import loads
 from ayxg.z3 import declaration_variables, expr_from_z3, expr_to_z3
-from extractor import runtime
-from extractor.amd64_state import (
-    LTS_EXTRACTION_CONTEXT as CTX,
-)
-from extractor.amd64_state import (
-    _resolve_memory_reads,
-    canonical_memory,
-    canonical_register,
-    claripy_to_z3,
-    fresh_instruction_state,
-    step_instruction_outcomes,
-)
-from extractor.instruction_inventory import Span, inventory
+from extractor.elf_fixture import PC, code_session, code_inventory
 from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
-from extractor.fresh import artifact_declarations
-from extractor.lean_angr_worker import _step
+from extractor.lean_equanimity_worker import _step
 
-PC = 0x400000
 # Independent architectural storage roster, not obtained from emitted declarations.
 NAMES = (
     {
@@ -114,13 +97,9 @@ class MemorySemantics(unittest.TestCase):
     def extract(self, code):
         raw = bytes.fromhex(code + "c3")
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "memory.bin"
-            path.write_bytes(raw)
-            project = runtime.angr.load_shellcode(raw, arch="amd64", load_address=PC)
-            decoded = inventory([Span(PC, raw)], [], project.arch.capstone)
-            records = linear_site_records(project, decoded, chunk_size=2, seed=7,
-                                          image_digest=hashlib.sha256(raw).hexdigest())
-            function = extract_linear(project, records)
+            session = code_session(directory, raw)
+            records = linear_site_records(code_inventory(session, len(raw)), chunk_size=2, seed=7)
+            function = extract_linear(session, records)
             function = FreshInstructions.from_data(json.loads(function.canonical_json()))
         self.assertEqual(
             [o.origin.canonical_address for o in function.occurrences],
@@ -278,53 +257,29 @@ class MemorySemantics(unittest.TestCase):
 
     def test_conditional_write_metadata(self):
         code = bytes.fromhex("f0410fb109")
-        project = runtime.angr.load_shellcode(code, arch="amd64", load_address=PC)
-        family = step_instruction_outcomes(project, PC)
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), code)
+        family = session.step(PC)
         self.assertEqual(len(family.outcomes), 1)
         writes = family.outcomes[0].writes
         self.assertEqual(len(writes), 1)
         self.assertIsNotNone(writes[0].condition)
-        memory = canonical_memory()
-        address = canonical_register("r9")
+        ctx = z3.Context()
+        variables = declaration_variables(session.image.declarations, ctx)
+        memory, address = variables["mem"], variables["r9"]
         old = z3.Concat(*(z3.Select(memory, address + i) for i in (3, 2, 1, 0)))
-        expected = z3.Extract(31, 0, canonical_register("rax"))
-        self.prove(writes[0].condition == (old == expected), "write condition")
-
-    def test_concrete_write_conditions(self):
-        project = runtime.angr.load_shellcode(b"\x90", arch="amd64", load_address=PC)
-        address = runtime.claripy.BVV(0x1000, 64)
-        memory = canonical_memory()
-        destination = z3.BitVecVal(0x1000, 64, CTX)
-        for condition, enabled in (
-            (True, True),
-            (False, False),
-            (runtime.claripy.BoolV(True), True),
-            (runtime.claripy.BoolV(False), False),
-        ):
-            with self.subTest(condition=condition):
-                state = fresh_instruction_state(project, PC)
-                state.memory.store(
-                    address, runtime.claripy.BVV(7, 8), size=1, condition=condition
-                )
-                post = _resolve_memory_reads(
-                    state.globals["_ghot_memory_expr"],
-                    state.globals["_ghot_memory_reads"],
-                )
-                expected = z3.Store(memory, destination, z3.BitVecVal(7, 8, CTX)) if enabled else memory
-                self.prove(post == expected, "concrete condition")
+        expected = z3.Extract(31, 0, variables["rax"])
+        self.prove(expr_to_z3(writes[0].condition, variables, ctx) == (old == expected), "write condition")
 
     def test_lean_worker_preserves_conditional_write(self):
-        project = runtime.angr.load_shellcode(
-            bytes.fromhex("f0410fb109"), arch="amd64", load_address=PC
-        )
-        response = _step(project, PC)
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), bytes.fromhex("f0410fb109"))
+        response = _step(session, PC)
         dag = response["expression_dag"]
         roots = loads(json.dumps({
             "schema": "ayxg-artifact-dag-v1",
             "expression_dag": dag,
             "payload": [{"$expr": i} for i in range(len(dag["roots"]))],
         }))
-        declarations = artifact_declarations(project.arch)
+        declarations = session.image.declarations
         ctx = z3.Context()
         variables = declaration_variables(declarations, ctx)
         self.assertEqual(len(response["outcomes"]), 1)
@@ -392,86 +347,6 @@ class MemorySemantics(unittest.TestCase):
                 {"rax": z3.BitVecVal(VALUES[8], 64, c)},
                 domain,
             )
-
-    def test_hook_overlap_nested_reads_and_fixed_inputs(self):
-        # Real hooked Angr memory operations; oracle uses literal bytes and SMT
-        # selects, never production load_le/store_le to compute expectations.
-        project = runtime.angr.load_shellcode(b"\x90", arch="amd64", load_address=PC)
-        state = fresh_instruction_state(project, PC)
-        p = runtime.claripy.BVS("rdi", 64, explicit_name=True)
-        q = runtime.claripy.BVS("rsi", 64, explicit_name=True)
-        before = state.memory.load(p, 2, endness="Iend_LE")
-        state.memory.store(
-            p, runtime.claripy.BVV(0xDE42A713, 32), size=4, endness="Iend_LE"
-        )
-        state.memory.store(
-            p + 1, runtime.claripy.BVV(0xBC81, 16), size=2, endness="Iend_LE"
-        )
-        after = state.memory.load(q, 4, endness="Iend_LE")
-        nested = state.memory.load(before.zero_extend(48), 1)
-        reads = state.globals["_ghot_memory_reads"]
-        resolve = lambda x: _resolve_memory_reads(claripy_to_z3(x), reads)
-        m, a, b = (
-            canonical_memory(),
-            canonical_register("rdi"),
-            canonical_register("rsi"),
-        )
-        old = z3.Concat(z3.Select(m, a + 1), z3.Select(m, a))
-        self.prove(resolve(before) == old, "read before writes")
-        self.assertEqual(self.result(a == b), z3.sat, "alias witness")
-        self.assertEqual(
-            self.result(z3.And(a == 0x1003, b == 0x2005)), z3.sat, "nonalias witness"
-        )
-        self.prove(
-            z3.Implies(a == b, resolve(after) == 0xDEBC8113),
-            "overlap and symbolic alias",
-        )
-        self.prove(
-            z3.Implies(
-                z3.And(*(b + i != a + j for i in range(4) for j in range(4))),
-                resolve(after)
-                == z3.Concat(*(z3.Select(m, b + i) for i in (3, 2, 1, 0))),
-            ),
-            "symbolic nonalias",
-        )
-        # Nested pointer is a 16-bit load zero-extended to the machine address.
-        expected_memory = z3.Store(
-            z3.Store(
-                z3.Store(
-                    z3.Store(m, a, z3.BitVecVal(0x13, 8, CTX)),
-                    a + 1,
-                    z3.BitVecVal(0x81, 8, CTX),
-                ),
-                a + 2,
-                z3.BitVecVal(0xBC, 8, CTX),
-            ),
-            a + 3,
-            z3.BitVecVal(0xDE, 8, CTX),
-        )
-        self.prove(
-            resolve(nested) == z3.Select(expected_memory, z3.ZeroExt(48, old)),
-            "nested read uses updated memory",
-        )
-        fixed = fresh_instruction_state(project, PC)
-        fixed.globals["_ghot_fixed_byte_reads"] = tuple(
-            (a + i, byte) for i, byte in enumerate(BYTES[:4])
-        )
-        full = fixed.memory.load(p, 4, endness="Iend_LE")
-        partial = fixed.memory.load(p + 2, 4, endness="Iend_LE")
-        self.assertEqual(full.op, "BVV")
-        self.assertEqual(full.args[0], 0xDE42A713)
-        self.assertTrue(partial.symbolic, "partially unknown read must remain symbolic")
-        self.assertEqual(
-            fixed.globals["_ghot_memory_read_counts"], {"fixed": 1, "symbolic": 1}
-        )
-        partial_value = _resolve_memory_reads(
-            claripy_to_z3(partial), fixed.globals["_ghot_memory_reads"]
-        )
-        self.prove(
-            partial_value == z3.Concat(*(z3.Select(m, a + i) for i in (5, 4, 3, 2))),
-            "partial read retains canonical memory",
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

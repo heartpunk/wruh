@@ -8,22 +8,19 @@ from extractor.runtime_trace import start_runtime_trace
 
 start_runtime_trace()
 
-from extractor import runtime
+import tempfile
+from types import SimpleNamespace
+
+from extractor.elf_fixture import PC, code_session
 
 # ruff: isort: split
 import z3
 
-from extractor.amd64_state import (
-    AMD64_LAYOUT,
-    FLAG_NAMES,
-    canonical_declarations,
-    canonical_flag,
-    canonical_register,
-    canonical_register_view,
-    step_instruction_outcomes,
-)
-from extractor.amd64_state import LTS_EXTRACTION_CONTEXT as CTX
-from extractor.architecture import NORMALIZED_AMD64_FLAGS
+from ayxg.z3 import declaration_variables, expr_to_z3
+from extractor.architecture import ArchitectureLayout, NORMALIZED_AMD64_FLAGS
+
+CTX = z3.Context()
+FLAG_NAMES = ("CF", "ZF", "SF", "OF", "PF", "AF")
 
 
 def prove(expression):
@@ -32,31 +29,49 @@ def prove(expression):
     assert solver.check() == z3.unsat, expression
 
 
-def project(code):
-    return runtime.angr.load_shellcode(bytes.fromhex(code), arch="amd64", load_address=0x400000)
-
-
 def check():
     records = []
-    declarations = {d.name: d for d in canonical_declarations()}
-    assert set(declarations) == ({r.name for r in AMD64_LAYOUT.storage} - NORMALIZED_AMD64_FLAGS |
+    with tempfile.TemporaryDirectory() as temp:
+        image = code_session(temp, b"\x90").image
+    layout = ArchitectureLayout.from_data(image.architecture)
+    variables = declaration_variables(image.declarations, CTX)
+    def register(name):
+        return variables[name]
+
+    def view_value(name):
+        view = layout.view(name)
+        storage = register(view.storage_name)
+        if view.size_bytes * 8 == storage.size():
+            return storage
+        return z3.Extract((view.byte_offset + view.size_bytes) * 8 - 1, view.byte_offset * 8, storage)
+
+    declarations = variables
+    assert set(declarations) == ({r.name for r in layout.storage} - NORMALIZED_AMD64_FLAGS |
                                  {f"rflags_{n}" for n in FLAG_NAMES} | {"mem"})
     for name in ("fs", "gs", "fpreg", "fptag", "ftop", "fpround", "sseround"):
         assert name in declarations
-    for view in AMD64_LAYOUT.views:
-        item = AMD64_LAYOUT.register(view.storage_name)
+    for view in layout.views:
+        item = layout.register(view.storage_name)
         assert 0 <= view.byte_offset and view.byte_offset + view.size_bytes <= item.size_bytes
-    prove(canonical_register_view("eax") == z3.Extract(31,0,canonical_register("rax")))
-    prove(canonical_register_view("ah") == z3.Extract(15,8,canonical_register("rax")))
-    assert canonical_register_view("pc").eq(canonical_register("rip"))
-    assert type(AMD64_LAYOUT).from_data(json.loads(json.dumps(AMD64_LAYOUT.to_data()))) == AMD64_LAYOUT
-    records.append({"case": "layout", "storage": len(AMD64_LAYOUT.storage), "views": len(AMD64_LAYOUT.views)})
+    prove(view_value("eax") == z3.Extract(31,0,register("rax")))
+    prove(view_value("ah") == z3.Extract(15,8,register("rax")))
+    assert view_value("pc").eq(register("rip"))
+    assert type(layout).from_data(json.loads(json.dumps(layout.to_data()))) == layout
+    records.append({"case": "layout", "storage": len(layout.storage), "views": len(layout.views)})
 
     def instruction(name, code):
-        family = step_instruction_outcomes(project(code), 0x400000)
-        records.append({"case": name, "outcomes": len(family.outcomes),
-                        "updated": [sorted(o.updates) for o in family.outcomes]})
-        return family
+        with tempfile.TemporaryDirectory() as temp:
+            family = code_session(temp, bytes.fromhex(code)).step(PC)
+        def as_z3(expr):
+            return expr_to_z3(expr, variables, CTX)
+        outcomes = tuple(SimpleNamespace(
+            guard=as_z3(item.guard), jumpkind=item.jumpkind,
+            updates={key: as_z3(value) for key, value in item.updates.items()}
+        ) for item in family.outcomes)
+        records.append({"case": name, "outcomes": len(outcomes),
+                        "updated": [sorted(k for k, v in o.updates.items() if not v.eq(variables[k]))
+                                    for o in outcomes]})
+        return SimpleNamespace(source_guard=as_z3(family.source_guard), outcomes=outcomes)
     # Exercise real AMD64 IDIV lifting (idiv rcx), including a negative
     # dividend and truncation-toward-zero remainder through the extraction path.
     family = instruction("signed-idiv-quotient-remainder", "48f7f9")
@@ -71,9 +86,9 @@ def check():
     ]
     assert normal_outcomes, "signed IDIV produced no normal outcome"
     initial_operands = (
-        canonical_register("rax") == dividend_low,
-        canonical_register("rdx") == dividend_high,
-        canonical_register("rcx") == divisor,
+        register("rax") == dividend_low,
+        register("rdx") == dividend_high,
+        register("rcx") == divisor,
     )
     matching_outcomes = []
     for outcome in normal_outcomes:
@@ -95,11 +110,11 @@ def check():
     out = instruction("eax-zero-extension", "b878563412").outcomes[0]
     prove(out.updates["rax"] == 0x12345678)
     out = instruction("ah-preserves-other-bits", "b47f").outcomes[0]
-    old = canonical_register("rax")
+    old = register("rax")
     prove(out.updates["rax"] == ((old & z3.BitVecVal(0xffffffffffff00ff,64,ctx=CTX)) | 0x7f00))
     out = instruction("vector-alias-pxor", "660fefc0").outcomes[0]
-    backing = AMD64_LAYOUT.view("xmm0").storage_name
-    old = canonical_register(backing)
+    backing = layout.view("xmm0").storage_name
+    old = register(backing)
     assert backing in out.updates
     prove(z3.Extract(127,0,out.updates[backing]) == 0)
     if old.size() > 128:
@@ -111,25 +126,25 @@ def check():
     out = instruction("flag-normalization", "f8").outcomes[0]
     prove(out.updates["rflags_CF"] == 0)
     for flag in set(FLAG_NAMES) - {"CF"}:
-        prove(out.updates.get(f"rflags_{flag}", canonical_flag(flag)) == canonical_flag(flag))
+        prove(out.updates[f"rflags_{flag}"] == variables[f"rflags_{flag}"])
     family = instruction("x87-counter-preserves-high-bits", "d9f7")
     assert len(family.outcomes) == 8
     prove(z3.Or(*(o.guard for o in family.outcomes)))
     for out in family.outcomes:
-        prove(z3.Implies(out.guard, out.updates["ftop"] == (canonical_register("ftop") + 1)))
+        prove(z3.Implies(out.guard, out.updates["ftop"] == (register("ftop") + 1)))
     family = instruction("sse-rounding-selector-store", "0fae1f")
     assert len(family.outcomes) == 4
-    prove(z3.Or(*(o.guard for o in family.outcomes)) == z3.ULE(canonical_register("sseround"),3))
+    prove(z3.Or(*(o.guard for o in family.outcomes)) == z3.ULE(register("sseround"),3))
     family = instruction("x87-rounding-selector-store", "d93f")
     assert len(family.outcomes) == 4
-    prove(z3.Or(*(o.guard for o in family.outcomes)) == z3.ULE(canonical_register("fpround"),3))
+    prove(z3.Or(*(o.guard for o in family.outcomes)) == z3.ULE(register("fpround"),3))
     family = instruction("direction-selector-partition", "a4")
     assert len(family.outcomes) == 2
     prove(z3.Or(*(o.guard for o in family.outcomes)) ==
-          z3.Or(canonical_register("d") == 1, canonical_register("d") == (1 << 64) - 1))
+          z3.Or(register("d") == 1, register("d") == (1 << 64) - 1))
     for a,b in zip(family.outcomes, family.outcomes[1:]):
         prove(z3.Not(z3.And(a.guard,b.guard)))
-    return {"status": "PASS", "architecture": AMD64_LAYOUT.to_data(), "records": records}
+    return {"status": "PASS", "architecture": layout.to_data(), "records": records}
 
 
 if __name__ == "__main__":

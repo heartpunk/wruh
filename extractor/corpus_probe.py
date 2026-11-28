@@ -17,19 +17,22 @@ start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
 
 preload_libstdcxx()
+from extractor.backend import Session
 from extractor.fresh import extract_linear, linear_site_records
-from extractor.instruction_inventory import inventory_project
-from extractor.loaded_image import load_object_set
+import archinfo
+import pyvex
+from angr.block import CapstoneBlock, CapstoneInsn
 
 CANONICAL = ['var','bool_lit','bv_lit','bool_not','bool_and','bool_or','ite','bv_add','bv_sub','bv_mul','bv_udiv','bv_urem','bv_and','bv_or','bv_xor','bv_shl','bv_lshr','bv_ashr','bv_ult','bv_ule','bv_slt','bv_sle','eq','bv_not','zero_extend','sign_extend','extract','concat','const_array','select','store']
 CONTROL = {'jump:Ijk_Call','jump:Ijk_Ret'}
 
-def features(project, decoded):
+def features(decoded):
+    arch = archinfo.ArchAMD64()
     found = set()
     failures = []
     for instruction in decoded.decoded:
         try:
-            ir = project.factory.block(instruction.address, num_inst=1).vex
+            ir = pyvex.IRSB(instruction.data, instruction.address, arch, num_inst=1)
             found.add('jump:' + ir.jumpkind)
             for stmt in ir.statements:
                 found.add('stmt:' + stmt.tag)
@@ -52,9 +55,8 @@ def scan(args):
     with tempfile.TemporaryDirectory() as temp:
         elf=Path(temp)/'corpus.elf'
         subprocess.run(command+['-o',str(elf)],check=True)
-        project=load_object_set(elf)
-        decoded=inventory_project(project)
-        observed_features, feature_failures = features(project, decoded)
+        decoded=Session.load(elf).inventory([])
+        observed_features, feature_failures = features(decoded)
         candidates={'image': {'features': observed_features}}
         from angr.engines.vex.claripy import irop
         registry=set(irop.operations)
@@ -85,12 +87,18 @@ def prepare_native(args):
         elf=Path(temp)/'native-harness.elf'
         subprocess.run(command+['-o',str(elf)],check=True)
         data=elf.read_bytes()
-        project=load_object_set(elf)
-        functions={}
-        for name in ('main','alias','overlap','division'):
-            symbol=project.loader.find_symbol(name)
-            block=project.factory.block(symbol.rebased_addr,size=symbol.size)
-            functions[name]=str(block.capstone)
+        obj, = Session.load(elf).image.loaded_image["objects"]
+        decoder = archinfo.ArchAMD64().capstone
+        functions = {}
+        for name in ('main', 'alias', 'overlap', 'division'):
+            symbol = next(item for item in obj["function_symbols"] if name in item["names"])
+            address = obj["mapped_base"] + symbol["offset"]
+            segment = next(s for s in obj["segments"] if s["address"] <= address
+                           and address + symbol["size"] <= s["address"] + s["size"])
+            start = address - segment["address"]
+            code = bytes.fromhex(segment["bytes"])[start:start + symbol["size"]]
+            block = CapstoneBlock(address, [CapstoneInsn(i) for i in decoder.disasm(code, address)])
+            functions[name] = str(block)
         return {'optimization':args.optimization,'command':command+['-o','<temporary>/native-harness.elf'],
                 'compiler':subprocess.check_output([compiler,'--version'],text=True),
                 'source_sha256':{p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in args.source},
@@ -119,11 +127,11 @@ def extract(args):
     started=time.monotonic()
     with tempfile.TemporaryDirectory() as temp:
         elf=Path(temp)/'corpus.elf';elf.write_bytes(base64.b64decode(scan['elf_base64']))
-        project=load_object_set(elf)
+        session=Session.load(elf)
         try:
-            decoded=inventory_project(project)
-            records=linear_site_records(project,decoded,chunk_size=256,seed=0)
-            fresh=extract_linear(project,records)
+            decoded=session.inventory([])
+            records=linear_site_records(decoded,chunk_size=256,seed=0)
+            fresh=extract_linear(session,records)
             ops,nodes=expression_ops(fresh)
             return {'root':'image','optimization':scan['optimization'],'status':'PASS','elf_sha256':scan['elf_sha256'],
               'occurrences':len(fresh.occurrences),'local_edges':len(fresh.local_edges),'canonical_ops':ops,'expression_objects':nodes,

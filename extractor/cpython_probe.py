@@ -16,7 +16,6 @@ from ayxg.codec import dumps
 
 from extractor.fresh import extract_linear
 from extractor.linear_pipeline import prepare
-from extractor.loaded_image import loaded_image_data
 
 
 def main() -> None:
@@ -43,11 +42,11 @@ def main() -> None:
         selection = SimpleNamespace(artifact=actual[main_hash], objects=specification,
                                     data_intervals=args.data_intervals,
                                     chunk_size=args.chunk_size, seed=args.seed)
-        project, records, report, image_sha256 = prepare(selection)
+        session, records, report, image_sha256 = prepare(selection)
         result = {'schema': 'wruh-cpython-extraction-v2', 'identity': identity,
                   'image_sha256': image_sha256, 'inventory': report,
-                  'extraction': extract_linear(project, records).to_data(),
-                  'loaded_image': loaded_image_data(project),
+                  'extraction': extract_linear(session, records).to_data(),
+                  'loaded_image': session.image.loaded_image,
                   'native_candidate_execution': False}
         args.output.write_text(dumps(result, indent=2, sort_keys=True) + '\n')
 

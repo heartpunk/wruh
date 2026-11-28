@@ -12,21 +12,10 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
-
-from cle.backends.elf.relocation.amd64 import R_X86_64_64, R_X86_64_COPY, R_X86_64_PC32
-from cle.backends.relocation import Relocation
-from elftools.elf.elffile import ELFFile
-from elftools.elf.relocation import RelocationSection
 
 from extractor.fresh import extract_linear, linear_site_records
-from extractor.instruction_inventory import inventory_project
-from extractor.loaded_image import (
-    load_object_set,
-    loaded_image_data,
-    relocation_write_size,
-    skipped_elf_relocations,
-)
+from extractor.backend import Session
+from extractor.elf_fixture import elf_fixture
 
 
 def main(argv=None):
@@ -60,54 +49,38 @@ def main(argv=None):
                 subprocess.run(command,check=True)
         specification=directory/'objects.json'; specification.write_text(json.dumps([
             {'path':str(library),'base_addr':0x900000,'sha256':hashlib.sha256(library.read_bytes()).hexdigest()}]))
-        project=load_object_set(entry,specification)
-        image=loaded_image_data(project)
+        session=Session.load(entry,specification)
+        image=session.image.loaded_image
         assert len(image['objects'])==2
-        decoded = inventory_project(project)
-        records = linear_site_records(project, decoded, chunk_size=32, seed=17)
-        extraction = extract_linear(project, records)
+        decoded = session.inventory([])
+        records = linear_site_records(decoded, chunk_size=32, seed=17)
+        extraction = extract_linear(session, records)
         library_hash = hashlib.sha256(library.read_bytes()).hexdigest()
         entry_hash = hashlib.sha256(entry.read_bytes()).hexdigest()
         assert {item.origin.image_sha256 for item in extraction.occurrences} == {entry_hash, library_hash}
-        indirect = project.loader.find_symbol('indirect_root')
-        assert indirect is not None
+        entry_object = next(obj for obj in image["objects"] if obj["sha256"] == entry_hash)
+        indirect = next(symbol for symbol in entry_object["function_symbols"]
+                        if "indirect_root" in symbol["names"])
+        address = entry_object["mapped_base"] + indirect["offset"]
         indirect_edges = [edge for edge in extraction.local_edges
-                          if indirect.rebased_addr <= edge.source < indirect.rebased_addr + indirect.size]
+                          if address <= edge.source < address + indirect["size"]]
         assert any(edge.summary.target.kind == 'symbolic' for edge in indirect_edges)
-        assert all(not project.is_hooked(address) for address, _ in records)
-        # Actual CLE relocation classes: unknown-mask extent follows their writes.
-        memory_bytes=bytes(range(64)); fixture_path=directory/'relocation.bin'; fixture_path.write_bytes(memory_bytes)
-        segment=SimpleNamespace(min_addr=0x1000,memsize=64,is_readable=True,is_writable=True,is_executable=False)
-        owner=SimpleNamespace(binary=str(fixture_path),mapped_base=0x1000,linked_base=0,arch=SimpleNamespace(bytes=8,name="AMD64"),segments=[segment],imports={})
-        symbol=SimpleNamespace(name='unknown',size=24,is_import=False)
-        owner.relocs=[R_X86_64_PC32(owner,symbol,0,addend=0),R_X86_64_64(owner,symbol,8,addend=0),R_X86_64_COPY(owner,symbol,24,addend=0)]
-        fake=SimpleNamespace(loader=SimpleNamespace(all_objects=[owner],memory=SimpleNamespace(load=lambda address,size: memory_bytes[address-0x1000:address-0x1000+size])))
-        from unittest.mock import patch
-        with patch('extractor.loaded_image.skipped_elf_relocations', return_value=[]):
-            masks=loaded_image_data(fake)['objects'][0]['undefined_bytes']
-        assert [(item['address'],item['size']) for item in masks]==[(0x1000,4),(0x1008,8),(0x1018,24)]
-        masked={address for item in masks for address in range(item['address'],item['address']+item['size'])}
-        assert 0x1004 not in masked and 0x1007 not in masked and 0x1030 not in masked
-        assert all(address in masked for address in range(0x1018,0x1030))
-        class UnknownRelocation(Relocation):
-            def relocate(self): return True
-        try: relocation_write_size(UnknownRelocation(owner,symbol,0))
-        except ValueError: pass
-        else: raise AssertionError('unknown write extent accepted')
-        # Patch only relocation type in a frozen test copy; parse, never execute.
-        with entry.open('rb') as stream:
-            elf=ELFFile(stream)
-            section=next(sec for sec in elf.iter_sections() if isinstance(sec,RelocationSection) and sec.num_relocations())
-            entry_offset=section['sh_offset']; old_info=next(section.iter_relocations())['r_info']
-        raw=bytearray(entry.read_bytes()); raw[entry_offset+8:entry_offset+16]=((old_info&~0xffffffff)|36).to_bytes(8,'little')
-        descriptor_file=directory/'tlsdesc.elf'; descriptor_file.write_bytes(raw)
-        descriptor_owner=SimpleNamespace(binary=str(descriptor_file),mapped_base=0x400000,linked_base=0x400000,arch=SimpleNamespace(name='AMD64'))
-        skipped=skipped_elf_relocations(descriptor_owner)
-        assert len(skipped)==1 and skipped[0]['elf_type']==36 and skipped[0]['size']==16
-        raw[entry_offset+8:entry_offset+16]=((old_info&~0xffffffff)|999).to_bytes(8,'little'); descriptor_file.write_bytes(raw)
-        try: skipped_elf_relocations(descriptor_owner)
-        except ValueError: pass
-        else: raise AssertionError('unknown skipped ELF relocation accepted')
+        relocation_file = directory / "relocations.so"
+        elf_fixture(relocation_file, [(0, 2, 1, 0), (8, 1, 1, 0), (24, 5, 1, 0),
+                                      (48, 36, 1, 0)], import_size=24)
+        relocation_obj = Session.load(relocation_file).image.loaded_image["objects"][0]
+        base = relocation_obj["mapped_base"]
+        masks = sorted((r["address"] - base, r["size"]) for r in relocation_obj["undefined_bytes"])
+        assert masks == [(0x300, 4), (0x308, 8), (0x318, 24), (0x330, 16)]
+        skipped, = relocation_obj["skipped_relocations"]
+        assert skipped["elf_type"] == 36 and skipped["size"] == 16
+        elf_fixture(relocation_file, [(0, 999, 1, 0)])
+        try:
+            Session.load(relocation_file)
+        except ValueError as error:
+            assert "unsupported skipped ELF relocation 999" in str(error)
+        else:
+            raise AssertionError("unknown skipped ELF relocation accepted")
         result={'skipped_relocation_controls':'raw TLSDESC16 retained / unknown fails explicitly',
             'relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},
             'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
