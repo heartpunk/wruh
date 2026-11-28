@@ -1,8 +1,7 @@
 """Extract real AMD64 open transfers from a compiler-free ELF fixture.
 
-The tiny ELF contains instruction bytes and ordinary sized function symbols;
-CLE, inventory, CFG recovery and fresh extraction all run without mocks. The
-fixture is loaded as data and is never executed natively.
+The tiny ELF contains instruction bytes and ordinary sized function symbols.
+The fixture is loaded as data and is never executed natively.
 """
 from extractor.runtime_trace import start_runtime_trace
 
@@ -24,13 +23,9 @@ from ayxg.expr import TermSort, TypedExpr
 from ayxg.z3 import declaration_variables, expr_to_z3
 
 from extractor.artifact import Target
-from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import (
-    exact_symbol_inventory_policy,
-    inventory,
-    load_pinned_binary,
-)
-from extractor.fresh import FreshFunction, extract_fresh_function
+from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
+from extractor.instruction_inventory import Interval, inventory_project
+from extractor.loaded_image import load_object_set
 
 BASE = 0x400000
 TEXT_OFFSET = 0x1000
@@ -69,7 +64,7 @@ def write_fixture(path):
     """Write ELF64 headers, one RX segment, .text and a real symbol table.
 
     Encoding the fixed bytes directly avoids a compiler/linker dependency in
-    the existing Python smoke command. No inventory or CFG data is supplied.
+    the existing Python smoke command. No inventory data is supplied.
     """
     text = bytearray(b'\x90' * 50)
     strings = bytearray(b'\0')
@@ -133,7 +128,7 @@ def check_unknown_control():
 
 def check_transfer(function, name, address, code, is_call, symbolic):
     # Check the serialized consumer representation, not Python-only state.
-    function = FreshFunction.from_data(json.loads(function.canonical_json()))
+    function = FreshInstructions.from_data(json.loads(function.canonical_json()))
     assert len(function.declarations) == 91, (name, 'declaration count')
     assert {item.name: item.sort for item in function.declarations} == AMD64_SORTS, (name, 'AMD64 state contract')
     occurrence = next(item for item in function.occurrences
@@ -242,38 +237,22 @@ def main(argv=None):
         ('direct_tail', False, False), ('indirect_tail', False, True),
     ), 'fixed four-case transfer roster'
     check_unknown_control()
-    roots = tuple(item[0] for item in FIXTURES)
     with tempfile.TemporaryDirectory() as temp:
         artifact = Path(temp) / 'open-transfers.elf'
-        manifest_path = Path(temp) / 'inventory.json'
         write_fixture(artifact)
-        policy = exact_symbol_inventory_policy(roots, open_transfers=True,
-                                               discover_direct_targets=False)
-        manifest = inventory(artifact, policy)
-        manifest_path.write_text(json.dumps(manifest))
-        pinned = load_pinned_binary(artifact, manifest_path, policy)
-        assert not pinned.project.loader.find_object_containing(EXTERNAL)
-        cfg = build_static_cfg(pinned)
-        assert set(cfg['roots']) == set(roots)
+        project = load_object_set(artifact)
+        assert not project.loader.find_object_containing(EXTERNAL)
+        decoded = inventory_project(project, [Interval(BASE, BASE + TEXT_OFFSET)])
+        records = linear_site_records(project, decoded, chunk_size=16, seed=17)
+        function = extract_linear(project, records)
         results = {}
         rejection_controls = None
         for name, offset, code, is_call, symbolic in FIXTURES:
             address = BASE + TEXT_OFFSET + offset
-            if is_call:
-                calls = cfg['roots'][name]['calls']
-                assert len(calls) == 1 and calls[0]['kind'] == 'open', name
-                assert calls[0]['target'] == (None if symbolic else EXTERNAL), name
-                instructions = [instruction for block in cfg['roots'][name]['blocks']
-                                for instruction in block['instructions']]
-                assert any(item['address'] == address + len(code) - 1
-                           and item['mnemonic'] == 'ret' for item in instructions), name
-            function = extract_fresh_function(pinned, cfg, name)
-            assert all(item.origin.image_sha256 == manifest['image_sha256']
-                       for item in function.occurrences)
             results[name] = check_transfer(function, name, address, code, is_call, symbolic)
             if name == 'direct_call':
                 rejection_controls = check_rejection_controls(function, (name, offset, code, is_call, symbolic))
-        result = {'pipeline': 'ELF / pinned inventory / CFG / fresh extraction / JSON roundtrip',
+        result = {'pipeline': 'ELF / instruction inventory / fresh extraction / JSON roundtrip',
                   'image_sha256': hashlib.sha256(artifact.read_bytes()).hexdigest(),
                   'native_execution': False, 'transfers': results,
                   'rejection_controls': rejection_controls}

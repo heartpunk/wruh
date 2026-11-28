@@ -8,11 +8,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
 import struct
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from extractor.native_runtime import preload_libstdcxx
 
@@ -22,6 +26,7 @@ from cle.backends.elf.relocation.generic import GenericTLSDescriptorReloc
 from cle.backends.relocation import Relocation
 from extractor.loaded_image import (
     load_object_set,
+    function_symbols,
     loaded_image_data,
     relocation_write_size,
 )
@@ -134,6 +139,71 @@ class LoadedImageSemantics(unittest.TestCase):
         self.assertEqual(unknown, wanted, "exact byte mask")
         return obj
 
+    def test_function_symbol_annotations_group_only_equal_extents(self):
+        def symbol(name, offset, size, *, imported=False, kind="TYPE_FUNCTION"):
+            return SimpleNamespace(name=name, size=size, rebased_addr=0x4000 + offset,
+                                   is_import=imported, type=SimpleNamespace(name=kind))
+        obj = SimpleNamespace(mapped_base=0x4000, symbols=[
+            symbol("alias_b", 0x20, 8), symbol("alias_a", 0x20, 8),
+            symbol("overlap", 0x20, 4), symbol("zero", 0x22, 0),
+            symbol("other", 0x30, 8), symbol("imported", 0x40, 1, imported=True),
+            symbol("data", 0x50, 1, kind="TYPE_OBJECT"), symbol("bad", 0x60, -1),
+            symbol("", 0x70, 1)])
+        self.assertEqual(function_symbols(obj), [
+            {"offset": 0x20, "size": 4, "names": ["overlap"]},
+            {"offset": 0x20, "size": 8, "names": ["alias_a", "alias_b"]},
+            {"offset": 0x22, "size": 0, "names": ["zero"]},
+            {"offset": 0x30, "size": 8, "names": ["other"]}])
+        self.assertEqual(function_symbols(SimpleNamespace(mapped_base=0)), [])
+
+    @unittest.skipUnless(os.environ.get("WRUH_LEAN_EXE"), "requires built Lean extractor")
+    def test_main_entrypoints_publish_same_symbols_and_transitions(self):
+        from ayxg.codec import loads
+        from extractor.fresh import extract_linear, linear_site_records
+        from extractor.instruction_inventory import Interval, inventory_project
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / "fixture.so"
+            elf_fixture(binary)
+            project = load_object_set(binary)
+            base = project.loader.main_object.mapped_base
+            exclusions = [Interval(base, base + 0x200), Interval(base + 0x201, base + 0x1000)]
+            decoded = inventory_project(project, exclusions)
+            records = linear_site_records(project, decoded, chunk_size=1, seed=17)
+            annotated = loaded_image_data(project)
+            model = extract_linear(project, records)
+            with patch("extractor.loaded_image.function_symbols", return_value=[]):
+                suppressed = loaded_image_data(project)
+                decoded_without = inventory_project(project, exclusions)
+                records_without = linear_site_records(project, decoded_without, chunk_size=1, seed=17)
+                model_without = extract_linear(project, records_without)
+            self.assertTrue(annotated["objects"][0]["function_symbols"])
+            self.assertEqual(suppressed["objects"][0]["function_symbols"], [])
+            self.assertEqual([item.site_key for item in decoded.decoded],
+                             [item.site_key for item in decoded_without.decoded])
+            self.assertEqual(model.canonical_json(), model_without.canonical_json())
+
+            intervals = root / "data.json"
+            intervals.write_text(json.dumps([{"start": item.start, "end": item.end} for item in exclusions]))
+            python_output, lean_output = root / "python.json", root / "lean.json"
+            common = ["--artifact", str(binary), "--data-intervals", str(intervals),
+                      "--chunk-size", "1", "--seed", "17"]
+            env = dict(os.environ, WRUH_PYTHON=sys.executable)
+            for command, output in (([sys.executable, "-m", "extractor.extract_cli"], python_output),
+                                    ([env["WRUH_LEAN_EXE"]], lean_output)):
+                subprocess.run([*command, *common, "--output", str(output)], env=env, check=True)
+            python_bundle = loads(python_output.read_text())
+            lean_bundle = loads(lean_output.read_text())
+            self.assertEqual(python_bundle["loaded_image"]["objects"][0]["function_symbols"],
+                             [{"offset": 0x200, "size": 1, "names": ["fixture"]}])
+            self.assertEqual(python_bundle["loaded_image"], lean_bundle["loaded_image"])
+            report = root / "parity.json"
+            subprocess.run([sys.executable, "-m", "extractor.angr_upgrade_parity",
+                            "--baseline", str(python_output), "--candidate", str(lean_output),
+                            "--output", str(report)], env=env, check=True)
+            self.assertTrue(json.loads(report.read_text())["shared_edge_parity"])
+
     def test_real_elf_unresolved_and_pending_extents(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "relocations.so"
@@ -180,6 +250,8 @@ class LoadedImageSemantics(unittest.TestCase):
                 obj["sha256"], hashlib.sha256(path.read_bytes()).hexdigest()
             )
             self.assertEqual(Path(obj["path"]).resolve(), path.resolve())
+            self.assertIn({"offset": 0x200, "size": 1, "names": ["fixture"]},
+                          obj["function_symbols"])
             self.assertEqual(obj["linked_base"], 0)
             self.assertFalse(project.is_hooked(project.entry))
             # Unknown metadata overlays bytes; it must not erase the raw snapshot.

@@ -10,6 +10,8 @@ ayxg models give a few useful affordances:
 - you can prove over 'em in lean, as there's a lean embedding
 - the lean embedding has a region algebra if ur into that
 
+CFG recovery is not a focus of this project. We don’t have a new approach to contribute there, and you know better than we do what your analysis needs. If you need a CFG, generate it separately with a purpose-built tool such as angr and collate the results yourself.
+
 ## ai generated shit
 
 ### Proven correspondence

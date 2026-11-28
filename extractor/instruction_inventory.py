@@ -1,0 +1,154 @@
+"""Linear instruction occurrence inventory, independent of reachability.
+
+The caller supplies selected byte spans and explicit data intervals. Decoding is
+completed before work is partitioned so that a chunk boundary cannot invent an
+x86 instruction boundary.
+"""
+from __future__ import annotations
+
+import random
+from collections.abc import Iterable
+from dataclasses import dataclass
+from itertools import pairwise
+from typing import Any
+
+
+@dataclass(frozen=True)
+class Span:
+    address: int
+    data: bytes
+    image_sha256: str | None = None
+    mapped_base: int | None = None
+
+    @property
+    def end(self) -> int:
+        return self.address + len(self.data)
+
+
+@dataclass(frozen=True)
+class Instruction:
+    address: int
+    data: bytes
+    mnemonic: str
+    operands: str
+    image_sha256: str | None = None
+    mapped_base: int | None = None
+
+    @property
+    def site_key(self) -> tuple[str, int, str]:
+        if self.image_sha256 is None or self.mapped_base is None:
+            raise ValueError("instruction has no backing-object identity")
+        return (self.image_sha256, self.address - self.mapped_base, "long64")
+
+
+@dataclass(frozen=True)
+class Interval:
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class Inventory:
+    decoded: tuple[Instruction, ...]
+    unresolved: tuple[Interval, ...]
+    unexamined: tuple[Interval, ...]
+
+
+def inventory(spans: Iterable[Span], data_intervals: Iterable[Interval], decoder: Any) -> Inventory:
+    """Decode selected spans, recording failures and explicitly excluded data.
+
+    Intervals are half-open. An undecodable byte is examined but unresolved. The remainder of that
+    contiguous code span is unexamined because its next instruction boundary
+    is unknown. Excluded data is never passed to the decoder, including as
+    part of an instruction crossing its boundary.
+    """
+    spans = tuple(sorted(spans, key=lambda span: span.address))
+    exclusions = tuple(sorted(data_intervals, key=lambda item: item.start))
+    if any((span.image_sha256 is None) != (span.mapped_base is None) for span in spans):
+        raise ValueError("backing-object digest and mapped base must be supplied together")
+    if any(span.mapped_base is not None and span.address < span.mapped_base for span in spans):
+        raise ValueError("span precedes backing-object mapped base")
+    if any(span.address < 0 or not span.data for span in spans):
+        raise ValueError("spans must be nonempty and have nonnegative addresses")
+    if any(a.end > b.address for a, b in pairwise(spans)):
+        raise ValueError("selected spans overlap")
+    if any(item.start < 0 or item.start >= item.end for item in exclusions):
+        raise ValueError("invalid data interval")
+    if any(a.end > b.start for a, b in pairwise(exclusions)):
+        raise ValueError("data intervals overlap")
+
+    decoded: list[Instruction] = []
+    unresolved: list[Interval] = []
+    unexamined: list[Interval] = []
+    for span in spans:
+        cursor = span.address
+        for excluded in (*exclusions, Interval(span.end, span.end)):
+            if excluded.end <= cursor and excluded.start != span.end:
+                continue
+            if excluded.start >= span.end:
+                boundary = span.end
+            else:
+                boundary = max(cursor, excluded.start)
+            while cursor < boundary:
+                offset = cursor - span.address
+                code = span.data[offset:min(offset + 15, boundary - span.address)]
+                instruction = next(iter(decoder.disasm(code, cursor, count=1)), None)
+                if instruction is None:
+                    unresolved.append(Interval(cursor, cursor + 1))
+                    cursor += 1
+                    if cursor < boundary:
+                        unexamined.append(Interval(cursor, boundary))
+                        cursor = boundary
+                    break
+                size = instruction.size
+                if (instruction.address != cursor or size <= 0 or size > len(code)
+                        or bytes(instruction.bytes) != code[:size]):
+                    raise ValueError("decoder returned an invalid instruction")
+                decoded.append(Instruction(cursor, bytes(instruction.bytes), instruction.mnemonic, instruction.op_str,
+                                           span.image_sha256, span.mapped_base))
+                cursor += size
+            if excluded.start >= span.end:
+                break
+            cursor = max(cursor, min(span.end, excluded.end))
+    return Inventory(tuple(decoded), tuple(unresolved), tuple(unexamined))
+
+
+def shuffled_chunks(result: Inventory, chunk_size: int, seed: int) -> tuple[tuple[Instruction, ...], ...]:
+    """Partition decoded occurrences, then shuffle chunks without changing them."""
+    if chunk_size <= 0:
+        raise ValueError("chunk size must be positive")
+    def order(item: Instruction):
+        if item.image_sha256 is None:
+            return ("", item.address, "", 0)
+        return (*item.site_key, item.mapped_base)
+    ordered = tuple(sorted(result.decoded, key=order))
+    chunks = [ordered[i:i + chunk_size] for i in range(0, len(ordered), chunk_size)]
+    random.Random(seed).shuffle(chunks)
+    return tuple(chunks)
+
+
+def inventory_project(project: Any, data_intervals: Iterable[Interval] = ()) -> Inventory:
+    """Inventory every executable segment in the explicitly loaded object set.
+
+    The loader may also supply synthetic objects without a backing file. They
+    are not part of the supplied object set and do not represent input bytes.
+    """
+    import hashlib
+    from pathlib import Path
+
+    if project.arch.name != "AMD64" or project.arch.bits != 64:
+        raise ValueError("only AMD64 long mode is supported")
+    spans = []
+    for obj in project.loader.all_objects:
+        path = getattr(obj, "binary", None)
+        if not path or not Path(path).is_file():
+            continue
+        digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        for segment in obj.segments:
+            if segment.is_executable and segment.memsize:
+                spans.append(Span(segment.min_addr,
+                                  bytes(project.loader.memory.load(segment.min_addr, segment.memsize)),
+                                  digest, int(obj.mapped_base)))
+    if not spans:
+        raise ValueError("no executable segments in the loaded object set")
+    return inventory(spans, data_intervals, project.arch.capstone)

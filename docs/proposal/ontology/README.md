@@ -1,5 +1,7 @@
 # First-pass binary function extraction ontology
 
+> Historical record: the former census and its schema are no longer maintained.
+
 **Status:** generic binary and Bazel/Nix build-lineage design accepted by two reviewers  
 **Version:** `0.1.0-draft`  
 **Scope:** provenance for binary function inventories, extraction censuses, per-candidate outcomes, and artifacts. Interpreter targets are a specialization of the generic binary target. Source mapping is outside this first pass.

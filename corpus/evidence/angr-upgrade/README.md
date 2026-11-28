@@ -40,3 +40,16 @@ native SUT execution, broader architecture coverage, controlled performance
 comparison, or Darwin/aarch64-Linux runtime validation. Those platforms have
 pinned release-wheel sources only. Angr emits an optional Unicorn-load warning;
 WRUH already disables Unicorn and uses VEX. That feature is not validated.
+
+## Historical graph-equality records
+
+The former `same_cfg` field recorded these results for the historical comparison:
+
+| Model | Graphs matched |
+| --- | --- |
+| `corpus_native_model_O0_alias.json` | true |
+| `corpus_native_model_O0_division.json` | true |
+| `corpus_native_model_O0_overlap.json` | true |
+| `corpus_native_model_O2_alias.json` | true |
+| `corpus_native_model_O2_division.json` | true |
+| `corpus_native_model_O2_overlap.json` | true |

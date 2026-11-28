@@ -1,5 +1,7 @@
 # Proposal: a generic binary function extraction target
 
+> Historical record: this describes earlier tooling and is not a current workflow.
+
 ## Decision sought
 
 Build a small reusable *target contract and run harness* around WRUH’s existing per-function binary extraction. Keep target-specific acquisition, inventory, and address semantics in adapters. First exercise the contract against Lua, QuickJS, CPython, Node.js, and Bun without requiring any one runtime to reach a particular completion percentage.

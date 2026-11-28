@@ -37,12 +37,10 @@ private partial def splitArgs : List String → Option String → Array String �
   | "--output" :: [], _, _ => throw "--output requires a path"
   | argument :: rest, output, workerArgs => splitArgs rest output (workerArgs.push argument)
 
-private def runFunction (Γ : Ctx) (input output : IO.FS.Handle)
-    (declarations architecture : Json) (function : Json)
+private def runSites (Γ : Ctx) (input output : IO.FS.Handle)
+    (declarations architecture : Json) (inventory : Json)
     (roots : Array (TypedExpr Γ)) : IO (Json × Array (TypedExpr Γ)) := do
-  let functionId ← stringField function "function_id"
-  let entry ← checked (natField function "entry")
-  let siteRecords ← arrayField function "sites"
+  let siteRecords ← arrayField inventory "sites"
   let mut sites : List (Site Γ) := []
   let mut occurrences : List Json := []
   for record in siteRecords do
@@ -52,8 +50,7 @@ private def runFunction (Γ : Ctx) (input output : IO.FS.Handle)
     let response ← request input output address
     sites := (← checked (parseSite Γ address occurrenceId response)) :: sites
     occurrences := occurrence :: occurrences
-  pure <| (functionJson declarations architecture functionId entry
-    occurrences.reverse sites.reverse).run roots
+  pure <| (extractionJson declarations architecture occurrences.reverse sites.reverse).run roots
 
 private def run (args : List String) : IO Unit := do
   let (outputPath, workerArgs) ← checked (splitArgs args none #[])
@@ -85,19 +82,13 @@ private def run (args : List String) : IO Unit := do
     let records ← declarations.getArr?
     records.toList.mapM parseDecl)
   let architecture ← checked (field inventory "architecture")
-  let functionRecords ← arrayField inventory "functions"
-  let mut roots : Array (TypedExpr Γ) := #[]
-  let mut functions : Array Json := #[]
-  for function in functionRecords do
-    let (result, nextRoots) ← runFunction Γ child.stdin child.stdout
-      declarations architecture function roots
-    roots := nextRoots
-    functions := functions.push result
+  let (extraction, roots) ← runSites Γ child.stdin child.stdout
+    declarations architecture inventory #[]
   child.stdin.putStrLn ((Json.mkObj [("op", toJson "quit")]).compress)
   child.stdin.flush
   let status ← child.wait
   if status != 0 then throw (IO.userError s!"angr worker exited with status {status}")
-  let document ← checked (bundleJson inventory functions.toList roots)
+  let document ← checked (bundleJson inventory extraction roots)
   IO.FS.writeFile (System.FilePath.mk outputPath) (document.compress ++ "\n")
 
 end Wruh.AngrMain

@@ -1,5 +1,7 @@
 # WRUH zeroth-pass corpus
 
+> Historical record: this describes earlier tooling and is not a current workflow.
+
 Extraction: 19 PASS, 2 FAIL, 9 unselected.
 Emitted canonical operation kinds: 23/31.
 

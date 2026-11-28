@@ -1,6 +1,9 @@
 """Summarize declared zeroth-pass output files without running candidates."""
-import argparse,csv,json
+import argparse
+import csv
+import json
 from pathlib import Path
+
 p=argparse.ArgumentParser();p.add_argument('results',type=Path);p.add_argument('--output',type=Path,required=True);a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
 scans=[json.loads(f.read_text()) for f in sorted(a.results.glob('corpus_scan_O[02].json'))]
 rows=[json.loads(f.read_text()) for f in sorted(a.results.glob('corpus_extract_*.json')) if 'runtime-trace' not in f.name]
@@ -24,6 +27,6 @@ for v in summary['variants']:
 lines += ['','## Failures','']
 for r in rows:
  if r['status']=='FAIL':lines.append(f"- O{r['optimization']} {r['root']}: {r['error_type']}: {r['error']}")
-lines += ['','## Limits and first-pass follow-up','','- No native candidate execution or concrete input fuzzing occurred. Sources/templates are NOT approved for native execution.','- VEX set cover covers the observed seed universe plus explicit CFG requirements; it does not establish exhaustive inherited-angr operation coverage.','- Canonical operation occurrence is not validation of its denotation or value boundaries.','- Fresh instruction models were extracted; path composition and end-to-end semantic comparisons were not performed.','- Aliasing inputs, external ABI models, indirect calls, FP/vector behavior, faults, and shrinking remain untested.','- First follow-up: diagnose division CFG overlap; pin alias/overlap scenarios regardless of feature redundancy; audit selected native harness/input domains; run model-vs-binary input comparisons.','- Retain O0/O2 compiled ELFs and per-root fresh models from the declared JSON outputs.','']
+lines += ['','## Limits and first-pass follow-up','','- No native candidate execution or concrete input fuzzing occurred. Sources/templates are NOT approved for native execution.','- VEX feature collection does not establish exhaustive inherited-angr operation coverage.','- Canonical operation occurrence is not validation of its denotation or value boundaries.','- Fresh instruction models were extracted; path composition and end-to-end semantic comparisons were not performed.','- Aliasing inputs, external ABI models, indirect calls, FP/vector behavior, faults, and shrinking remain untested.','- First follow-up: audit native harness/input domains and run model-vs-binary input comparisons.','- Retain O0/O2 compiled ELFs and fresh instruction models from the declared JSON outputs.','']
 (a.output/'README.md').write_text('\n'.join(lines))
 print(json.dumps(summary,indent=2))

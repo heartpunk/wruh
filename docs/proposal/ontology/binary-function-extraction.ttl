@@ -1,3 +1,4 @@
+# Historical, unmaintained schema for the former census.
 @prefix bfe: <https://github.com/heartpunk/wruh/blob/main/docs/proposal/ontology/binary-function-extraction.ttl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .

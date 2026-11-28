@@ -1,5 +1,7 @@
 # Wruh CI archive first wave
 
+> Historical record: the former census and its schema are no longer maintained.
+
 This prototype captures one repository so the archive can be exercised against live data before a larger control-plane design is chosen.
 
 ## Capture loop

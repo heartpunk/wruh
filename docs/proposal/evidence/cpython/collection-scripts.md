@@ -1,5 +1,7 @@
 # Collection scripts for WRUH extraction
 
+> Historical record: this describes earlier tooling and is not a current workflow.
+
 Run provenance and artifact-recovery status: [[CPython extraction attempt counts]]. Complete exploratory script listings are preserved below.
 
 `extract_all.py` selects sized function symbols, collapses aliases by entry address, writes shared loaded-image metadata, and records each attempted extraction in a success or failure ledger. Shards and the completed ledger make the run resumable.

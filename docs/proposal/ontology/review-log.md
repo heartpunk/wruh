@@ -1,5 +1,7 @@
 # Ontology design review log
 
+> Historical record: the former census and its schema are no longer maintained.
+
 Reviewers assessed the proposed vocabulary for scope, semantic fit, complexity, PROV-O alignment, open-world handling, and fidelity to the Lua, QuickJS, and CPython census evidence. Rounds 1–3 reviewed the interpreter-specific draft; Round 4 accepted its generic binary revision; Round 5 accepted the Bazel/Nix build-lineage extension. Review was read-only; no extraction or build was run.
 
 ## Round 1 — initial draft

@@ -5,15 +5,11 @@ py_test(
     srcs = glob(["test_*.py"]) + ["pytest_main.py"],
     main = "pytest_main.py",
     data = [
-        "//:.github/workflows/binary-census.yml",
         "//:pytest.ini",
         "//corpus/open-transfers:fixture_data",
         "//corpus/open-transfers:entry.c",
         "//corpus/open-transfers:library.c",
         "//extractor:BUILD.bazel",
-        "//extractor:binary_census_targets.bzl",
-        "//tools:run_census_ci.sh",
-        "//tools:write_census_run_manifest.py",
         "@nix_native_deps//:libstdcxx",
     ],
     env = {
