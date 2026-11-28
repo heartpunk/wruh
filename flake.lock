@@ -47,17 +47,17 @@
     "equanimity": {
       "flake": false,
       "locked": {
-        "lastModified": 1795835854,
-        "narHash": "sha256-WW5uyCKb8rA76c0VWO2DzF6JXb19fBRSpAae63H5Jig=",
+        "lastModified": 1795881088,
+        "narHash": "sha256-Ww8a9T5ki5SFJmNPj2X2qUnB9SJddCyQLvDQnurUWOk=",
         "owner": "heartpunk",
         "repo": "equanimity",
-        "rev": "406a8c33cdc3c5a7e2a5388338d68cc79b9b3764",
+        "rev": "7312d503f84514f2a5b3c04769ba3eddd9d86411",
         "type": "github"
       },
       "original": {
         "owner": "heartpunk",
         "repo": "equanimity",
-        "rev": "406a8c33cdc3c5a7e2a5388338d68cc79b9b3764",
+        "rev": "7312d503f84514f2a5b3c04769ba3eddd9d86411",
         "type": "github"
       }
     },

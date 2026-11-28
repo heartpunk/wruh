@@ -3,7 +3,7 @@
 
   inputs = {
     equanimity = {
-      url = "github:heartpunk/equanimity/406a8c33cdc3c5a7e2a5388338d68cc79b9b3764";
+      url = "github:heartpunk/equanimity/7312d503f84514f2a5b3c04769ba3eddd9d86411";
       flake = false;
     };
     ifrl.url = "github:heartpunk/ifrl/main";
