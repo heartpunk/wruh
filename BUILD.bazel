@@ -1,1 +1,7 @@
 exports_files(["flake.lock", "pytest.ini"])
+
+filegroup(
+    name = "ci_test_inputs",
+    srcs = [".github/workflows/ci.yml", "flake.nix"],
+    visibility = ["//tests:__pkg__"],
+)
