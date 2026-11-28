@@ -13,7 +13,7 @@
   outputs = { nixpkgs, ifrl, ayxg, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
-      censusPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
+      ciPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
           withSymbols = package: package.overrideAttrs (_: {
@@ -21,68 +21,11 @@
             stripAllList = [];
             stripDebugList = [];
           });
-          censusTarget = { packageName, package, binaryPattern, buildConfiguration }:
-            let
-              unstripped = withSymbols package;
-              outputs = unstripped.outputs or [ "out" ];
-              searchRoots = pkgs.lib.concatMapStringsSep " " (output:
-                "'${builtins.toString (unstripped.${output})}'"
-              ) outputs;
-            in pkgs.runCommand "wruh-census-${packageName}" {} ''
-              set -euo pipefail
-              mkdir -p "$out"
-              binary="$(find -L ${searchRoots} -type f -path '${binaryPattern}' -print -quit)"
-              if [[ -z "$binary" ]]; then
-                echo "could not locate ${binaryPattern} in ${packageName} outputs" >&2
-                exit 1
-              fi
-              ln -s "$binary" "$out/binary"
-              printf '%s\n' '${package.version}' > "$out/version"
-              printf '%s\n' '${packageName}' > "$out/package"
-              printf '%s\n' '${buildConfiguration}' > "$out/build-configuration"
-              printf '%s\n' '${unstripped.drvPath}' > "$out/package-derivation"
-            '';
         in {
           apacheHttpdPinned = withSymbols pkgs.apacheHttpd;
-          censusLua = censusTarget {
-            packageName = "lua5_5";
-            package = pkgs.lua5_5;
-            binaryPattern = "*/lib/liblua.so*";
-            buildConfiguration = "lua5_5 shared library, dontStrip=true";
-          };
-          censusQuickjs = censusTarget {
-            packageName = "quickjs";
-            package = pkgs.quickjs;
-            binaryPattern = "*/bin/qjs";
-            buildConfiguration = "QuickJS qjs executable, dontStrip=true";
-          };
-          censusCpython = censusTarget {
-            packageName = "python312";
-            package = pkgs.python312;
-            binaryPattern = "*/lib/libpython3.12.so*";
-            buildConfiguration = "CPython 3.12 shared library, dontStrip=true";
-          };
-          censusApache = censusTarget {
-            packageName = "apache-httpd";
-            package = pkgs.apacheHttpd;
-            binaryPattern = "*/bin/httpd";
-            buildConfiguration = "Apache HTTP Server httpd executable, dontStrip=true";
-          };
-          censusNode = censusTarget {
-            packageName = "nodejs";
-            package = pkgs.nodejs;
-            binaryPattern = "*/bin/node";
-            buildConfiguration = "Nixpkgs Node.js executable, dontStrip=true";
-          };
-          censusBun = censusTarget {
-            packageName = "bun";
-            package = pkgs.bun;
-            binaryPattern = "*/bin/bun";
-            buildConfiguration = "Nixpkgs Bun executable, dontStrip=true";
-          };
         });
     in {
-      packages = censusPackages;
+      packages = ciPackages;
       devShells = nixpkgs.lib.genAttrs systems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
             buildbuddyRbe = pkgs.mkShell {

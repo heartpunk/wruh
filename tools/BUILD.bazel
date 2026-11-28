@@ -3,8 +3,6 @@ load("@rules_python//python:defs.bzl", "py_library")
 exports_files([
     "ghot_inputs.bzl",
     "nix_native_deps.bzl",
-    "run_census_ci.sh",
-    "write_census_run_manifest.py",
 ])
 
 platform(

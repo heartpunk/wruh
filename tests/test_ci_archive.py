@@ -51,11 +51,9 @@ class ArchiveStoreTests(unittest.TestCase):
             self.assertEqual(store.pending_run_ids(), {100})
             store.close()
 
-    def test_docker_image_artifact_is_skipped_but_census_bundle_is_kept(self):
+    def test_docker_image_artifact_is_skipped(self):
         self.assertEqual(Collector.skip_artifact("wruh-dev-linux-amd64"), "skipped-docker")
         self.assertEqual(Collector.skip_artifact("docker-image-layer"), "skipped-docker")
-        self.assertIsNone(Collector.skip_artifact("binary-census-cpython"))
-        self.assertIsNone(Collector.skip_artifact("function-artifacts.tar.gz"))
 
 
 class CollectorSchedulingTests(unittest.TestCase):
