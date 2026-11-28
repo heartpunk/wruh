@@ -92,10 +92,7 @@ def inventory(spans: Iterable[Span], data_intervals: Iterable[Interval], decoder
                 cursor += size
             if excluded.start >= span.end:
                 break
-            end = min(span.end, excluded.end)
-            if cursor < end:
-                unexamined.append(Interval(cursor, end))
-                cursor = end
+            cursor = max(cursor, min(span.end, excluded.end))
     return Inventory(tuple(decoded), tuple(unresolved), tuple(unexamined))
 
 

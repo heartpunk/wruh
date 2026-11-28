@@ -24,8 +24,8 @@ class InstructionInventoryTest(unittest.TestCase):
                          [(0x1000, b'\xaa\x01'), (0x1005, b'\x03')])
         self.assertEqual(result.unresolved,
                          (Interval(0x1002, 0x1003),))
-        self.assertEqual(result.unexamined, (Interval(0x1003, 0x1004),
-                                             Interval(0x1004, 0x1005)))
+        self.assertEqual(result.unexamined, (Interval(0x1003, 0x1004),))
+        self.assertNotIn(Interval(0x1004, 0x1005), result.unexamined)
         self.assertEqual(sorted(item.address for chunk in shuffled_chunks(result, 1, 42)
                                 for item in chunk), [0x1000, 0x1005])
 
@@ -45,7 +45,7 @@ class InstructionInventoryTest(unittest.TestCase):
                                       loader=SimpleNamespace(all_objects=[image], memory=memory))
             result = inventory_project(project, [Interval(0x2001, 0x2002)])
             self.assertEqual([item.address for item in result.decoded], [0x2000, 0x2002])
-            self.assertEqual(result.unexamined, (Interval(0x2001, 0x2002),))
+            self.assertEqual(result.unexamined, ())
 
     def test_real_x86_instruction_boundaries_are_independent_of_chunks(self):
         try:
