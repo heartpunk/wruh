@@ -88,7 +88,8 @@ def prepare_native(args):
         subprocess.run(command+['-o',str(elf)],check=True)
         data=elf.read_bytes()
         obj, = Session.load(elf).image.loaded_image["objects"]
-        decoder = archinfo.ArchAMD64().capstone
+        arch = archinfo.ArchAMD64()
+        decoder = arch.capstone
         functions = {}
         for name in ('main', 'alias', 'overlap', 'division'):
             symbol = next(item for item in obj["function_symbols"] if name in item["names"])
@@ -97,7 +98,7 @@ def prepare_native(args):
                            and address + symbol["size"] <= s["address"] + s["size"])
             start = address - segment["address"]
             code = bytes.fromhex(segment["bytes"])[start:start + symbol["size"]]
-            block = CapstoneBlock(address, [CapstoneInsn(i) for i in decoder.disasm(code, address)])
+            block = CapstoneBlock(address, [CapstoneInsn(i) for i in decoder.disasm(code, address)], False, arch)
             functions[name] = str(block)
         return {'optimization':args.optimization,'command':command+['-o','<temporary>/native-harness.elf'],
                 'compiler':subprocess.check_output([compiler,'--version'],text=True),
