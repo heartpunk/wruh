@@ -5,7 +5,21 @@ from extractor.runtime import claripy as c
 # ruff: isort: split
 import z3
 
-from extractor.amd64_state import LTS_EXTRACTION_CONTEXT, claripy_to_z3
+LTS_EXTRACTION_CONTEXT = z3.Context()
+
+
+def claripy_to_z3(ast):
+    """Read the public solver export into the oracle's Z3 context."""
+    result = (c.BoolS("__probe_result", explicit_name=True) if isinstance(ast, c.ast.Bool)
+              else c.BVS("__probe_result", ast.size(), explicit_name=True))
+    solver = c.Solver()
+    solver.add(result == ast)
+    equality, = z3.parse_smt2_string(solver.to_smt2(), ctx=LTS_EXTRACTION_CONTEXT)
+    if ast.op == "BoolV":
+        return z3.BoolVal(c.is_true(ast), ctx=LTS_EXTRACTION_CONTEXT)
+    left, right = equality.children()
+    assert str(left) == "__probe_result" or str(right) == "__probe_result"
+    return right if str(left) == "__probe_result" else left
 
 
 def check():
@@ -59,7 +73,6 @@ def check():
             term, expected = term.raw_to_bv(), z3.fpToIEEEBV(expected, ctx=LTS_EXTRACTION_CONTEXT)
         actual = claripy_to_z3(term)
         assert actual.sort() == expected.sort(), name
-        assert claripy_to_z3(term) is actual, name
         solver = z3.Solver(ctx=LTS_EXTRACTION_CONTEXT)
         if name in ('sdiv_by_zero_positive', 'sdiv_by_zero_negative'):
             solver.add(claripy_to_z3(sdiv_zero_divisor) == 0)

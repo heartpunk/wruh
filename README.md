@@ -20,6 +20,6 @@ CFG recovery is not a focus of this project. We don’t have a new approach to c
 
 `extract_bisimulation` proves a label-sensitive strong bisimulation between the extracted system and the reference system. It matches the exact original edge label and relates the complete `Config Unit Γ` states. `Unit` is the structural control component; machine control such as the program counter and error flags lives in the ordinary typed environment `Γ`. `OutcomeLaws` can additionally require each retained edge's site, target, fault/recovery event, and error-state update to agree with those environment fields. `extract_bisimulation_and_outcomes` combines that state/outcome contract with the bisimulation.
 
-`Wruh.AyxgSymex` proves the adapter laws for AYXG's source-indexed QF_ABV transition systems. The theorem is about this idealized provider contract; it does not prove that an external Angr implementation satisfies the contract.
+`Wruh.AyxgSymex` proves the adapter laws for AYXG's source-indexed QF_ABV transition systems. The theorem is about this idealized provider contract; the concrete Equanimity backend must satisfy this contract for the result to apply. Both WRUH entry points use its public image loader and one-instruction step. WRUH selects decoded sites and assembles the AYXG transitions.
 
 `Wruh.FreshTransform` has a separate job: it closes ordered temporary reads and constructs the guarded simultaneous update used by extraction. Its local denotation theorem is distinct from the transition-system bisimulation.

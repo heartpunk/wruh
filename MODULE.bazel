@@ -45,3 +45,6 @@ ayxg_python_repository = use_repo_rule(
 )
 ayxg_python_repository(name = "wruh_ayxg")
 
+equanimity_repository = use_repo_rule("//tools:nix_native_deps.bzl", "equanimity_repository")
+equanimity_repository(name = "wruh_equanimity")
+

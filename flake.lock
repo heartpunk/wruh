@@ -44,6 +44,23 @@
         "type": "github"
       }
     },
+    "equanimity": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795881088,
+        "narHash": "sha256-Ww8a9T5ki5SFJmNPj2X2qUnB9SJddCyQLvDQnurUWOk=",
+        "owner": "heartpunk",
+        "repo": "equanimity",
+        "rev": "7312d503f84514f2a5b3c04769ba3eddd9d86411",
+        "type": "github"
+      },
+      "original": {
+        "owner": "heartpunk",
+        "repo": "equanimity",
+        "rev": "7312d503f84514f2a5b3c04769ba3eddd9d86411",
+        "type": "github"
+      }
+    },
     "exit-codes-src": {
       "flake": false,
       "locked": {
@@ -176,6 +193,7 @@
     "root": {
       "inputs": {
         "ayxg": "ayxg",
+        "equanimity": "equanimity",
         "ifrl": "ifrl",
         "nixpkgs": [
           "ifrl",

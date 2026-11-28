@@ -15,107 +15,13 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from extractor.native_runtime import preload_libstdcxx
 
 preload_libstdcxx()
-from cle.backends.elf.relocation.amd64 import R_X86_64_64, R_X86_64_COPY, R_X86_64_PC32
-from cle.backends.elf.relocation.generic import GenericTLSDescriptorReloc
-from cle.backends.relocation import Relocation
-from extractor.loaded_image import (
-    load_object_set,
-    function_symbols,
-    loaded_image_data,
-    relocation_write_size,
-)
-
-
-def elf_fixture(path, relocations=()):
-    """ET_DYN with one load segment, explicit sections, and dynamic relocations.
-
-    Relocations are (offset within data, ELF type, symbol index, addend).
-    Symbol 1 is undefined; symbol 2 names the RET instruction at 0x200.
-    """
-    raw = bytearray(0x1000)
-    raw[:64] = struct.pack(
-        "<16sHHIQQQIHHHHHH",
-        b"\x7fELF\x02\x01\x01" + bytes(9),
-        3,
-        62,
-        1,
-        0x200,
-        64,
-        0x800,
-        0,
-        64,
-        56,
-        2,
-        64,
-        8,
-        7,
-    )
-    raw[64:120] = struct.pack("<IIQQQQQQ", 1, 7, 0, 0, 0, len(raw), len(raw), 0x1000)
-    raw[120:176] = struct.pack("<IIQQQQQQ", 2, 6, 0x600, 0x600, 0x600, 144, 144, 8)
-    raw[0x200] = 0xC3
-    raw[0x300:0x340] = bytes(range(0x80, 0xC0))
-    for index, (offset, kind, symbol, addend) in enumerate(relocations):
-        struct.pack_into(
-            "<QQq",
-            raw,
-            0x400 + index * 24,
-            0x300 + offset,
-            (symbol << 32) | kind,
-            addend,
-        )
-    strings = b"\0external\0fixture\0"
-    raw[0x580 : 0x580 + len(strings)] = strings
-    struct.pack_into("<IBBHQQ", raw, 0x518, 1, 0x11, 0, 0, 0, 8)
-    struct.pack_into("<IBBHQQ", raw, 0x530, 10, 0x12, 0, 1, 0x200, 1)
-    dynamic = (
-        (5, 0x580),
-        (6, 0x500),
-        (7, 0x400),
-        (8, len(relocations) * 24),
-        (9, 24),
-        (10, len(strings)),
-        (11, 24),
-        (0, 0),
-        (0, 0),
-    )
-    for index, pair in enumerate(dynamic):
-        struct.pack_into("<qQ", raw, 0x600 + index * 16, *pair)
-    names = b"\0.text\0.data\0.rela.dyn\0.dynsym\0.dynstr\0.dynamic\0.shstrtab\0"
-    raw[0x700 : 0x700 + len(names)] = names
-    sections = (
-        (".text", 1, 6, 0x200, 1, 0, 0, 1, 0),
-        (".data", 1, 3, 0x300, 64, 0, 0, 8, 0),
-        (".rela.dyn", 4, 2, 0x400, len(relocations) * 24, 4, 0, 8, 24),
-        (".dynsym", 11, 2, 0x500, 72, 5, 1, 8, 24),
-        (".dynstr", 3, 2, 0x580, len(strings), 0, 0, 1, 0),
-        (".dynamic", 6, 3, 0x600, 144, 5, 0, 8, 16),
-        (".shstrtab", 3, 0, 0x700, len(names), 0, 0, 1, 0),
-    )
-    for index, (name, kind, flags, offset, size, link, info, align, entry) in enumerate(
-        sections, 1
-    ):
-        struct.pack_into(
-            "<IIQQQQIIQQ",
-            raw,
-            0x800 + index * 64,
-            names.index(name.encode()),
-            kind,
-            flags,
-            offset if flags else 0,
-            offset,
-            size,
-            link,
-            info,
-            align,
-            entry,
-        )
-    path.write_bytes(raw)
+from extractor.backend import Session
+from extractor.elf_fixture import elf_fixture
 
 
 class LoadedImageSemantics(unittest.TestCase):
@@ -140,46 +46,39 @@ class LoadedImageSemantics(unittest.TestCase):
         return obj
 
     def test_function_symbol_annotations_group_only_equal_extents(self):
-        def symbol(name, offset, size, *, imported=False, kind="TYPE_FUNCTION"):
-            return SimpleNamespace(name=name, size=size, rebased_addr=0x4000 + offset,
-                                   is_import=imported, type=SimpleNamespace(name=kind))
-        obj = SimpleNamespace(mapped_base=0x4000, symbols=[
-            symbol("alias_b", 0x20, 8), symbol("alias_a", 0x20, 8),
-            symbol("overlap", 0x20, 4), symbol("zero", 0x22, 0),
-            symbol("other", 0x30, 8), symbol("imported", 0x40, 1, imported=True),
-            symbol("data", 0x50, 1, kind="TYPE_OBJECT"), symbol("bad", 0x60, -1),
-            symbol("", 0x70, 1)])
-        self.assertEqual(function_symbols(obj), [
-            {"offset": 0x20, "size": 4, "names": ["overlap"]},
-            {"offset": 0x20, "size": 8, "names": ["alias_a", "alias_b"]},
-            {"offset": 0x22, "size": 0, "names": ["zero"]},
-            {"offset": 0x30, "size": 8, "names": ["other"]}])
-        self.assertEqual(function_symbols(SimpleNamespace(mapped_base=0)), [])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "symbols.so"
+            elf_fixture(path, extra_functions=[("alias_b", 0x200, 1), ("alias_a", 0x200, 1),
+                                               ("overlap", 0x200, 4), ("zero", 0x202, 0)])
+            obj = Session.load(path).image.loaded_image["objects"][0]
+            self.assertEqual(obj["function_symbols"], [
+                {"offset": 0x200, "size": 1, "names": ["alias_a", "alias_b", "fixture"]},
+                {"offset": 0x200, "size": 4, "names": ["overlap"]},
+                {"offset": 0x202, "size": 0, "names": ["zero"]},
+            ])
 
     @unittest.skipUnless(os.environ.get("WRUH_LEAN_EXE"), "requires built Lean extractor")
     def test_main_entrypoints_publish_same_symbols_and_transitions(self):
         from ayxg.codec import loads
         from extractor.fresh import extract_linear, linear_site_records
-        from extractor.instruction_inventory import Interval, inventory_project
+        from extractor.instruction_inventory import Interval
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             binary = root / "fixture.so"
             elf_fixture(binary)
-            project = load_object_set(binary)
-            base = project.loader.main_object.mapped_base
+            session = Session.load(binary)
+            obj = session.image.loaded_image["objects"][0]
+            base = obj["mapped_base"]
             exclusions = [Interval(base, base + 0x200), Interval(base + 0x201, base + 0x1000)]
-            decoded = inventory_project(project, exclusions)
-            records = linear_site_records(project, decoded, chunk_size=1, seed=17)
-            annotated = loaded_image_data(project)
-            model = extract_linear(project, records)
-            with patch("extractor.loaded_image.function_symbols", return_value=[]):
-                suppressed = loaded_image_data(project)
-                decoded_without = inventory_project(project, exclusions)
-                records_without = linear_site_records(project, decoded_without, chunk_size=1, seed=17)
-                model_without = extract_linear(project, records_without)
-            self.assertTrue(annotated["objects"][0]["function_symbols"])
-            self.assertEqual(suppressed["objects"][0]["function_symbols"], [])
+            decoded = session.inventory(exclusions)
+            records = linear_site_records(decoded, chunk_size=1, seed=17)
+            model = extract_linear(session, records)
+            self.assertTrue(obj["function_symbols"])
+            with patch.dict(obj, {"function_symbols": []}):
+                decoded_without = session.inventory(exclusions)
+                records_without = linear_site_records(decoded_without, chunk_size=1, seed=17)
+                model_without = extract_linear(session, records_without)
             self.assertEqual([item.site_key for item in decoded.decoded],
                              [item.site_key for item in decoded_without.decoded])
             self.assertEqual(model.canonical_json(), model_without.canonical_json())
@@ -229,9 +128,8 @@ class LoadedImageSemantics(unittest.TestCase):
                 ],
                 "fixture dynamic inventory must be present even when CLE can use sections",
             )
-            project = load_object_set(path)
-            base = project.loader.main_object.mapped_base
-            image = json.loads(json.dumps(loaded_image_data(project)))
+            image = Session.load(path).image.loaded_image
+            base = image["objects"][0]["mapped_base"]
             expected = [
                 (0x300, 4, "unresolved-relocation"),
                 (0x308, 8, "unresolved-relocation"),
@@ -253,7 +151,6 @@ class LoadedImageSemantics(unittest.TestCase):
             self.assertIn({"offset": 0x200, "size": 1, "names": ["fixture"]},
                           obj["function_symbols"])
             self.assertEqual(obj["linked_base"], 0)
-            self.assertFalse(project.is_hooked(project.entry))
             # Unknown metadata overlays bytes; it must not erase the raw snapshot.
             segment = next(
                 s
@@ -293,7 +190,7 @@ class LoadedImageSemantics(unittest.TestCase):
                 "sha256": hashlib.sha256(library.read_bytes()).hexdigest(),
             }
             spec.write_text(json.dumps([record]))
-            image = loaded_image_data(load_object_set(entry, spec))
+            image = Session.load(entry, spec).image.loaded_image
             self.assertEqual(
                 {Path(o["path"]).resolve() for o in image["objects"]},
                 {entry.resolve(), library.resolve()},
@@ -309,47 +206,15 @@ class LoadedImageSemantics(unittest.TestCase):
             record["sha256"] = "0" * 64
             spec.write_text(json.dumps([record]))
             with self.assertRaisesRegex(ValueError, "object hash mismatch"):
-                load_object_set(entry, spec)
+                Session.load(entry, spec)
 
-    def test_extent_provider_boundaries(self):
-        owner = SimpleNamespace(arch=SimpleNamespace(bytes=8), imports={})
-        symbol = SimpleNamespace(name="copy", size=24, is_import=False)
-        self.assertEqual(
-            relocation_write_size(R_X86_64_PC32(owner, symbol, 0, addend=0)), 4
-        )
-        self.assertEqual(
-            relocation_write_size(R_X86_64_64(owner, symbol, 0, addend=0)), 8
-        )
-        self.assertEqual(
-            relocation_write_size(
-                GenericTLSDescriptorReloc(owner, symbol, 0, addend=0)
-            ),
-            16,
-        )
-        copy = R_X86_64_COPY(owner, symbol, 0, addend=0)
-        self.assertEqual(relocation_write_size(copy), 24)
-        copy.resolvedby = SimpleNamespace(size=24)
-        self.assertEqual(relocation_write_size(copy), 24)
-        copy.resolvedby = SimpleNamespace(size=0)
-        self.assertEqual(relocation_write_size(copy), 24)
-        copy.resolvedby = SimpleNamespace(size=16)
-        with self.assertRaisesRegex(ValueError, "size mismatch"):
-            relocation_write_size(copy)
-        copy.resolvedby = None
-        rejected_sizes = 0
-        for size in (None, 0, -1, True, "24"):
-            symbol.size = size
-            with self.assertRaisesRegex(ValueError, "positive extent"):
-                relocation_write_size(copy)
-            rejected_sizes += 1
-        self.assertEqual(rejected_sizes, 5, "all invalid COPY extents checked")
-
-        class UnknownRelocation(Relocation):
-            def relocate(self):
-                return True
-
-        with self.assertRaisesRegex(ValueError, "unsupported relocation write extent"):
-            relocation_write_size(UnknownRelocation(owner, symbol, 0))
+    def test_copy_extent_uses_symbol_size(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "copy.so"
+            elf_fixture(path, [(0, 5, 1, 0)], import_size=24)
+            image = Session.load(path).image.loaded_image
+            base = image["objects"][0]["mapped_base"]
+            self.check_masks(image, base, [(0x300, 24, "unresolved-relocation")])
 
     def test_unknown_elf_relocation_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -358,7 +223,7 @@ class LoadedImageSemantics(unittest.TestCase):
             with self.assertRaisesRegex(
                 ValueError, "unsupported skipped ELF relocation 999"
             ):
-                loaded_image_data(load_object_set(path))
+                Session.load(path)
 
 
 if __name__ == "__main__":

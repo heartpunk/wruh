@@ -4,7 +4,8 @@ py_test(
     name = "python_tests",
     srcs = glob(["test_*.py"]) + ["pytest_main.py"],
     main = "pytest_main.py",
-    data = [
+    data = glob(["fixtures/apache-httpd-2.4.69/*"]) + [
+        "//:ci_test_inputs",
         "//:pytest.ini",
         "//corpus/open-transfers:fixture_data",
         "//corpus/open-transfers:entry.c",

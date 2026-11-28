@@ -16,12 +16,10 @@ import z3
 from ayxg.expr import TermSort, TypedExpr
 from ayxg.z3 import declaration_variables, expr_from_z3, expr_to_z3
 
-from extractor import runtime
 from extractor.artifact import Target
-from extractor.instruction_inventory import Span, inventory
+from extractor.elf_fixture import PC, code_inventory, code_session
 from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
 
-PC = 0x400000
 
 
 class InstructionOutcomesTest(unittest.TestCase):
@@ -42,14 +40,12 @@ class InstructionOutcomesTest(unittest.TestCase):
     def extract(self, code, offsets):
         """Decode a real function ending in RET, then round-trip its artifact."""
         raw = bytes.fromhex(code)
-        digest = hashlib.sha256(raw).hexdigest()
         with tempfile.TemporaryDirectory() as directory:
-            artifact = Path(directory) / "instruction.bin"
-            artifact.write_bytes(raw)
-            project = runtime.angr.load_shellcode(raw, arch="amd64", load_address=PC)
-            decoded = inventory([Span(PC, raw)], [], project.arch.capstone)
-            records = linear_site_records(project, decoded, chunk_size=2, seed=7, image_digest=digest)
-            extracted = extract_linear(project, records)
+            session = code_session(directory, raw)
+            digest = hashlib.sha256((Path(directory) / "instruction.so").read_bytes()).hexdigest()
+            decoded = code_inventory(session, len(raw))
+            records = linear_site_records(decoded, chunk_size=2, seed=7)
+            extracted = extract_linear(session, records)
             serialized = json.loads(extracted.canonical_json())
             self.assertTrue(all("function_owners" not in item["origin"]
                                 for item in serialized["occurrences"]))

@@ -132,3 +132,33 @@ ayxg_python_repository = repository_rule(
 )
 
 
+def _equanimity_repository_impl(ctx):
+    source = ctx.getenv("WRUH_EQUANIMITY_SOURCE", "")
+    if not source.startswith("/nix/store/") or not ctx.path(source + "/equanimity/__init__.py").exists:
+        fail("Run Bazel in the pinned WRUH dev shell")
+    ctx.symlink(ctx.path(source + "/equanimity"), "equanimity")
+    imports = ["."]
+    for i, path in enumerate(ctx.getenv("WRUH_ASPECTLIB_PATH", "").split(":")):
+        if not path.startswith("/nix/store/"):
+            fail("WRUH_ASPECTLIB_PATH must contain pinned Python package directories")
+        name = "extra{}".format(i)
+        ctx.symlink(ctx.path(path), name)
+        imports.append(name)
+    ctx.file("BUILD.bazel", """load("@rules_python//python:defs.bzl", "py_library")
+py_library(
+    name = "backend",
+    srcs = glob(["equanimity/**/*.py", "extra*/**/*.py"]),
+    deps = ["@shared_angr//:pkg", "@wruh_ayxg//:z3"],
+    imports = %s,
+    visibility = ["//visibility:public"],
+)
+""" % repr(imports))
+
+
+equanimity_repository = repository_rule(
+    implementation = _equanimity_repository_impl,
+    configure = True,
+    local = True,
+)
+
+

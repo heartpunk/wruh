@@ -4,9 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 
+from extractor.backend import Session
 from extractor.fresh import linear_site_records
-from extractor.instruction_inventory import Interval, inventory_project
-from extractor.loaded_image import load_object_set
+from extractor.instruction_inventory import Interval
 
 
 def prepare(args):
@@ -21,13 +21,14 @@ def prepare(args):
             if type(item["start"]) is not int or type(item["end"]) is not int:
                 raise ValueError("data interval addresses must be integers")
             exclusions.append(Interval(item["start"], item["end"]))
-    project = load_object_set(args.artifact, args.objects)
-    inv = inventory_project(project, exclusions)
-    records = linear_site_records(project, inv, chunk_size=args.chunk_size, seed=args.seed)
+    digest = hashlib.sha256(args.artifact.read_bytes()).hexdigest()
+    session = Session.load(args.artifact, args.objects, digest)
+    inv = session.inventory(exclusions)
+    records = linear_site_records(inv, chunk_size=args.chunk_size, seed=args.seed)
     report = {
         "decoded": len(inv.decoded),
         "data_intervals": [{"start": item.start, "end": item.end} for item in exclusions],
         "unresolved": [{"start": item.start, "end": item.end} for item in inv.unresolved],
         "unexamined": [{"start": item.start, "end": item.end} for item in inv.unexamined],
     }
-    return project, records, report, hashlib.sha256(args.artifact.read_bytes()).hexdigest()
+    return session, records, report, digest
