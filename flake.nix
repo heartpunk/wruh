@@ -2,6 +2,10 @@
   description = "Wruh fresh handler extraction environment";
 
   inputs = {
+    equanimity = {
+      url = "github:heartpunk/equanimity/406a8c33cdc3c5a7e2a5388338d68cc79b9b3764";
+      flake = false;
+    };
     ifrl.url = "github:heartpunk/ifrl/main";
     ayxg = {
       url = "github:heartpunk/ayxg/main";
@@ -10,7 +14,7 @@
     nixpkgs.follows = "ifrl/nixpkgs";
   };
 
-  outputs = { nixpkgs, ifrl, ayxg, ... }:
+  outputs = { nixpkgs, ifrl, ayxg, equanimity, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
       ciPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
@@ -52,13 +56,15 @@
           IFRL_ANGR_ENVIRONMENT = "${ifrl.packages.${system}.angr-python}";
           GHOT_NIX_ANGR_ROOT = "${ifrl.packages.${system}.angr-python}";
           WRUH_AYXG_SOURCE = "${ayxg.outPath}";
+          WRUH_EQUANIMITY_SOURCE = "${equanimity}";
+          WRUH_ASPECTLIB_PATH = pkgs.python312.pkgs.makePythonPath [ pkgs.python312Packages.aspectlib ];
           JAVA_HOME = pkgs.jdk21_headless.home;
           GHOT_NIX_LIBSTDCXX_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.stdenv.cc.cc.lib}";
           GHOT_REAPI_WORKER_RUNTIME_ROOT = pkgs.lib.optionalString pkgs.stdenv.isLinux "/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime";
           shellHook = ''
             # Use IFRL's shared Python environment after inherited hooks run.
             export PATH="${ifrl.packages.${system}.angr-python}/bin:$PATH"
-            export PYTHONPATH="$PWD:${ayxg.outPath}/python''${PYTHONPATH:+:$PYTHONPATH}"
+            export PYTHONPATH="$PWD:${equanimity}:${ayxg.outPath}/python:$WRUH_ASPECTLIB_PATH''${PYTHONPATH:+:$PYTHONPATH}"
           '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             # Keep the runtime available without shadowing the shared Lean toolchain.
             export PATH="$PATH:/nix/store/v1g3lwbbarxyrdl4b6b2mgdgdx9b7v9q-ghot-reapi-worker-runtime/bin"
