@@ -46,3 +46,18 @@ class InstructionInventoryTest(unittest.TestCase):
             result = inventory_project(project, [Interval(0x2001, 0x2002)])
             self.assertEqual([item.address for item in result.decoded], [0x2000, 0x2002])
             self.assertEqual(result.unexamined, (Interval(0x2001, 0x2002),))
+
+    def test_real_x86_instruction_boundaries_are_independent_of_chunks(self):
+        try:
+            import capstone
+        except ImportError:
+            self.skipTest("capstone is not available")
+        decoder = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+        result = inventory([Span(0x1000, bytes.fromhex("b80100000090c3"))], [], decoder)
+        self.assertEqual([item.address for item in result.decoded], [0x1000, 0x1005, 0x1006])
+        self.assertEqual(result.unresolved, ())
+        self.assertEqual(result.unexamined, ())
+        expected = {(item.address, item.data) for item in result.decoded}
+        for seed in range(10):
+            actual = {(item.address, item.data) for chunk in shuffled_chunks(result, 1, seed) for item in chunk}
+            self.assertEqual(actual, expected)
