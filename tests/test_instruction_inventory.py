@@ -1,9 +1,7 @@
 from types import SimpleNamespace
-from pathlib import Path
-import tempfile
 import unittest
 
-from extractor.instruction_inventory import Interval, Span, inventory, inventory_project, shuffled_chunks
+from extractor.instruction_inventory import Interval, Span, inventory, shuffled_chunks
 
 
 class Decoder:
@@ -33,19 +31,16 @@ class InstructionInventoryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "overlap"):
             inventory([Span(0, b'12'), Span(1, b'3')], [], Decoder())
 
-    def test_project_scans_executable_segments_without_symbols(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "image"
-            path.write_bytes(b"image")
-            segment = SimpleNamespace(is_executable=True, memsize=3, min_addr=0x2000)
-            other = SimpleNamespace(is_executable=False, memsize=1, min_addr=0x3000)
-            image = SimpleNamespace(binary=str(path), mapped_base=0x2000, segments=[segment, other])
-            memory = SimpleNamespace(load=lambda address, size: b"\x01\x02\x03")
-            project = SimpleNamespace(arch=SimpleNamespace(name="AMD64", bits=64, capstone=Decoder()),
-                                      loader=SimpleNamespace(all_objects=[image], memory=memory))
-            result = inventory_project(project, [Interval(0x2001, 0x2002)])
-            self.assertEqual([item.address for item in result.decoded], [0x2000, 0x2002])
-            self.assertEqual(result.unexamined, ())
+    def test_session_scans_executable_segments_without_symbols(self):
+        from extractor.backend import Session
+        obj = {"sha256": "a" * 64, "mapped_base": 0x2000, "segments": [
+            {"address": 0x2000, "size": 3, "bytes": "909090", "executable": True},
+            {"address": 0x3000, "size": 1, "bytes": "90", "executable": False},
+        ]}
+        session = Session(None, SimpleNamespace(loaded_image={"objects": [obj]}))
+        result = session.inventory([Interval(0x2001, 0x2002)])
+        self.assertEqual([item.address for item in result.decoded], [0x2000, 0x2002])
+        self.assertEqual(result.unexamined, ())
 
     def test_real_x86_instruction_boundaries_are_independent_of_chunks(self):
         try:

@@ -7,11 +7,8 @@ import tempfile
 
 from ayxg.expr import TypedExpr
 
-from extractor.elf_fixture import PC, code_session
-from extractor.amd64_terminals import (
-    is_ud2_instruction,
-    is_ud2_no_decode_terminal,
-)
+from extractor.elf_fixture import PC, code_inventory, code_session
+from extractor.instruction_inventory import Interval
 from extractor.artifact import LocalEdge, StaticOccurrenceId
 from extractor.fresh import _local_edges
 
@@ -41,23 +38,13 @@ class Ud2TerminalTests(unittest.TestCase):
         self.assertEqual(restored.jumpkind, "Ijk_SigILL")
         self.assertEqual(restored.fault_kind, "invalid_opcode")
 
-    def test_minimized_synthetic_ud2_is_a_valid_terminal(self):
+    def test_complete_ud2_decodes_as_one_instruction(self):
         code = b"\x0f\x0b"
-        instruction = {
-            "mnemonic": "ud2",
-            "bytes": code.hex(),
-            "size": len(code),
-            "address": 0x1000,
-        }
-        self.assertTrue(is_ud2_instruction(instruction))
-        self.assertTrue(
-            is_ud2_no_decode_terminal(
-                "Ijk_NoDecode",
-                [instruction],
-                block_end=0x1002,
-                has_zero_length_imark=False,
-            )
-        )
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), code)
+        decoded = code_inventory(session, len(code))
+        instruction, = decoded.decoded
+        self.assertEqual((instruction.address, instruction.data, instruction.mnemonic), (PC, code, "ud2"))
+        self.assertFalse(decoded.unresolved or decoded.unexamined)
 
     def test_pinned_apache_cold_symbol_fixtures_end_in_ud2(self):
         fixture_dir = Path(__file__).parent / "fixtures" / "apache-httpd-2.4.69"
@@ -79,34 +66,19 @@ class Ud2TerminalTests(unittest.TestCase):
                     hashlib.sha256(code).hexdigest(), record["fixture_sha256"]
                 )
                 self.assertTrue(code.endswith(b"\x0f\x0b"))
-                instruction = {"mnemonic": "ud2", "bytes": code[-2:].hex(),
-                               "size": 2, "address": record["address"] + len(code) - 2}
-                self.assertTrue(is_ud2_instruction(instruction))
-                self.assertTrue(is_ud2_no_decode_terminal(
-                    "Ijk_NoDecode", [instruction],
-                    block_end=record["address"] + len(code),
-                    has_zero_length_imark=False,
-                ))
+                session = code_session(self.enterContext(tempfile.TemporaryDirectory()), code)
+                terminal = code_inventory(session, len(code)).decoded[-1]
+                self.assertEqual((terminal.mnemonic, terminal.address), ("ud2", PC + len(code) - 2))
+                outcome, = session.step(terminal.address).outcomes
+                self.assertEqual((outcome.fault_kind, outcome.target_value), ("invalid_opcode", terminal.address))
 
-    def test_ordinary_decode_failures_and_zero_length_imarks_are_rejected(self):
-        ud2 = {"mnemonic": "ud2", "bytes": "0f0b", "size": 2,
-               "address": 0x1002}
-        ordinary = {"mnemonic": "mov", "bytes": "4889", "size": 2,
-                    "address": 0x1002}
-        for instructions, zero_mark in (([ordinary], False), ([ud2], True)):
-            with self.subTest(instructions=instructions, zero_mark=zero_mark):
-                self.assertFalse(is_ud2_no_decode_terminal(
-                    "Ijk_NoDecode", instructions,
-                    block_end=0x1004, has_zero_length_imark=zero_mark,
-                ))
-        self.assertFalse(is_ud2_no_decode_terminal(
-            "Ijk_NoDecode", [ud2], block_end=0x1003,
-            has_zero_length_imark=False,
-        ))
-        self.assertFalse(is_ud2_no_decode_terminal(
-            "Ijk_Boring", [ud2], block_end=0x1004,
-            has_zero_length_imark=False,
-        ))
+    def test_incomplete_instruction_is_unresolved(self):
+        for code in (b"\x0f", b"\x48\x89"):
+            with self.subTest(code=code):
+                session = code_session(self.enterContext(tempfile.TemporaryDirectory()), code)
+                result = code_inventory(session, len(code))
+                self.assertEqual(result.decoded, ())
+                self.assertEqual(result.unresolved, (Interval(PC, PC + 1),))
 
 
 if __name__ == "__main__":

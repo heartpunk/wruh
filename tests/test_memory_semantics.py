@@ -270,6 +270,23 @@ class MemorySemantics(unittest.TestCase):
         expected = z3.Extract(31, 0, variables["rax"])
         self.prove(expr_to_z3(writes[0].condition, variables, ctx) == (old == expected), "write condition")
 
+    def test_overlapping_movsd_reads_before_writing(self):
+        session = code_session(self.enterContext(tempfile.TemporaryDirectory()), bytes.fromhex("a5"))
+        family = session.step(PC)
+        ctx = z3.Context()
+        variables = declaration_variables(session.image.declarations, ctx)
+        memory, src, dst = (variables[name] for name in ("mem", "rsi", "rdi"))
+        expected = memory
+        for index in range(4):
+            expected = z3.Store(expected, dst + index, z3.Select(memory, src + index))
+        self.assertTrue(family.outcomes)
+        for item in family.outcomes:
+            guard = expr_to_z3(item.guard, variables, ctx)
+            post = expr_to_z3(item.updates["mem"], variables, ctx)
+            self.prove(z3.Implies(guard, post == expected), "source bytes precede all destination writes")
+            for displacement in (0, 1, 8):
+                self.assertEqual(self.result(z3.And(guard, dst == src + displacement)), z3.sat)
+
     def test_lean_worker_preserves_conditional_write(self):
         session = code_session(self.enterContext(tempfile.TemporaryDirectory()), bytes.fromhex("f0410fb109"))
         response = _step(session, PC)
