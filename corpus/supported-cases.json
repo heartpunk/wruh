@@ -217,22 +217,6 @@
     {
       "feature": "structural VEX exits/default",
       "source": "extractor/amd64_state.py:777"
-    },
-    {
-      "feature": "symbolic/direct targets",
-      "source": "extractor/fresh_composition.py:319"
-    },
-    {
-      "feature": "internal-call continuation",
-      "source": "extractor/fresh_composition.py:296"
-    },
-    {
-      "feature": "return equality guard",
-      "source": "extractor/fresh_composition.py:257"
-    },
-    {
-      "feature": "path/step bounds",
-      "source": "extractor/fresh_composition.py:176"
     }
   ],
   "inherited_vex": "angr 9.2.214 owns VEX statement/expression/irop dispatch. Collector records full runtime registry count and observed registry membership; no claim to inventory every inherited semantic case in zeroth pass."
