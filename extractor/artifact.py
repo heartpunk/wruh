@@ -285,7 +285,6 @@ class DecodedInstructionEvidence:
     architecture: str
     decode_mode: str
     instruction_identity: str
-    function_owners: tuple[str, ...]
     object_offset: int | None = None
     mapped_base: int | None = None
 
@@ -308,11 +307,6 @@ class DecodedInstructionEvidence:
         _identifier(self.architecture, "decoded.architecture")
         _identifier(self.decode_mode, "decoded.decode_mode")
         _text(self.instruction_identity, "decoded.instruction_identity")
-        for owner in self.function_owners:
-            _identifier(owner, "decoded.function_owners[]")
-        _unique(self.function_owners, "decoded.function_owners")
-        if self.function_owners != tuple(sorted(self.function_owners)):
-            raise ArtifactError("decoded.function_owners must be sorted")
 
     @property
     def source(self) -> int:
@@ -327,7 +321,6 @@ class DecodedInstructionEvidence:
             "architecture": self.architecture,
             "decode_mode": self.decode_mode,
             "instruction_identity": self.instruction_identity,
-            "function_owners": list(self.function_owners),
             **({"object_offset": self.object_offset, "mapped_base": self.mapped_base}
                if self.object_offset is not None else {}),
         }
@@ -345,7 +338,6 @@ class DecodedInstructionEvidence:
                 "architecture",
                 "decode_mode",
                 "instruction_identity",
-                "function_owners",
             } | ({"object_offset", "mapped_base"} if "object_offset" in obj or "mapped_base" in obj else set()),
             "decoded origin",
         )
@@ -365,12 +357,6 @@ class DecodedInstructionEvidence:
             decode_mode=_identifier(obj["decode_mode"], "decoded.decode_mode"),
             instruction_identity=_text(
                 obj["instruction_identity"], "decoded.instruction_identity"
-            ),
-            function_owners=tuple(
-                _identifier(owner, "decoded.function_owners[]")
-                for owner in _array(
-                    obj["function_owners"], "decoded.function_owners"
-                )
             ),
             object_offset=obj.get("object_offset"),
             mapped_base=obj.get("mapped_base"),

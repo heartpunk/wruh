@@ -19,13 +19,8 @@ from cle.backends.relocation import Relocation
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
 
-from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import (
-    PinnedBinary,
-    exact_symbol_inventory_policy,
-    inventory_project,
-)
-from extractor.fresh import extract_fresh_function
+from extractor.instruction_inventory import inventory_project
+from extractor.fresh import extract_linear, linear_site_records
 from extractor.loaded_image import (
     load_object_set,
     loaded_image_data,
@@ -68,21 +63,18 @@ def main(argv=None):
         project=load_object_set(entry,specification)
         image=loaded_image_data(project)
         assert len(image['objects'])==2
-        roots=('direct_root','indirect_root','tail_root','child')
-        manifest=inventory_project(project,entry,exact_symbol_inventory_policy(roots,open_transfers=True))
-        pinned=PinnedBinary(entry,manifest,project); cfg=build_static_cfg(pinned)
-        selected_only=inventory_project(project,entry,exact_symbol_inventory_policy(('direct_root',),open_transfers=True,discover_direct_targets=False))
-        assert set(selected_only['roots'])=={'direct_root'}
-        selected_cfg=build_static_cfg(PinnedBinary(entry,selected_only,project))
-        assert selected_cfg['roots']['direct_root']['calls'][0]['kind']=='open'
-        assert selected_cfg['roots']['direct_root']['calls'][0]['target']==project.loader.main_object.plt['child']
-        functions=[extract_fresh_function(pinned,cfg,name) for name in cfg["roots"]]
-        assert any(name.startswith("plt:child:") for name in cfg["roots"])
-        library_hash=hashlib.sha256(library.read_bytes()).hexdigest()
-        child=next(f for f in functions if f.function_id=='child')
-        assert all(item.origin.image_sha256==library_hash for item in child.occurrences)
-        assert any(call['target'] is None for call in cfg['roots']['indirect_root']['calls'])
-        assert all(not project.is_hooked(root['address']) for root in manifest['roots'].values())
+        decoded = inventory_project(project)
+        records = linear_site_records(project, decoded, chunk_size=32, seed=17)
+        extraction = extract_linear(project, records)
+        library_hash = hashlib.sha256(library.read_bytes()).hexdigest()
+        entry_hash = hashlib.sha256(entry.read_bytes()).hexdigest()
+        assert {item.origin.image_sha256 for item in extraction.occurrences} == {entry_hash, library_hash}
+        indirect = project.loader.find_symbol('indirect_root')
+        assert indirect is not None
+        indirect_edges = [edge for edge in extraction.local_edges
+                          if indirect.rebased_addr <= edge.source < indirect.rebased_addr + indirect.size]
+        assert any(edge.summary.target.kind == 'symbolic' for edge in indirect_edges)
+        assert all(not project.is_hooked(address) for address, _ in records)
         # Actual CLE relocation classes: unknown-mask extent follows their writes.
         memory_bytes=bytes(range(64)); fixture_path=directory/'relocation.bin'; fixture_path.write_bytes(memory_bytes)
         segment=SimpleNamespace(min_addr=0x1000,memsize=64,is_readable=True,is_writable=True,is_executable=False)
@@ -116,10 +108,12 @@ def main(argv=None):
         try: skipped_elf_relocations(descriptor_owner)
         except ValueError: pass
         else: raise AssertionError('unknown skipped ELF relocation accepted')
-        result={'skipped_relocation_controls':'raw TLSDESC16 retained / unknown fails explicitly','root_only_selection':'direct callee remains exact open target','relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
+        result={'skipped_relocation_controls':'raw TLSDESC16 retained / unknown fails explicitly',
+            'relocation_controls':{'pc32_bytes':4,'word_bytes':8,'copy_bytes':24,'neighbor_sentinels':'retained','unknown_extent':'explicit rejection'},
+            'commands':commands,'source_hashes':{str(source):hashlib.sha256(source.read_bytes()).hexdigest() for source in (args.entry,args.library)},
             'objects':[{key:obj[key] for key in ('sha256','mapped_base','linked_base','relocations','undefined_bytes')} for obj in image['objects']],
-            'roots':manifest['roots'],'local_edges':{f.function_id:len(f.local_edges) for f in functions},
-            'indirect_calls':cfg['roots']['indirect_root']['calls'], 'native_execution':False}
+            'decoded':len(decoded.decoded), 'unresolved':len(decoded.unresolved), 'unexamined':len(decoded.unexamined),
+            'local_edges':len(extraction.local_edges), 'indirect_target':'symbolic', 'native_execution':False}
         args.output.write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
 
 if __name__=='__main__': main()

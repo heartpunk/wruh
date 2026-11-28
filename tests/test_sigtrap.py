@@ -6,17 +6,16 @@ from pathlib import Path
 from extractor import runtime
 from extractor.amd64_state import AMD64_LAYOUT, step_instruction_outcomes
 from extractor.artifact import (
-    DecodedInstructionEvidence,
     LocalEdge,
     StaticOccurrenceId,
 )
 from extractor.lean_angr_worker import _step
-from extractor.binary_cfg import _walk_function, build_static_cfg
-from extractor.binary_inventory import PinnedBinary
+from extractor.instruction_inventory import Span, inventory
 from extractor.fresh import (
     _local_edges,
     artifact_declarations,
-    extract_fresh_function,
+    extract_linear,
+    linear_site_records,
 )
 
 
@@ -27,33 +26,12 @@ class SigtrapAdapterTest(unittest.TestCase):
         "36399fd28157325004304f84f77a5f777250fb7fc26afdc025b75c2fea07e700"
     )
 
-    def test_decoded_evidence_accepts_elf_entry_symbol_owner(self):
-        evidence = DecodedInstructionEvidence(
-            image_sha256="0" * 64,
-            canonical_address=0x400000,
-            instruction_bytes="f4",
-            architecture="AMD64",
-            decode_mode="default",
-            instruction_identity="hlt",
-            function_owners=("_start",),
-        )
-
-        self.assertEqual(
-            DecodedInstructionEvidence.from_data(evidence.to_data()), evidence
-        )
-
     def test_hlt_sigtrap_is_terminal_fault_outcome(self):
         project = runtime.angr.load_shellcode(
             b"\xf4", arch="amd64", load_address=0x400000
         )
 
         family = step_instruction_outcomes(project, 0x400000)
-        pinned = PinnedBinary(
-            artifact=Path("<synthetic-hlt>"),
-            manifest={"open_transfers": False},
-            project=project,
-        )
-
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
@@ -67,18 +45,6 @@ class SigtrapAdapterTest(unittest.TestCase):
             outcome.updates[AMD64_LAYOUT.ip_view].as_long(), 0x400000
         )
         self.assertEqual(outcome.writes, ())
-
-        blocks, calls, indirect_sites = _walk_function(
-            pinned,
-            root_name="synthetic_hlt",
-            root={"address": 0x400000, "size": 1},
-            jump_tables={},
-        )
-        self.assertEqual(calls, [])
-        self.assertEqual(indirect_sites, set())
-        self.assertEqual(len(blocks), 1)
-        self.assertEqual(blocks[0]["instructions"][0]["mnemonic"], "hlt")
-        self.assertEqual(blocks[0]["successors"], [])
 
         edges = _local_edges(
             artifact_declarations(project.arch),
@@ -99,12 +65,6 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
 
         family = step_instruction_outcomes(project, 0x400000)
-        pinned = PinnedBinary(
-            artifact=Path("<synthetic-int3>"),
-            manifest={"open_transfers": False},
-            project=project,
-        )
-
         self.assertEqual(len(family.outcomes), 1)
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
@@ -175,38 +135,10 @@ class SigtrapAdapterTest(unittest.TestCase):
         )
 
         image_sha256 = hashlib.sha256(binary.read_bytes()).hexdigest()
-        pinned = PinnedBinary(
-            artifact=binary,
-            manifest={
-                "call_graph": {"_start": {}},
-                "image_sha256": image_sha256,
-                "open_transfers": True,
-                "primitive_boundaries": {},
-                "roots": {
-                    "_start": {
-                        "address": start_symbol.rebased_addr,
-                        "size": start_symbol.size,
-                        "symbol": "_start",
-                    }
-                },
-            },
-            project=project,
-        )
-        cfg = build_static_cfg(pinned)
-        start_root = cfg["roots"]["_start"]
-        hlt_blocks = [
-            block
-            for block in start_root["blocks"]
-            if any(
-                instruction["address"] == hlt_address
-                and instruction["mnemonic"] == "hlt"
-                for instruction in block["instructions"]
-            )
-        ]
-        self.assertEqual(len(hlt_blocks), 1)
-        self.assertEqual(hlt_blocks[0]["successors"], [])
-
-        fresh = extract_fresh_function(pinned, cfg, "_start")
+        decoded = inventory([Span(start_symbol.rebased_addr, start_code, image_sha256,
+                                  project.loader.main_object.mapped_base)], [], project.arch.capstone)
+        records = linear_site_records(project, decoded, chunk_size=64, seed=0)
+        fresh = extract_linear(project, records)
         hlt_edges = [
             edge for edge in fresh.local_edges if edge.source == hlt_address
         ]

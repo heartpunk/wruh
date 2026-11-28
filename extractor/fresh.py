@@ -1,4 +1,4 @@
-"""Deterministic fresh extraction of one provider-selected rooted function."""
+"""Fresh instruction extraction over selected decoded sites."""
 
 from __future__ import annotations
 
@@ -6,10 +6,7 @@ import json
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from extractor.binary_inventory import PinnedBinary
+from typing import Any
 
 import z3
 from ayxg.expr import Declaration, TermSort
@@ -32,51 +29,7 @@ from extractor.typed_z3 import step_summary_from_z3
 
 
 class FreshExtractionError(RuntimeError):
-    """The exact rooted function cannot be freshly extracted."""
-
-
-@dataclass(frozen=True)
-class FreshFunction:
-    function_id: str
-    entry: int
-    declarations: tuple[Declaration, ...]
-    occurrences: tuple[Occurrence, ...]
-    local_edges: tuple[LocalEdge, ...]
-    architecture: ArchitectureLayout | None = None
-
-    schema = "ghot-fresh-function-v1"
-
-    def to_data(self) -> dict[str, Any]:
-        return {
-            "schema": self.schema,
-            "function_id": self.function_id,
-            "entry": self.entry,
-            "declarations": [item.to_data() for item in self.declarations],
-            "occurrences": [item.to_data() for item in self.occurrences],
-            "local_edges": [item.to_data() for item in self.local_edges],
-            **({"architecture": self.architecture.to_data()} if self.architecture is not None else {}),
-        }
-
-    @classmethod
-    def from_data(cls, value: dict[str, Any]) -> FreshFunction:
-        if value.get("schema") != cls.schema:
-            raise FreshExtractionError("unknown fresh function schema")
-        return cls(
-            value["function_id"], value["entry"],
-            tuple(Declaration.from_data(item) for item in value["declarations"]),
-            tuple(Occurrence.from_data(item) for item in value["occurrences"]),
-            tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
-            ArchitectureLayout.from_data(value["architecture"]) if "architecture" in value else None,
-        )
-
-    def canonical_json(self) -> bytes:
-        return json.dumps(
-            self.to_data(),
-            ensure_ascii=False,
-            allow_nan=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8")
+    """The selected sites cannot be freshly extracted."""
 
 
 def artifact_declarations(arch: Any | None = None) -> tuple[Declaration, ...]:
@@ -99,51 +52,6 @@ def artifact_declarations(arch: Any | None = None) -> tuple[Declaration, ...]:
             )
         result.append(Declaration(declaration.name, sort))
     return tuple(result)
-
-
-def _decoded_owners(cfg: dict[str, Any]) -> dict[int, tuple[str, ...]]:
-    owners: dict[int, set[str]] = {}
-    for function_id, root in cfg["roots"].items():
-        for block in root["blocks"]:
-            for instruction in block["instructions"]:
-                owners.setdefault(instruction["address"], set()).add(
-                    function_id
-                )
-    return {
-        address: tuple(sorted(names))
-        for address, names in owners.items()
-    }
-
-
-def occurrence_catalog(
-    pinned: PinnedBinary,
-    cfg: dict[str, Any],
-) -> dict[int, StaticOccurrenceId]:
-    """Assign one global ID to every decoded or primitive source address."""
-
-    sources = set(_decoded_owners(cfg))
-    primitive_sources = set(
-        pinned.manifest["primitive_boundaries"].values()
-    )
-    overlap = sources & primitive_sources
-    if overlap:
-        raise FreshExtractionError(
-            "decoded and primitive occurrence sources overlap: "
-            f"{sorted(hex(address) for address in overlap)}"
-        )
-    return {
-        address: StaticOccurrenceId(index)
-        for index, address in enumerate(sorted(sources | primitive_sources))
-    }
-
-
-def _instruction_records(root: dict[str, Any]) -> tuple[dict[str, Any], ...]:
-    from extractor.cfg_blocks import CfgBlockValidationError, ordered_instruction_records
-
-    try:
-        return ordered_instruction_records(root["blocks"])
-    except CfgBlockValidationError as error:
-        raise FreshExtractionError(str(error)) from error
 
 
 def _local_edges(
@@ -194,82 +102,6 @@ def _local_edges(
     return tuple(result)
 
 
-def extract_fresh_function(
-    pinned: PinnedBinary,
-    cfg: dict[str, Any],
-    function_id: str,
-) -> FreshFunction:
-    roots = cfg.get("roots")
-    if not isinstance(roots, dict) or function_id not in roots:
-        raise FreshExtractionError(f"unknown rooted function {function_id!r}")
-    if cfg.get("image_sha256") != pinned.manifest.get("image_sha256"):
-        raise FreshExtractionError("CFG and loaded image identities disagree")
-
-    root = roots[function_id]
-    declarations = artifact_declarations(pinned.project.arch)
-    owners = _decoded_owners(cfg)
-    catalog = occurrence_catalog(pinned, cfg)
-    occurrences = []
-    edges = []
-    for instruction in _instruction_records(root):
-        address = instruction["address"]
-        occurrence_id = catalog[address]
-        occurrences.append(
-            Occurrence(
-                occurrence_id,
-                DecodedInstructionEvidence(
-                    image_sha256=root.get("image_sha256", cfg["image_sha256"]),
-                    canonical_address=address,
-                    instruction_bytes=instruction["bytes"],
-                    architecture="AMD64",
-                    decode_mode="long64",
-                    instruction_identity=(
-                        f"{instruction['mnemonic']} {instruction['op_str']}"
-                    ).strip(),
-                    function_owners=owners[address],
-                ),
-            )
-        )
-        edges.extend(
-            _local_edges(
-                declarations,
-                occurrence_id,
-                step_instruction_outcomes(pinned.project, address),
-            )
-        )
-
-    edges.sort(
-        key=lambda edge: (
-            edge.id.occurrence.value,
-            edge.id.outcome.value,
-        )
-    )
-    return FreshFunction(
-        function_id=function_id,
-        entry=root["address"],
-        declarations=declarations,
-        occurrences=tuple(occurrences),
-        local_edges=tuple(edges),
-        architecture=architecture_layout(pinned.project.arch),
-    )
-
-
-
-def linear_occurrence_data(occurrence: Occurrence) -> dict[str, Any]:
-    """Serialize instruction evidence without inferred function ownership."""
-    result = occurrence.to_data()
-    result["origin"].pop("function_owners", None)
-    return result
-
-
-def linear_occurrence_from_data(value: dict[str, Any]) -> Occurrence:
-    origin = dict(value["origin"])
-    if "function_owners" in origin:
-        raise FreshExtractionError("instruction evidence must not have function owners")
-    origin["function_owners"] = []
-    return Occurrence.from_data({**value, "origin": origin})
-
-
 @dataclass(frozen=True)
 class FreshInstructions:
     declarations: tuple[Declaration, ...]
@@ -282,7 +114,7 @@ class FreshInstructions:
     def to_data(self) -> dict[str, Any]:
         return {"schema": self.schema,
                 "declarations": [item.to_data() for item in self.declarations],
-                "occurrences": [linear_occurrence_data(item) for item in self.occurrences],
+                "occurrences": [item.to_data() for item in self.occurrences],
                 "local_edges": [item.to_data() for item in self.local_edges],
                 "architecture": self.architecture.to_data()}
 
@@ -291,7 +123,7 @@ class FreshInstructions:
         if value.get("schema") != cls.schema:
             raise FreshExtractionError("unknown fresh instruction schema")
         return cls(tuple(Declaration.from_data(item) for item in value["declarations"]),
-                   tuple(linear_occurrence_from_data(item) for item in value["occurrences"]),
+                   tuple(Occurrence.from_data(item) for item in value["occurrences"]),
                    tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
                    ArchitectureLayout.from_data(value["architecture"]))
 
@@ -330,7 +162,7 @@ def linear_site_records(project: Any, inventory: Any, *, chunk_size: int, seed: 
                     instruction_bytes=instruction.data.hex(), architecture="AMD64",
                     decode_mode="long64",
                     instruction_identity=f"{instruction.mnemonic} {instruction.operands}".strip(),
-                    function_owners=(), object_offset=instruction.address - mapped_base,
+                    object_offset=instruction.address - mapped_base,
                     mapped_base=mapped_base,
                 ),
             )

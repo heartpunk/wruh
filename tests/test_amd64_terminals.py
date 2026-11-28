@@ -2,7 +2,6 @@ import hashlib
 import json
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
 import angr
 
@@ -12,11 +11,6 @@ from extractor.amd64_terminals import (
     is_ud2_no_decode_terminal,
 )
 from extractor.artifact import LocalEdge, StaticOccurrenceId
-from extractor.binary_cfg import (
-    _validate_block_partition,
-    _walk_function,
-)
-from extractor.binary_inventory import InventoryError
 from extractor.fresh import _local_edges, artifact_declarations
 
 
@@ -94,68 +88,6 @@ class Ud2TerminalTests(unittest.TestCase):
                     block_end=record["address"] + len(code),
                     has_zero_length_imark=False,
                 ))
-
-    def test_pinned_apache_symbols_are_accepted_by_static_cfg_inventory(self):
-        fixture_dir = Path(__file__).parent / "fixtures" / "apache-httpd-2.4.69"
-        for name in ("ap_expr_yyrestart.cold", "ap_expr_yylex.cold"):
-            with self.subTest(symbol=name):
-                record = json.loads(
-                    (fixture_dir / f"{name}.json").read_text(encoding="utf-8")
-                )
-                code = (fixture_dir / record["fixture_file"]).read_bytes()
-                address = record["address"]
-                pinned = SimpleNamespace(
-                    project=angr.load_shellcode(
-                        code, arch="amd64", load_address=address
-                    ),
-                    manifest={"open_transfers": True},
-                )
-
-                blocks, calls, indirect_sites = _walk_function(
-                    pinned,
-                    root_name=name,
-                    root={"address": address, "size": len(code)},
-                    jump_tables={},
-                )
-
-                terminal = blocks[-1]
-                self.assertEqual(
-                    terminal["instructions"][-1]["mnemonic"], "ud2"
-                )
-                self.assertEqual(
-                    terminal["address"] + terminal["size"],
-                    address + len(code),
-                )
-                self.assertEqual(terminal["successors"], [])
-                self.assertEqual(indirect_sites, set())
-                if name == "ap_expr_yyrestart.cold":
-                    self.assertEqual(len(calls), 1)
-                else:
-                    self.assertEqual(calls, [])
-
-    def test_static_cfg_inventory_accepts_overlapping_instruction_streams(self):
-        _validate_block_partition(
-            root_name="sample",
-            entry=0x1000,
-            extent_end=0x1005,
-            blocks=[
-                {
-                    "address": 0x1000,
-                    "size": 4,
-                    "instructions": [
-                        {"address": 0x1000, "size": 1},
-                        {"address": 0x1001, "size": 3},
-                    ],
-                    "successors": [0x1002],
-                },
-                {
-                    "address": 0x1002,
-                    "size": 3,
-                    "instructions": [{"address": 0x1002, "size": 3}],
-                    "successors": [0x1000],
-                },
-            ],
-        )
 
     def test_ordinary_decode_failures_and_zero_length_imarks_are_rejected(self):
         ud2 = {"mnemonic": "ud2", "bytes": "0f0b", "size": 2,

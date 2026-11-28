@@ -1,5 +1,7 @@
 # Zeroth-pass static corpus
 
+> Historical record: this describes earlier tooling and is not a current workflow.
+
 Baseline: WRUH `5594bfc1157c180fef1fa4a88f119ca4a0a113af`.
 Workspace: `/Users/sophiesmithburg/workspaces/wruh-corpus-zeroth`.
 Bookmark: `corpus-zeroth`.

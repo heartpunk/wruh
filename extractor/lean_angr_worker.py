@@ -16,7 +16,7 @@ from ayxg.z3 import expr_from_z3, typed_conversion_cache
 
 from extractor.amd64_state import step_instruction_outcomes
 from extractor.architecture import architecture_layout
-from extractor.fresh import artifact_declarations, linear_occurrence_data
+from extractor.fresh import artifact_declarations
 from extractor.extraction_args import add_arguments
 from extractor.linear_pipeline import prepare
 from extractor.loaded_image import loaded_image_data
@@ -30,7 +30,7 @@ def _arguments() -> argparse.Namespace:
 
 def _inventory(args: argparse.Namespace):
     project, records, report, image_sha256 = prepare(args)
-    sites = [{"address": address, "occurrence": linear_occurrence_data(occurrence)} for address, occurrence in records]
+    sites = [{"address": address, "occurrence": occurrence.to_data()} for address, occurrence in records]
     inventory = {
         "kind": "inventory", "image_sha256": image_sha256, "inventory": report,
         "declarations": [declaration.to_data() for declaration in artifact_declarations(project.arch)],

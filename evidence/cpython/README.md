@@ -34,3 +34,5 @@ Only selected function bodies are extracted. Direct callees outside selection an
 `float_add` and `float_mul` from the same libpython were attempted at WRUH revision `4391c7a6`, with AYXG Python FP transport `09169378`. Both failed in angr 10.0.1's public SMT exporter: conversion operators emit explicit mantissa width rather than SMT-LIB significand width (binary64 `to_fp 11 52` instead of `11 53`). No arithmetic extraction success is claimed. Existing six O0/O2 corpus models still extracted successfully in that run. Exact diagnostic support is committed at `c23798ca`.
 
 FP arithmetic completion and final AYXG Lean/Python correspondence remain outstanding. SMT floating-point models do not automatically recover NaN payload propagation or hardware FP exception state.
+
+Historical runtime traces are retained as gzip-compressed original JSON bytes; they describe the former implementation.

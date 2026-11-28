@@ -61,7 +61,6 @@ class InstructionOutcomesTest(unittest.TestCase):
         for occurrence, start, stop in zip(function.occurrences, offsets, [*offsets[1:], len(raw)]):
             self.assertEqual(occurrence.origin.image_sha256, digest)
             self.assertEqual(occurrence.origin.instruction_bytes, raw[start:stop].hex())
-            self.assertEqual(occurrence.origin.function_owners, ())
         ctx = z3.Context()
         variables = declaration_variables(function.declarations, ctx)
         edges = [edge for edge in function.local_edges if edge.source == PC]

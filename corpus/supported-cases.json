@@ -203,18 +203,6 @@
   ],
   "control_cases": [
     {
-      "feature": "jump:Ijk_Ret",
-      "source": "extractor/binary_cfg.py:364"
-    },
-    {
-      "feature": "jump:Ijk_Call",
-      "source": "extractor/binary_cfg.py:366"
-    },
-    {
-      "feature": "jump:Ijk_Boring",
-      "source": "extractor/binary_cfg.py:410"
-    },
-    {
       "feature": "structural VEX exits/default",
       "source": "extractor/amd64_state.py:777"
     }

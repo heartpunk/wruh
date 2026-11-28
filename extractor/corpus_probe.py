@@ -6,40 +6,32 @@ from extractor.runtime_trace import start_runtime_trace
 start_runtime_trace()
 from extractor import runtime as _runtime
 import angr
-from extractor.binary_inventory import PinnedBinary, inventory_project, exact_symbol_inventory_policy
-from extractor.binary_cfg import build_static_cfg
-from extractor import binary_cfg as cfg_module
-from extractor.fresh import extract_fresh_function
+from extractor.instruction_inventory import inventory_project
+from extractor.loaded_image import load_object_set
+from extractor.fresh import extract_linear, linear_site_records
 
-ROOTS = ['arithmetic','shifts','signed_shift','division','branch','signed_branch','loop','alias','overlap','widths','extend','call','memcmp','strcmp','strncmp']
 CANONICAL = ['var','bool_lit','bv_lit','bool_not','bool_and','bool_or','ite','bv_add','bv_sub','bv_mul','bv_udiv','bv_urem','bv_and','bv_or','bv_xor','bv_shl','bv_lshr','bv_ashr','bv_ult','bv_ule','bv_slt','bv_sle','eq','bv_not','zero_extend','sign_extend','extract','concat','const_array','select','store']
-PINNED = {'alias', 'overlap'}
-CONTROL = {'cfg:branch','cfg:join','cfg:backedge','jump:Ijk_Call','jump:Ijk_Ret'}
+CONTROL = {'jump:Ijk_Call','jump:Ijk_Ret'}
 
-def features(project, function):
+def features(project, decoded):
     found = set()
-    for block in function.blocks:
-        ir = block.vex
-        found.add('jump:'+ir.jumpkind)
-        for stmt in ir.statements:
-            found.add('stmt:'+stmt.tag)
-            if stmt.tag == 'Ist_Store':
-                found.add('store:'+str(stmt.data.result_size(ir.tyenv))+':'+stmt.end)
-        for expr in ir.expressions:
-            found.add('expr:'+expr.tag)
-            if hasattr(expr,'op'): found.add('vex:'+expr.op)
-            if expr.tag == 'Iex_Load':
-                found.add('load:'+str(expr.result_size(ir.tyenv))+':'+expr.end)
-    graph=function.graph
-    for node in graph:
-        if graph.out_degree(node)>1:found.add('cfg:branch')
-        if graph.in_degree(node)>1:found.add('cfg:join')
-    # A backwards address edge is recorded separately from a true cycle.
-    for a,b in graph.edges():
-        if b.addr<=a.addr:found.add('cfg:backward-address')
-    import networkx as nx
-    if not nx.is_directed_acyclic_graph(graph):found.add('cfg:backedge')
-    return sorted(found)
+    failures = []
+    for instruction in decoded.decoded:
+        try:
+            ir = project.factory.block(instruction.address, num_inst=1).vex
+            found.add('jump:' + ir.jumpkind)
+            for stmt in ir.statements:
+                found.add('stmt:' + stmt.tag)
+                if stmt.tag == 'Ist_Store':
+                    found.add('store:' + str(stmt.data.result_size(ir.tyenv)) + ':' + stmt.end)
+            for expr in ir.expressions:
+                found.add('expr:' + expr.tag)
+                if hasattr(expr, 'op'): found.add('vex:' + expr.op)
+                if expr.tag == 'Iex_Load':
+                    found.add('load:' + str(expr.result_size(ir.tyenv)) + ':' + expr.end)
+        except Exception as error:
+            failures.append({'address': instruction.address, 'error': str(error)})
+    return sorted(found), failures
 
 def scan(args):
     compiler=shutil.which('clang')
@@ -49,14 +41,10 @@ def scan(args):
     with tempfile.TemporaryDirectory() as temp:
         elf=Path(temp)/'corpus.elf'
         subprocess.run(command+['-o',str(elf)],check=True)
-        project=angr.Project(str(elf),auto_load_libs=False)
-        cfg=project.analyses.CFGFast(normalize=True)
-        candidates={}
-        for name in ROOTS:
-            symbol=project.loader.find_symbol(name)
-            function=cfg.kb.functions.get(symbol.rebased_addr) if symbol else None
-            if function is None:raise RuntimeError('missing recovered function '+name)
-            candidates[name]={'address':function.addr,'size':symbol.size,'features':features(project,function)}
+        project=load_object_set(elf)
+        decoded=inventory_project(project)
+        observed_features, feature_failures = features(project, decoded)
+        candidates={'image': {'features': observed_features}}
         from angr.engines.vex.claripy import irop
         registry=set(irop.operations)
         observed=set().union(*(set(c['features']) for c in candidates.values()))
@@ -68,12 +56,10 @@ def scan(args):
             if not gain:break
             selected.append({'name':name,'new_features':sorted(gain)})
             remaining-=gain;pool.remove(name)
-        for name in sorted(PINNED - {s['name'] for s in selected}):
-            selected.append({'name': name, 'new_features': [], 'reason': 'pinned memory-interaction coverage'})
         return {'optimization':args.optimization,'compiler':version,'command':command+['-o','<temporary>/corpus.elf'],
           'source_sha256':{p:hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in args.source},
           'elf_sha256':hashlib.sha256(elf.read_bytes()).hexdigest(),'elf_base64':base64.b64encode(elf.read_bytes()).decode(),
-          'candidates':candidates,'selected':selected,'selection_universe':sorted(selection_universe),'uncovered':sorted(remaining),
+          'candidates':candidates,'selected':selected,'feature_failures':feature_failures,'selection_universe':sorted(selection_universe),'uncovered':sorted(remaining),
           'inherited_vex_registry_count':len(registry),'inherited_vex_registry':sorted(registry),'observed_vex_not_in_registry':sorted(f for f in observed if f.startswith('vex:') and f[4:] not in registry),
           'canonical_required':CANONICAL,'limitations':['VEX selection covers observed supported registry operations, not all inherited angr semantics.','Backend registry membership is availability, not proof of end-to-end WRUH support.','Aliasing input relationships untested.','No native candidate execution.','No FP/vector scope.']}
 
@@ -88,7 +74,7 @@ def prepare_native(args):
         elf=Path(temp)/'native-harness.elf'
         subprocess.run(command+['-o',str(elf)],check=True)
         data=elf.read_bytes()
-        project=angr.Project(str(elf),auto_load_libs=False)
+        project=load_object_set(elf)
         functions={}
         for name in ('main','alias','overlap','division'):
             symbol=project.loader.find_symbol(name)
@@ -101,12 +87,7 @@ def prepare_native(args):
                 'disassembly':functions,'native_executed':False}
 
 def native_model(args):
-    data=json.loads(Path(args.scan).read_text())
-    data['selected']=[{'name':args.root}]
-    with tempfile.TemporaryDirectory() as temp:
-        path=Path(temp)/'scan.json';path.write_text(json.dumps(data))
-        args.scan=str(path)
-        return extract(args)
+    return extract(args)
 
 def expression_ops(fresh):
     todo=[]
@@ -124,42 +105,30 @@ def expression_ops(fresh):
 
 def extract(args):
     scan=json.loads(Path(args.scan).read_text())
-    if args.root not in {s['name'] for s in scan['selected']}:
-        return {'root':args.root,'optimization':scan['optimization'],'status':'NOT_SELECTED'}
     started=time.monotonic()
     with tempfile.TemporaryDirectory() as temp:
         elf=Path(temp)/'corpus.elf';elf.write_bytes(base64.b64decode(scan['elf_base64']))
-        policy=exact_symbol_inventory_policy((args.root,))
-        project=angr.Project(str(elf),auto_load_libs=False)
-        partition_trace=[]
-        original_validate=cfg_module._validate_block_partition
-        def traced_validate(**kwargs):
-            for record in kwargs['blocks']:
-                block=project.factory.block(record['address'],size=record['size'])
-                partition_trace.append({**record,'root':kwargs['root_name'],
-                    'vex':str(block.vex),'jumpkind':block.vex.jumpkind,
-                    'exits':[{'statement':i,'jumpkind':stmt.jumpkind,'destination':str(stmt.dst),'guard':str(stmt.guard)} for i,stmt in enumerate(block.vex.statements) if stmt.tag=='Ist_Exit']})
-            return original_validate(**kwargs)
-        cfg_module._validate_block_partition=traced_validate
+        project=load_object_set(elf)
         try:
-            manifest=inventory_project(project,elf,policy)
-            pinned=PinnedBinary(elf,manifest,project)
-            cfg=build_static_cfg(pinned)
-            fresh=extract_fresh_function(pinned,cfg,args.root)
+            decoded=inventory_project(project)
+            records=linear_site_records(project,decoded,chunk_size=256,seed=0)
+            fresh=extract_linear(project,records)
             ops,nodes=expression_ops(fresh)
-            return {'root':args.root,'optimization':scan['optimization'],'status':'PASS','elf_sha256':scan['elf_sha256'],
+            return {'root':'image','optimization':scan['optimization'],'status':'PASS','elf_sha256':scan['elf_sha256'],
               'occurrences':len(fresh.occurrences),'local_edges':len(fresh.local_edges),'canonical_ops':ops,'expression_objects':nodes,
-              'cfg':cfg,'fresh_model':fresh.to_data(),'seconds':time.monotonic()-started}
+              'inventory':{'decoded':len(decoded.decoded),'unresolved':len(decoded.unresolved),'unexamined':len(decoded.unexamined)},
+              'fresh_model':fresh.to_data(),'seconds':time.monotonic()-started}
         except Exception as exc:
             import traceback
-            return {'root':args.root,'optimization':scan['optimization'],'status':'FAIL','stage':'inventory/cfg/fresh','error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'partition_trace':partition_trace,'seconds':time.monotonic()-started}
+            return {'root':'image','optimization':scan['optimization'],'status':'FAIL','stage':'inventory/extraction',
+                    'error_type':type(exc).__name__,'error':str(exc),'traceback':traceback.format_exc(),'seconds':time.monotonic()-started}
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--mode',choices=['scan','extract','prepare-native','native-model'],required=True)
     parser.add_argument('--optimization',choices=['0','2'])
     parser.add_argument('--source',action='append',default=[])
-    parser.add_argument('--scan');parser.add_argument('--root');parser.add_argument('--output',required=True)
+    parser.add_argument('--scan');parser.add_argument('--output',required=True)
     args=parser.parse_args()
     result={'scan':scan,'extract':extract,'prepare-native':prepare_native,'native-model':native_model}[args.mode](args)
     Path(args.output).write_text(json.dumps(result,sort_keys=True,indent=2)+'\n')
