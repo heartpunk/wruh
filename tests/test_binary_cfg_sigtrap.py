@@ -58,7 +58,7 @@ class SigtrapAdapterTest(unittest.TestCase):
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
         self.assertEqual(outcome.fault_kind, "general_protection")
-        emitted = _step(pinned, 0x400000)["outcomes"][0]
+        emitted = _step(project, 0x400000)["outcomes"][0]
         self.assertEqual(emitted["jumpkind"], "Ijk_SigTRAP")
         self.assertEqual(emitted["fault_kind"], "general_protection")
         self.assertEqual(outcome.target_value, 0x400000)
@@ -109,7 +109,7 @@ class SigtrapAdapterTest(unittest.TestCase):
         outcome = family.outcomes[0]
         self.assertEqual(outcome.jumpkind, "Ijk_SigTRAP")
         self.assertEqual(outcome.fault_kind, "signal_trap")
-        emitted = _step(pinned, 0x400000)["outcomes"][0]
+        emitted = _step(project, 0x400000)["outcomes"][0]
         self.assertEqual(emitted["jumpkind"], "Ijk_SigTRAP")
         self.assertEqual(emitted["fault_kind"], "signal_trap")
         self.assertEqual(outcome.target_value, 0x400001)

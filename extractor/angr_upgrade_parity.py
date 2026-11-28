@@ -19,7 +19,7 @@ def read_bundle(path: Path):
     data = json.loads(raw)
     if data.get('schema') == 'ayxg-artifact-dag-v1':
         data = loads(raw)
-    return data, combine_models(data['functions'])
+    return data, combine_models([data['extraction']] if 'extraction' in data else data['functions'])
 
 
 def main() -> int:

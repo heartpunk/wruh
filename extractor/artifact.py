@@ -299,8 +299,6 @@ class DecodedInstructionEvidence:
         _identifier(self.architecture, "decoded.architecture")
         _identifier(self.decode_mode, "decoded.decode_mode")
         _text(self.instruction_identity, "decoded.instruction_identity")
-        if not self.function_owners:
-            raise ArtifactError("decoded.function_owners must be nonempty")
         for owner in self.function_owners:
             _identifier(owner, "decoded.function_owners[]")
         _unique(self.function_owners, "decoded.function_owners")

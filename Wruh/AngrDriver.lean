@@ -186,8 +186,8 @@ private def edgeJson {Γ : Ctx} (address : Nat)
       ("mirrored_pc", mirroredPc)])] ++ provenanceFields)
 
 /-- The actual WRUH extractor constructs the guarded complete-state edges. -/
-def functionJson {Γ : Ctx} (declarations architecture : Json)
-    (functionId : String) (entry : Nat) (occurrences : List Json)
+def extractionJson {Γ : Ctx} (declarations architecture : Json)
+    (occurrences : List Json)
     (sites : List (Site Γ)) : RootWriter Γ Json := do
   let tagged := freshSuccessors Γ sites
   let mut edges := #[]
@@ -197,28 +197,22 @@ def functionJson {Γ : Ctx} (declarations architecture : Json)
       ⟨⟨successor.step.guard, successor.step.update⟩, metadata⟩
     edges := edges.push (← edgeJson site.address transformer)
   pure <| Json.mkObj [
-    ("schema", toJson "ghot-fresh-function-v1"),
-    ("function_id", toJson functionId),
-    ("entry", toJson entry),
+    ("schema", toJson "wruh-fresh-instructions-v1"),
     ("declarations", declarations),
     ("occurrences", toJson occurrences),
     ("local_edges", toJson edges),
     ("architecture", architecture)]
 
 /-- Package all Lean-authored edges in AYXG's existing shared-DAG envelope. -/
-def bundleJson {Γ : Ctx} (inventory : Json) (functions : List Json)
+def bundleJson {Γ : Ctx} (inventory : Json) (extraction : Json)
     (roots : Array (TypedExpr Γ)) : Except String Json := do
   let imageSha256 ← field inventory "image_sha256"
-  let rootId ← field inventory "root_id"
-  let cfg ← field inventory "cfg"
-  let externalEdges ← field inventory "external_edges"
+  let inventoryReport ← field inventory "inventory"
   let fields := [
-    ("schema", toJson "wruh-fresh-bundle-v1"),
+    ("schema", toJson "wruh-fresh-bundle-v2"),
     ("image_sha256", imageSha256),
-    ("root_id", rootId),
-    ("cfg", cfg),
-    ("functions", toJson functions),
-    ("external_edges", externalEdges)]
+    ("inventory", inventoryReport),
+    ("extraction", extraction)]
   let fields := match (inventory.getObjVal? "loaded_image").toOption with
     | some image => fields ++ [("loaded_image", image)]
     | none => fields

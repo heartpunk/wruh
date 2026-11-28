@@ -31,6 +31,9 @@ class CliSmokeTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("--artifact", result.stdout)
+        for option in ("--objects", "--data-intervals", "--chunk-size", "--seed"):
+            self.assertIn(option, result.stdout)
+        self.assertNotIn("--cfg", result.stdout)
 
     def test_local_cli_may_omit_ci_metadata(self):
         argv = [

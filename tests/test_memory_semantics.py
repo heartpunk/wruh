@@ -28,9 +28,8 @@ from extractor.amd64_state import (
     fresh_instruction_state,
     step_instruction_outcomes,
 )
-from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import PinnedBinary
-from extractor.fresh import FreshFunction, extract_fresh_function
+from extractor.instruction_inventory import Span, inventory
+from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
 from extractor.fresh import artifact_declarations
 from extractor.lean_angr_worker import _step
 
@@ -118,20 +117,11 @@ class MemorySemantics(unittest.TestCase):
             path = Path(directory) / "memory.bin"
             path.write_bytes(raw)
             project = runtime.angr.load_shellcode(raw, arch="amd64", load_address=PC)
-            manifest = {
-                "image_sha256": hashlib.sha256(raw).hexdigest(),
-                "roots": {
-                    "memory": {"address": PC, "size": len(raw), "symbol": "memory"}
-                },
-                "primitive_boundaries": {},
-                "call_graph": {"memory": {}},
-                "open_transfers": True,
-            }
-            pinned = PinnedBinary(path, manifest, project)
-            function = extract_fresh_function(
-                pinned, build_static_cfg(pinned), "memory"
-            )
-            function = FreshFunction.from_data(json.loads(function.canonical_json()))
+            decoded = inventory([Span(PC, raw)], [], project.arch.capstone)
+            records = linear_site_records(project, decoded, chunk_size=2, seed=7,
+                                          image_digest=hashlib.sha256(raw).hexdigest())
+            function = extract_linear(project, records)
+            function = FreshInstructions.from_data(json.loads(function.canonical_json()))
         self.assertEqual(
             [o.origin.canonical_address for o in function.occurrences],
             [PC, PC + len(raw) - 1],
@@ -327,7 +317,7 @@ class MemorySemantics(unittest.TestCase):
         project = runtime.angr.load_shellcode(
             bytes.fromhex("f0410fb109"), arch="amd64", load_address=PC
         )
-        response = _step(SimpleNamespace(project=project), PC)
+        response = _step(project, PC)
         dag = response["expression_dag"]
         roots = loads(json.dumps({
             "schema": "ayxg-artifact-dag-v1",

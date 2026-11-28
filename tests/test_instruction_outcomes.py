@@ -1,9 +1,4 @@
-"""Real AMD64 bytes must survive CFG extraction and artifact serialization.
-
-These are instruction-relation tests, not native executions or composition tests.
-The manifest deliberately selects small shellcode functions; the production CFG
-builder, instruction stepper, fresh extractor, and artifact codec do the work.
-"""
+"""Real AMD64 bytes survive instruction extraction and serialization."""
 from __future__ import annotations
 
 import hashlib
@@ -23,9 +18,8 @@ from ayxg.z3 import declaration_variables, expr_from_z3, expr_to_z3
 
 from extractor import runtime
 from extractor.artifact import Target
-from extractor.binary_cfg import build_static_cfg
-from extractor.binary_inventory import PinnedBinary
-from extractor.fresh import FreshFunction, extract_fresh_function
+from extractor.instruction_inventory import Span, inventory
+from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
 
 PC = 0x400000
 
@@ -53,19 +47,13 @@ class InstructionOutcomesTest(unittest.TestCase):
             artifact = Path(directory) / "instruction.bin"
             artifact.write_bytes(raw)
             project = runtime.angr.load_shellcode(raw, arch="amd64", load_address=PC)
-            manifest = {
-                "image_sha256": digest,
-                "roots": {"fixture": {"address": PC, "size": len(raw), "symbol": "fixture"}},
-                "primitive_boundaries": {},
-                "call_graph": {"fixture": {}},
-                "open_transfers": True,
-            }
-            pinned = PinnedBinary(artifact, manifest, project)
-            cfg = build_static_cfg(pinned)
-            extracted = extract_fresh_function(pinned, cfg, "fixture")
-            function = FreshFunction.from_data(json.loads(extracted.canonical_json()))
-        self.assertEqual(function.entry, PC)
-        self.assertEqual(function.function_id, "fixture")
+            decoded = inventory([Span(PC, raw)], [], project.arch.capstone)
+            records = linear_site_records(project, decoded, chunk_size=2, seed=7, image_digest=digest)
+            extracted = extract_linear(project, records)
+            serialized = json.loads(extracted.canonical_json())
+            self.assertTrue(all("function_owners" not in item["origin"]
+                                for item in serialized["occurrences"]))
+            function = FreshInstructions.from_data(serialized)
         self.assertEqual([o.origin.canonical_address for o in function.occurrences],
                          [PC + offset for offset in offsets])
         self.assertEqual({edge.source for edge in function.local_edges},
@@ -73,7 +61,7 @@ class InstructionOutcomesTest(unittest.TestCase):
         for occurrence, start, stop in zip(function.occurrences, offsets, [*offsets[1:], len(raw)]):
             self.assertEqual(occurrence.origin.image_sha256, digest)
             self.assertEqual(occurrence.origin.instruction_bytes, raw[start:stop].hex())
-            self.assertEqual(occurrence.origin.function_owners, ("fixture",))
+            self.assertEqual(occurrence.origin.function_owners, ())
         ctx = z3.Context()
         variables = declaration_variables(function.declarations, ctx)
         edges = [edge for edge in function.local_edges if edge.source == PC]
@@ -172,7 +160,7 @@ class InstructionOutcomesTest(unittest.TestCase):
                     item for item in edge.summary.simultaneous_update if item.name != "rbx")))
                 for edge in function.local_edges),
         )
-        corrupted = FreshFunction.from_data(json.loads(corrupted.canonical_json()))
+        corrupted = FreshInstructions.from_data(json.loads(corrupted.canonical_json()))
         variables = declaration_variables(corrupted.declarations, ctx)
         edges = [edge for edge in corrupted.local_edges if edge.source == PC]
         with self.assertRaisesRegex(AssertionError, "state declaration contract"):
@@ -207,7 +195,7 @@ class InstructionOutcomesTest(unittest.TestCase):
                 corrupted = replace(function, local_edges=tuple(
                     replace(edge, summary=summary) if edge.id == original.id else edge
                     for edge in function.local_edges))
-                corrupted = FreshFunction.from_data(json.loads(corrupted.canonical_json()))
+                corrupted = FreshInstructions.from_data(json.loads(corrupted.canonical_json()))
                 actual = [edge for edge in corrupted.local_edges if edge.source == PC]
                 with self.assertRaisesRegex(AssertionError, label):
                     self.check_relation(corrupted, actual, v, ctx, expected)

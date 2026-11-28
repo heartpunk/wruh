@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
+from pathlib import Path
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from extractor.binary_inventory import PinnedBinary
 
 import z3
 from ayxg.expr import Declaration, TermSort
@@ -22,11 +27,6 @@ from extractor.artifact import (
     Occurrence,
     OutcomeId,
     StaticOccurrenceId,
-)
-from extractor.binary_inventory import PinnedBinary
-from extractor.cfg_blocks import (
-    CfgBlockValidationError,
-    ordered_instruction_records,
 )
 from extractor.typed_z3 import step_summary_from_z3
 
@@ -138,6 +138,8 @@ def occurrence_catalog(
 
 
 def _instruction_records(root: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    from extractor.cfg_blocks import CfgBlockValidationError, ordered_instruction_records
+
     try:
         return ordered_instruction_records(root["blocks"])
     except CfgBlockValidationError as error:
@@ -250,3 +252,92 @@ def extract_fresh_function(
         local_edges=tuple(edges),
         architecture=architecture_layout(pinned.project.arch),
     )
+
+
+
+def linear_occurrence_data(occurrence: Occurrence) -> dict[str, Any]:
+    """Serialize instruction evidence without inferred function ownership."""
+    result = occurrence.to_data()
+    result["origin"].pop("function_owners", None)
+    return result
+
+
+def linear_occurrence_from_data(value: dict[str, Any]) -> Occurrence:
+    origin = dict(value["origin"])
+    if "function_owners" in origin:
+        raise FreshExtractionError("instruction evidence must not have function owners")
+    origin["function_owners"] = []
+    return Occurrence.from_data({**value, "origin": origin})
+
+
+@dataclass(frozen=True)
+class FreshInstructions:
+    declarations: tuple[Declaration, ...]
+    occurrences: tuple[Occurrence, ...]
+    local_edges: tuple[LocalEdge, ...]
+    architecture: ArchitectureLayout
+
+    schema = "wruh-fresh-instructions-v1"
+
+    def to_data(self) -> dict[str, Any]:
+        return {"schema": self.schema,
+                "declarations": [item.to_data() for item in self.declarations],
+                "occurrences": [linear_occurrence_data(item) for item in self.occurrences],
+                "local_edges": [item.to_data() for item in self.local_edges],
+                "architecture": self.architecture.to_data()}
+
+    @classmethod
+    def from_data(cls, value: dict[str, Any]) -> FreshInstructions:
+        if value.get("schema") != cls.schema:
+            raise FreshExtractionError("unknown fresh instruction schema")
+        return cls(tuple(Declaration.from_data(item) for item in value["declarations"]),
+                   tuple(linear_occurrence_from_data(item) for item in value["occurrences"]),
+                   tuple(LocalEdge.from_data(item) for item in value["local_edges"]),
+                   ArchitectureLayout.from_data(value["architecture"]))
+
+    def canonical_json(self) -> bytes:
+        return json.dumps(self.to_data(), ensure_ascii=False, allow_nan=False,
+                          sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+def linear_site_records(project: Any, inventory: Any, *, chunk_size: int, seed: int, image_digest: str | None = None) -> tuple[tuple[int, Occurrence], ...]:
+    """Assign site IDs from addresses before shuffling decoded work."""
+    from extractor.instruction_inventory import shuffled_chunks
+
+    digests: dict[str, str] = {}
+    records = []
+    for chunk in shuffled_chunks(inventory, chunk_size, seed):
+        for instruction in chunk:
+            obj = project.loader.find_object_containing(instruction.address)
+            path = getattr(obj, "binary", None) if obj is not None else None
+            if path and Path(path).is_file():
+                path = str(path)
+                if path not in digests:
+                    digests[path] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                digest = digests[path]
+            elif image_digest is not None:
+                digest = image_digest
+            else:
+                raise FreshExtractionError(f"no object for site {instruction.address:#x}")
+            occurrence = Occurrence(
+                StaticOccurrenceId(instruction.address),
+                DecodedInstructionEvidence(
+                    image_sha256=digest, canonical_address=instruction.address,
+                    instruction_bytes=instruction.data.hex(), architecture="AMD64",
+                    decode_mode="long64",
+                    instruction_identity=f"{instruction.mnemonic} {instruction.operands}".strip(),
+                    function_owners=(),
+                ),
+            )
+            records.append((instruction.address, occurrence))
+    return tuple(records)
+
+
+def extract_linear(project: Any, records: tuple[tuple[int, Occurrence], ...]) -> FreshInstructions:
+    """Step each selected site from a fresh symbolic state."""
+    declarations = artifact_declarations(project.arch)
+    edges = []
+    for address, occurrence in records:
+        edges.extend(_local_edges(declarations, occurrence.id, step_instruction_outcomes(project, address)))
+    edges.sort(key=lambda edge: (edge.id.occurrence.value, edge.id.outcome.value))
+    occurrences = tuple(sorted((occurrence for _, occurrence in records), key=lambda item: item.id.value))
+    return FreshInstructions(declarations, occurrences, tuple(edges), architecture_layout(project.arch))
