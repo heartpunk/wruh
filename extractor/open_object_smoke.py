@@ -13,9 +13,9 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from extractor.fresh import extract_linear, linear_site_records
 from extractor.backend import Session
 from extractor.elf_fixture import elf_fixture
+from extractor.fresh import extract_linear, linear_site_records
 
 
 def main(argv=None):

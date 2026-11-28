@@ -15,9 +15,9 @@ from extractor.elf_fixture import PC, code_session
 
 # ruff: isort: split
 import z3
-
 from ayxg.z3 import declaration_variables, expr_to_z3
-from extractor.architecture import ArchitectureLayout, NORMALIZED_AMD64_FLAGS
+
+from extractor.architecture import NORMALIZED_AMD64_FLAGS, ArchitectureLayout
 
 CTX = z3.Context()
 FLAG_NAMES = ("CF", "ZF", "SF", "OF", "PF", "AF")

@@ -17,11 +17,12 @@ start_runtime_trace()
 from extractor.native_runtime import preload_libstdcxx
 
 preload_libstdcxx()
-from extractor.backend import Session
-from extractor.fresh import extract_linear, linear_site_records
 import archinfo
 import pyvex
 from angr.block import CapstoneBlock, CapstoneInsn
+
+from extractor.backend import Session
+from extractor.fresh import extract_linear, linear_site_records
 
 CANONICAL = ['var','bool_lit','bv_lit','bool_not','bool_and','bool_or','ite','bv_add','bv_sub','bv_mul','bv_udiv','bv_urem','bv_and','bv_or','bv_xor','bv_shl','bv_lshr','bv_ashr','bv_ult','bv_ule','bv_slt','bv_sle','eq','bv_not','zero_extend','sign_extend','extract','concat','const_array','select','store']
 CONTROL = {'jump:Ijk_Call','jump:Ijk_Ret'}

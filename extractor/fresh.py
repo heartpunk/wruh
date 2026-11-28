@@ -10,7 +10,6 @@ from ayxg.expr import Declaration, TypedExpr
 from equanimity import StepResult
 
 from extractor.architecture import ArchitectureLayout
-from extractor.backend import Session
 from extractor.artifact import (
     Assignment,
     DecodedInstructionEvidence,
@@ -22,6 +21,7 @@ from extractor.artifact import (
     StepSummary,
     Target,
 )
+from extractor.backend import Session
 from extractor.instruction_inventory import Inventory, shuffled_chunks
 
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 import hashlib
 import json
 
-from extractor.fresh import linear_site_records
 from extractor.backend import Session
+from extractor.fresh import linear_site_records
 from extractor.instruction_inventory import Interval
 
 

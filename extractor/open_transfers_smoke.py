@@ -23,9 +23,9 @@ from ayxg.expr import TermSort, TypedExpr
 from ayxg.z3 import declaration_variables, expr_to_z3
 
 from extractor.artifact import Target
+from extractor.backend import Session
 from extractor.fresh import FreshInstructions, extract_linear, linear_site_records
 from extractor.instruction_inventory import Interval
-from extractor.backend import Session
 
 BASE = 0x400000
 TEXT_OFFSET = 0x1000
