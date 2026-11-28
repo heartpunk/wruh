@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "analysis-nixpkgs": {
+      "locked": {
+        "lastModified": 1795370043,
+        "narHash": "sha256-s/0jq8usZtLVOolYBwmyUmd3JsfAu7w3FU+a0dgMqSY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0dc498bfe49baeb18b0f9891e800b53bb2603193",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0dc498bfe49baeb18b0f9891e800b53bb2603193",
+        "type": "github"
+      }
+    },
     "ayxg": {
       "inputs": {
         "floatlib-src": "floatlib-src",
@@ -192,13 +208,15 @@
     },
     "root": {
       "inputs": {
+        "analysis-nixpkgs": "analysis-nixpkgs",
         "ayxg": "ayxg",
         "equanimity": "equanimity",
         "ifrl": "ifrl",
         "nixpkgs": [
           "ifrl",
           "nixpkgs"
-        ]
+        ],
+        "stock-declarations": "stock-declarations"
       }
     },
     "rust-overlay": {
@@ -220,6 +238,23 @@
         "owner": "oxalica",
         "ref": "master",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "stock-declarations": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795672698,
+        "narHash": "sha256-hCFOqBQudzSAiDAE0EQ+NfipJ8TeZZ9buizNgD3ZjgM=",
+        "owner": "heartpunk",
+        "repo": "equanimity",
+        "rev": "b3bf5c225390a125e20a5a9c7067e7798fc424a9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "heartpunk",
+        "repo": "equanimity",
+        "rev": "b3bf5c225390a125e20a5a9c7067e7798fc424a9",
         "type": "github"
       }
     }

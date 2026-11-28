@@ -6,6 +6,11 @@
       url = "github:heartpunk/equanimity/7312d503f84514f2a5b3c04769ba3eddd9d86411";
       flake = false;
     };
+    stock-declarations = {
+      url = "github:heartpunk/equanimity/b3bf5c225390a125e20a5a9c7067e7798fc424a9";
+      flake = false;
+    };
+    analysis-nixpkgs.url = "github:NixOS/nixpkgs/0dc498bfe49baeb18b0f9891e800b53bb2603193";
     ifrl.url = "github:heartpunk/ifrl/main";
     ayxg = {
       url = "github:heartpunk/ayxg/main";
@@ -14,7 +19,7 @@
     nixpkgs.follows = "ifrl/nixpkgs";
   };
 
-  outputs = { nixpkgs, ifrl, ayxg, equanimity, ... }:
+  outputs = { nixpkgs, ifrl, ayxg, equanimity, stock-declarations, analysis-nixpkgs, ... }:
     let
       systems = [ "aarch64-darwin" "x86_64-linux" ];
       ciPackages = nixpkgs.lib.genAttrs [ "x86_64-linux" ] (system:
@@ -26,6 +31,12 @@
             stripDebugList = [];
           });
         in {
+          stockLua = let
+            stock = import "${stock-declarations}/stock/inputs.nix" analysis-nixpkgs.legacyPackages.${system};
+          in pkgs.runCommand "wruh-stock-lua" {} ''
+            mkdir -p "$out"
+            cp "${stock.lua.output}/${stock.lua.files.elf}" "$out/lua.elf"
+          '';
           apacheHttpdPinned = withSymbols pkgs.apacheHttpd;
         });
     in {

@@ -23,3 +23,17 @@ CFG recovery is not a focus of this project. We don’t have a new approach to c
 `Wruh.AyxgSymex` proves the adapter laws for AYXG's source-indexed QF_ABV transition systems. The theorem is about this idealized provider contract; the concrete Equanimity backend must satisfy this contract for the result to apply. Both WRUH entry points use its public image loader and one-instruction step. WRUH selects decoded sites and assembles the AYXG transitions.
 
 `Wruh.FreshTransform` has a separate job: it closes ordered temporary reads and constructs the guarded simultaneous update used by extraction. Its local denotation theorem is distinct from the transition-system bisimulation.
+
+### Local Bazel extraction for stock Lua
+
+On x86_64 NixOS, run `nix develop --command scripts/extract-lua` to produce
+`bazel-bin/lua/lua.ayxg`. The stock Lua input is pinned independently of the
+Equanimity backend. The defaults extract instruction starts from the first
+1,024 bytes of the executable span in 256-byte object-relative windows.
+Override them with `--//extractor:lua_scope_bytes=2048` and
+`--//extractor:lua_window_bytes=512` after `scripts/extract-lua`.
+
+The script prepares the catalog before Bazel analyzes the extraction graph.
+Each extraction action reads the ELF and its own selector. The merge action
+reads the resulting AYXG shards and the catalog's single loaded-image
+snapshot and global decode report.

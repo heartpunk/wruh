@@ -1,0 +1,4 @@
+load("@wruh_lua_catalog//:jobs.bzl", "SELECTORS")
+load("//extractor:shards.bzl", "lua_bundle")
+
+lua_bundle(SELECTORS)

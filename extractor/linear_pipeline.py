@@ -25,6 +25,23 @@ def prepare(args):
     session = Session.load(args.artifact, args.objects, digest)
     inv = session.inventory(exclusions)
     records = linear_site_records(inv, chunk_size=args.chunk_size, seed=args.seed)
+    scope_bytes = getattr(args, "scope_bytes", None)
+    if scope_bytes is not None:
+        if scope_bytes <= 0:
+            raise ValueError("scope size must be positive")
+        limits = {
+            (obj["sha256"], obj["mapped_base"]): min(executable) + scope_bytes
+            for obj in session.image.loaded_image["objects"]
+            if (executable := [
+                segment["address"] for segment in obj["segments"]
+                if segment["executable"] and segment["size"]
+            ])
+        }
+        records = tuple(
+            (address, occurrence)
+            for address, occurrence in records
+            if address < limits[occurrence.origin.image_sha256, occurrence.origin.mapped_base]
+        )
     report = {
         "decoded": len(inv.decoded),
         "data_intervals": [{"start": item.start, "end": item.end} for item in exclusions],
