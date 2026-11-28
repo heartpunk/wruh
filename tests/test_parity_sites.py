@@ -23,3 +23,13 @@ class SiteParityTests(unittest.TestCase):
         duplicate = model([1], [(1, 0, 0), (1, 0, 1)])
         with self.assertRaisesRegex(ValueError, 'duplicate'):
             match_sites(duplicate, duplicate)
+
+    def test_repeated_owners_do_not_duplicate_the_same_edge(self):
+        from extractor.parity_sites import combine_models
+        instruction = {'origin': {'canonical_address': 1, 'image_sha256': 'a',
+                       'instruction_bytes': '90', 'architecture': 'AMD64', 'decode_mode': 'long64'}}
+        edge = {'source': 1, 'edge_id': {'outcome_id': 0, 'static_occurrence_id': 1}, 'summary': {}}
+        function = {'declarations': [], 'occurrences': [instruction], 'local_edges': [edge]}
+        result = combine_models([function, function])
+        self.assertEqual(len(result['occurrences']), 1)
+        self.assertEqual(len(result['local_edges']), 1)
